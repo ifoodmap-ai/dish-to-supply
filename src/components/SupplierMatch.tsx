@@ -24,33 +24,33 @@ const SupplierMatch = ({ show }: SupplierMatchProps) => {
   const mockSuppliers: Supplier[] = [
     {
       id: 1,
-      name: "鮮禾食材供應",
+      name: "Fresh Harvest Supplies",
       rating: 4.8,
-      location: "台北市中山區",
+      location: "Downtown District",
       phone: "02-1234-5678",
-      email: "contact@freshproduce.com.tw",
-      specialties: ["有機蔬菜", "新鮮肉品", "進口食材"],
-      deliveryTime: "24小時內"
+      email: "contact@freshproduce.com",
+      specialties: ["Organic Vegetables", "Fresh Meat", "Imported Ingredients"],
+      deliveryTime: "Within 24 hours"
     },
     {
       id: 2,
-      name: "優質肉品商行",
+      name: "Premium Meat Trading",
       rating: 4.9,
-      location: "新北市板橋區",
+      location: "Industrial Zone",
       phone: "02-8765-4321",
-      email: "info@qualitymeat.com.tw",
-      specialties: ["優質肉品", "冷凍海鮮", "調味料"],
-      deliveryTime: "48小時內"
+      email: "info@qualitymeat.com",
+      specialties: ["Quality Meat", "Frozen Seafood", "Seasonings"],
+      deliveryTime: "Within 48 hours"
     },
     {
       id: 3,
-      name: "綠色農場直送",
+      name: "Green Farm Direct",
       rating: 4.7,
-      location: "桃園市中壢區",
+      location: "Agricultural District",
       phone: "03-9876-5432",
-      email: "service@greenfarm.com.tw",
-      specialties: ["有機蔬菜", "水果", "雜糧"],
-      deliveryTime: "24小時內"
+      email: "service@greenfarm.com",
+      specialties: ["Organic Vegetables", "Fruits", "Grains"],
+      deliveryTime: "Within 24 hours"
     }
   ];
 
@@ -60,10 +60,10 @@ const SupplierMatch = ({ show }: SupplierMatchProps) => {
         <div className="max-w-6xl mx-auto space-y-8">
           <div className="text-center space-y-4">
             <h2 className="text-4xl md:text-5xl font-bold">
-              推薦供應商
+              Recommended Suppliers
             </h2>
             <p className="text-xl text-muted-foreground">
-              根據您的食材需求，為您精選以下優質供應商
+              Based on your ingredient needs, we have selected the following quality suppliers
             </p>
           </div>
 
@@ -80,7 +80,7 @@ const SupplierMatch = ({ show }: SupplierMatchProps) => {
                       </div>
                     </div>
                     <Badge variant="secondary" className="bg-primary/10 text-primary hover:bg-primary/20">
-                      {supplier.deliveryTime}配送
+                      {supplier.deliveryTime} delivery
                     </Badge>
                   </div>
 
@@ -100,7 +100,7 @@ const SupplierMatch = ({ show }: SupplierMatchProps) => {
                   </div>
 
                   <div className="space-y-2">
-                    <p className="text-sm font-medium">主要品項：</p>
+                    <p className="text-sm font-medium">Main Products:</p>
                     <div className="flex flex-wrap gap-2">
                       {supplier.specialties.map((specialty, index) => (
                         <Badge key={index} variant="outline" className="border-primary/30">
@@ -111,7 +111,7 @@ const SupplierMatch = ({ show }: SupplierMatchProps) => {
                   </div>
 
                   <Button variant="hero" className="w-full">
-                    聯繫供應商
+                    Contact Supplier
                   </Button>
                 </div>
               </Card>

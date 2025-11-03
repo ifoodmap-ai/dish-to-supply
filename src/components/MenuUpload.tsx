@@ -17,48 +17,48 @@ const MenuUpload = ({ onAnalysisComplete }: MenuUploadProps) => {
     const file = event.target.files?.[0];
     if (file) {
       if (file.size > 10 * 1024 * 1024) {
-        toast.error("檔案大小不能超過 10MB");
+        toast.error("File size cannot exceed 10MB");
         return;
       }
       
       if (!file.type.startsWith("image/")) {
-        toast.error("請上傳圖片檔案");
+        toast.error("Please upload an image file");
         return;
       }
 
       setSelectedFile(file);
       const url = URL.createObjectURL(file);
       setPreviewUrl(url);
-      toast.success("檔案已選取，點擊「開始分析」進行 AI 分析");
+      toast.success("File selected, click 'Start Analysis' to proceed with AI analysis");
     }
   };
 
   const handleAnalyze = async () => {
     if (!selectedFile) {
-      toast.error("請先選擇菜單圖片");
+      toast.error("Please select a menu image first");
       return;
     }
 
     setIsUploading(true);
     
-    // 模擬 AI 分析過程
+    // Simulate AI analysis process
     setTimeout(() => {
       const mockIngredients = [
-        "牛肉 2kg",
-        "豬肉 1.5kg",
-        "雞肉 1kg",
-        "新鮮蔬菜 3kg",
-        "番茄 1kg",
-        "洋蔥 0.5kg",
-        "大蒜 0.2kg",
-        "橄欖油 500ml",
-        "醬油 300ml",
-        "米 5kg"
+        "Beef 2kg",
+        "Pork 1.5kg",
+        "Chicken 1kg",
+        "Fresh Vegetables 3kg",
+        "Tomatoes 1kg",
+        "Onions 0.5kg",
+        "Garlic 0.2kg",
+        "Olive Oil 500ml",
+        "Soy Sauce 300ml",
+        "Rice 5kg"
       ];
       
       onAnalysisComplete(mockIngredients);
       setIsUploading(false);
-      toast.success("AI 分析完成！");
+      toast.success("AI analysis complete!");
     }, 3000);
   };
 
@@ -68,10 +68,10 @@ const MenuUpload = ({ onAnalysisComplete }: MenuUploadProps) => {
         <div className="max-w-4xl mx-auto space-y-8">
           <div className="text-center space-y-4">
             <h2 className="text-4xl md:text-5xl font-bold">
-              上傳您的菜單
+              Upload Your Menu
             </h2>
             <p className="text-xl text-muted-foreground">
-              支援 JPG、PNG 等常見圖片格式，檔案大小上限 10MB
+              Support JPG, PNG and other common image formats, file size limit 10MB
             </p>
           </div>
 
@@ -85,8 +85,8 @@ const MenuUpload = ({ onAnalysisComplete }: MenuUploadProps) => {
                         <Upload className="w-10 h-10 text-primary" />
                       </div>
                       <div className="space-y-2">
-                        <p className="text-xl font-semibold">點擊或拖曳檔案至此</p>
-                        <p className="text-muted-foreground">支援 JPG、PNG 格式</p>
+                        <p className="text-xl font-semibold">Click or drag file here</p>
+                        <p className="text-muted-foreground">Support JPG, PNG formats</p>
                       </div>
                     </div>
                   </div>
@@ -116,7 +116,7 @@ const MenuUpload = ({ onAnalysisComplete }: MenuUploadProps) => {
                         setPreviewUrl("");
                       }}
                     >
-                      移除
+                      Remove
                     </Button>
                   </div>
                 </div>
@@ -141,10 +141,10 @@ const MenuUpload = ({ onAnalysisComplete }: MenuUploadProps) => {
                   {isUploading ? (
                     <>
                       <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-                      AI 分析中...
+                      AI Analyzing...
                     </>
                   ) : (
-                    "開始 AI 分析"
+                    "Start AI Analysis"
                   )}
                 </Button>
               </div>

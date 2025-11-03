@@ -16,10 +16,10 @@ const IngredientAnalysis = ({ ingredients, onFindSuppliers }: IngredientAnalysis
         <div className="max-w-4xl mx-auto space-y-8">
           <div className="text-center space-y-4">
             <h2 className="text-4xl md:text-5xl font-bold">
-              分析結果
+              Analysis Results
             </h2>
             <p className="text-xl text-muted-foreground">
-              AI 已識別出以下食材需求
+              AI has identified the following ingredient requirements
             </p>
           </div>
 
@@ -40,8 +40,8 @@ const IngredientAnalysis = ({ ingredients, onFindSuppliers }: IngredientAnalysis
               <div className="pt-6 border-t border-border">
                 <div className="flex flex-col sm:flex-row justify-between items-center gap-4">
                   <div className="text-center sm:text-left">
-                    <p className="text-sm text-muted-foreground">總共識別</p>
-                    <p className="text-2xl font-bold text-primary">{ingredients.length} 項食材</p>
+                    <p className="text-sm text-muted-foreground">Total Identified</p>
+                    <p className="text-2xl font-bold text-primary">{ingredients.length} Ingredients</p>
                   </div>
                   <Button
                     variant="hero"
@@ -50,7 +50,7 @@ const IngredientAnalysis = ({ ingredients, onFindSuppliers }: IngredientAnalysis
                     className="text-lg px-8 py-6"
                   >
                     <ShoppingCart className="mr-2" />
-                    尋找供應商
+                    Find Suppliers
                   </Button>
                 </div>
               </div>

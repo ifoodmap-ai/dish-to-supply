@@ -24,14 +24,14 @@ const Hero = () => {
         <div className="max-w-4xl mx-auto text-center space-y-8">
           <h1 className="text-5xl md:text-7xl font-bold leading-tight">
             <span className="bg-gradient-to-r from-primary to-primary-glow bg-clip-text text-transparent">
-              AI 智能分析
+              AI-Powered Analysis
             </span>
             <br />
-            餐廳菜單食材需求
+            Restaurant Menu Ingredients
           </h1>
           
           <p className="text-xl md:text-2xl text-muted-foreground max-w-2xl mx-auto">
-            上傳菜單，AI 即時分析所需食材，自動媒合最佳供應商。讓採購變得更簡單、更高效。
+            Upload your menu, AI instantly analyzes ingredient requirements, and automatically matches the best suppliers. Making procurement simpler and more efficient.
           </p>
           
           <div className="flex flex-col sm:flex-row gap-4 justify-center items-center pt-4">
@@ -41,7 +41,7 @@ const Hero = () => {
               className="text-lg px-8 py-6"
               onClick={scrollToUpload}
             >
-              立即開始分析
+              Start Analysis Now
               <ArrowRight className="ml-2" />
             </Button>
             <Button 
@@ -49,22 +49,22 @@ const Hero = () => {
               size="lg" 
               className="text-lg px-8 py-6 border-primary hover:bg-accent"
             >
-              了解更多
+              Learn More
             </Button>
           </div>
           
           <div className="pt-12 grid grid-cols-1 md:grid-cols-3 gap-8 max-w-3xl mx-auto">
             <div className="space-y-2">
-              <div className="text-4xl font-bold text-primary">3 分鐘</div>
-              <div className="text-muted-foreground">完成分析</div>
+              <div className="text-4xl font-bold text-primary">3 Minutes</div>
+              <div className="text-muted-foreground">Analysis Complete</div>
             </div>
             <div className="space-y-2">
               <div className="text-4xl font-bold text-primary">98%</div>
-              <div className="text-muted-foreground">識別準確率</div>
+              <div className="text-muted-foreground">Recognition Accuracy</div>
             </div>
             <div className="space-y-2">
               <div className="text-4xl font-bold text-primary">500+</div>
-              <div className="text-muted-foreground">合作供應商</div>
+              <div className="text-muted-foreground">Partner Suppliers</div>
             </div>
           </div>
         </div>

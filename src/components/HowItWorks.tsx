@@ -7,24 +7,24 @@ const HowItWorks = () => {
   const steps = [
     {
       number: "01",
-      title: "上傳菜單",
-      description: "支援圖片格式，一鍵上傳您的餐廳菜單",
+      title: "Upload Menu",
+      description: "Support image formats, upload your restaurant menu with one click",
       icon: Upload,
       image: uploadIcon,
       color: "from-primary to-primary-glow"
     },
     {
       number: "02",
-      title: "AI 智能分析",
-      description: "先進的 AI 技術即時識別菜單中的所有食材需求",
+      title: "AI Smart Analysis",
+      description: "Advanced AI technology instantly identifies all ingredient requirements in the menu",
       icon: Sparkles,
       image: aiIcon,
       color: "from-secondary to-secondary/80"
     },
     {
       number: "03",
-      title: "供應商媒合",
-      description: "自動配對最適合的食材供應商，提供最佳報價",
+      title: "Supplier Matching",
+      description: "Automatically pairs the most suitable ingredient suppliers with the best quotes",
       icon: Users,
       image: matchIcon,
       color: "from-primary to-primary-glow"
@@ -36,10 +36,10 @@ const HowItWorks = () => {
       <div className="container px-4 mx-auto">
         <div className="text-center max-w-3xl mx-auto mb-16 space-y-4">
           <h2 className="text-4xl md:text-5xl font-bold">
-            運作流程
+            How It Works
           </h2>
           <p className="text-xl text-muted-foreground">
-            三個簡單步驟，輕鬆完成食材採購媒合
+            Three simple steps to complete ingredient procurement matching
           </p>
         </div>
 
