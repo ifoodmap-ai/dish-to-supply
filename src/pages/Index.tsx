@@ -4,6 +4,7 @@ import HowItWorks from "@/components/HowItWorks";
 import MenuUpload from "@/components/MenuUpload";
 import IngredientAnalysis from "@/components/IngredientAnalysis";
 import SupplierMatch from "@/components/SupplierMatch";
+import Chatbot from "@/components/Chatbot";
 
 const Index = () => {
   const [ingredients, setIngredients] = useState<string[]>([]);
@@ -23,10 +24,19 @@ const Index = () => {
     }, 100);
   };
 
+  const handleChatRequirements = (requirements: string[]) => {
+    setIngredients(requirements);
+    setShowSuppliers(true);
+    setTimeout(() => {
+      document.getElementById("analysis-results")?.scrollIntoView({ behavior: "smooth" });
+    }, 100);
+  };
+
   return (
     <div className="min-h-screen">
       <Hero />
       <HowItWorks />
+      <Chatbot onRequirementsSubmit={handleChatRequirements} />
       <MenuUpload onAnalysisComplete={handleAnalysisComplete} />
       <div id="analysis-results">
         <IngredientAnalysis 
