@@ -1,10 +1,46 @@
 import { Button } from "@/components/ui/button";
-import { Globe } from "lucide-react";
+import { Globe, User, LogOut } from "lucide-react";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { useNavigate } from "react-router-dom";
+import { supabase } from "@/integrations/supabase/client";
+import { useEffect, useState } from "react";
+import { User as SupabaseUser } from "@supabase/supabase-js";
+import { useToast } from "@/hooks/use-toast";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import heroBg from "@/assets/hero-bg.jpg";
 
 const Hero = () => {
   const { language, setLanguage, t } = useLanguage();
+  const navigate = useNavigate();
+  const { toast } = useToast();
+  const [user, setUser] = useState<SupabaseUser | null>(null);
+  
+  useEffect(() => {
+    // Get initial session
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setUser(session?.user ?? null);
+    });
+
+    // Listen for auth changes
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setUser(session?.user ?? null);
+    });
+
+    return () => subscription.unsubscribe();
+  }, []);
+
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
+    toast({
+      title: t('auth.logout'),
+      description: t('auth.welcomeBack'),
+    });
+  };
   
   const scrollToUpload = () => {
     document.getElementById("upload-section")?.scrollIntoView({ behavior: "smooth" });
@@ -23,8 +59,8 @@ const Hero = () => {
         <div className="absolute inset-0 bg-gradient-to-b from-background/95 via-background/90 to-background"></div>
       </div>
 
-      {/* Language Toggle */}
-      <div className="absolute top-6 right-6 z-20">
+      {/* Top Navigation */}
+      <div className="absolute top-6 right-6 z-20 flex gap-2">
         <Button
           variant="outline"
           size="sm"
@@ -34,6 +70,33 @@ const Hero = () => {
           <Globe className="mr-2 h-4 w-4" />
           {language === 'en' ? '中文' : 'English'}
         </Button>
+        
+        {user ? (
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" size="sm" className="border-primary/30 hover:bg-accent">
+                <User className="mr-2 h-4 w-4" />
+                {t('auth.myAccount')}
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem onClick={handleLogout}>
+                <LogOut className="mr-2 h-4 w-4" />
+                {t('auth.logout')}
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        ) : (
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => navigate('/auth')}
+            className="border-primary/30 hover:bg-accent"
+          >
+            <User className="mr-2 h-4 w-4" />
+            {t('auth.login')}
+          </Button>
+        )}
       </div>
       
       <div className="container relative z-10 px-4 py-16 mx-auto">
