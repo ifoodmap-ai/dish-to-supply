@@ -1,6 +1,7 @@
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { CheckCircle2, ShoppingCart } from "lucide-react";
+import { useLanguage } from "@/contexts/LanguageContext";
 
 interface IngredientAnalysisProps {
   ingredients: string[];
@@ -8,6 +9,8 @@ interface IngredientAnalysisProps {
 }
 
 const IngredientAnalysis = ({ ingredients, onFindSuppliers }: IngredientAnalysisProps) => {
+  const { t } = useLanguage();
+  
   if (ingredients.length === 0) return null;
 
   return (
@@ -16,7 +19,7 @@ const IngredientAnalysis = ({ ingredients, onFindSuppliers }: IngredientAnalysis
         <div className="max-w-4xl mx-auto space-y-8">
           <div className="text-center space-y-4">
             <h2 className="text-4xl md:text-5xl font-bold">
-              Analysis Results
+              {t('analysis.title')}
             </h2>
             <p className="text-xl text-muted-foreground">
               AI has identified the following ingredient requirements
@@ -50,7 +53,7 @@ const IngredientAnalysis = ({ ingredients, onFindSuppliers }: IngredientAnalysis
                     className="text-lg px-8 py-6"
                   >
                     <ShoppingCart className="mr-2" />
-                    Find Suppliers
+                    {t('analysis.find')}
                   </Button>
                 </div>
               </div>

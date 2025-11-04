@@ -3,12 +3,14 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Upload, FileImage, Loader2 } from "lucide-react";
 import { toast } from "sonner";
+import { useLanguage } from "@/contexts/LanguageContext";
 
 interface MenuUploadProps {
   onAnalysisComplete: (ingredients: string[]) => void;
 }
 
 const MenuUpload = ({ onAnalysisComplete }: MenuUploadProps) => {
+  const { t } = useLanguage();
   const [isUploading, setIsUploading] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string>("");
@@ -29,7 +31,7 @@ const MenuUpload = ({ onAnalysisComplete }: MenuUploadProps) => {
       setSelectedFile(file);
       const url = URL.createObjectURL(file);
       setPreviewUrl(url);
-      toast.success("File selected, click 'Start Analysis' to proceed with AI analysis");
+      toast.success("File selected");
     }
   };
 
@@ -68,10 +70,10 @@ const MenuUpload = ({ onAnalysisComplete }: MenuUploadProps) => {
         <div className="max-w-4xl mx-auto space-y-8">
           <div className="text-center space-y-4">
             <h2 className="text-4xl md:text-5xl font-bold">
-              Upload Your Menu
+              {t('upload.title')}
             </h2>
             <p className="text-xl text-muted-foreground">
-              Support JPG, PNG and other common image formats, file size limit 10MB
+              {t('upload.subtitle')}
             </p>
           </div>
 
@@ -85,8 +87,13 @@ const MenuUpload = ({ onAnalysisComplete }: MenuUploadProps) => {
                         <Upload className="w-10 h-10 text-primary" />
                       </div>
                       <div className="space-y-2">
-                        <p className="text-xl font-semibold">Click or drag file here</p>
-                        <p className="text-muted-foreground">Support JPG, PNG formats</p>
+                        <p className="text-xl font-semibold">{t('upload.drag')}</p>
+                        <p className="text-muted-foreground">{t('upload.or')}</p>
+                        <Button variant="outline" size="lg" type="button">
+                          <FileImage className="mr-2 h-5 w-5" />
+                          {t('upload.select')}
+                        </Button>
+                        <p className="text-sm text-muted-foreground">{t('upload.support')}</p>
                       </div>
                     </div>
                   </div>
@@ -116,7 +123,7 @@ const MenuUpload = ({ onAnalysisComplete }: MenuUploadProps) => {
                         setPreviewUrl("");
                       }}
                     >
-                      Remove
+                      {t('upload.remove')}
                     </Button>
                   </div>
                 </div>
@@ -126,7 +133,7 @@ const MenuUpload = ({ onAnalysisComplete }: MenuUploadProps) => {
                   <div className="flex-1">
                     <p className="font-medium">{selectedFile?.name}</p>
                     <p className="text-sm text-muted-foreground">
-                      {(selectedFile?.size || 0 / 1024 / 1024).toFixed(2)} MB
+                      {((selectedFile?.size || 0) / 1024 / 1024).toFixed(2)} MB
                     </p>
                   </div>
                 </div>
@@ -141,10 +148,10 @@ const MenuUpload = ({ onAnalysisComplete }: MenuUploadProps) => {
                   {isUploading ? (
                     <>
                       <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-                      AI Analyzing...
+                      {t('upload.analyzing')}
                     </>
                   ) : (
-                    "Start AI Analysis"
+                    t('upload.analyze')
                   )}
                 </Button>
               </div>

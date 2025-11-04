@@ -2,6 +2,7 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Star, MapPin, Phone, Mail } from "lucide-react";
+import { useLanguage } from "@/contexts/LanguageContext";
 
 interface Supplier {
   id: number;
@@ -19,6 +20,8 @@ interface SupplierMatchProps {
 }
 
 const SupplierMatch = ({ show }: SupplierMatchProps) => {
+  const { t } = useLanguage();
+  
   if (!show) return null;
 
   const mockSuppliers: Supplier[] = [
@@ -30,7 +33,7 @@ const SupplierMatch = ({ show }: SupplierMatchProps) => {
       phone: "02-1234-5678",
       email: "contact@freshproduce.com",
       specialties: ["Organic Vegetables", "Fresh Meat", "Imported Ingredients"],
-      deliveryTime: "Within 24 hours"
+      deliveryTime: "24 hours"
     },
     {
       id: 2,
@@ -40,7 +43,7 @@ const SupplierMatch = ({ show }: SupplierMatchProps) => {
       phone: "02-8765-4321",
       email: "info@qualitymeat.com",
       specialties: ["Quality Meat", "Frozen Seafood", "Seasonings"],
-      deliveryTime: "Within 48 hours"
+      deliveryTime: "48 hours"
     },
     {
       id: 3,
@@ -50,7 +53,7 @@ const SupplierMatch = ({ show }: SupplierMatchProps) => {
       phone: "03-9876-5432",
       email: "service@greenfarm.com",
       specialties: ["Organic Vegetables", "Fruits", "Grains"],
-      deliveryTime: "Within 24 hours"
+      deliveryTime: "24 hours"
     }
   ];
 
@@ -60,10 +63,10 @@ const SupplierMatch = ({ show }: SupplierMatchProps) => {
         <div className="max-w-6xl mx-auto space-y-8">
           <div className="text-center space-y-4">
             <h2 className="text-4xl md:text-5xl font-bold">
-              Recommended Suppliers
+              {t('supplier.title')}
             </h2>
             <p className="text-xl text-muted-foreground">
-              Based on your ingredient needs, we have selected the following quality suppliers
+              {t('supplier.subtitle')}
             </p>
           </div>
 
@@ -80,7 +83,7 @@ const SupplierMatch = ({ show }: SupplierMatchProps) => {
                       </div>
                     </div>
                     <Badge variant="secondary" className="bg-primary/10 text-primary hover:bg-primary/20">
-                      {supplier.deliveryTime} delivery
+                      {supplier.deliveryTime} {t('supplier.delivery')}
                     </Badge>
                   </div>
 
@@ -100,7 +103,7 @@ const SupplierMatch = ({ show }: SupplierMatchProps) => {
                   </div>
 
                   <div className="space-y-2">
-                    <p className="text-sm font-medium">Main Products:</p>
+                    <p className="text-sm font-medium">{t('supplier.specialties')}</p>
                     <div className="flex flex-wrap gap-2">
                       {supplier.specialties.map((specialty, index) => (
                         <Badge key={index} variant="outline" className="border-primary/30">
@@ -111,7 +114,7 @@ const SupplierMatch = ({ show }: SupplierMatchProps) => {
                   </div>
 
                   <Button variant="hero" className="w-full">
-                    Contact Supplier
+                    {t('supplier.contact')}
                   </Button>
                 </div>
               </Card>

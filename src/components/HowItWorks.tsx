@@ -1,30 +1,33 @@
 import { Upload, Sparkles, Users } from "lucide-react";
+import { useLanguage } from "@/contexts/LanguageContext";
 import uploadIcon from "@/assets/upload-icon.png";
 import aiIcon from "@/assets/ai-icon.png";
 import matchIcon from "@/assets/match-icon.png";
 
 const HowItWorks = () => {
+  const { t } = useLanguage();
+  
   const steps = [
     {
       number: "01",
-      title: "Upload Menu",
-      description: "Support image formats, upload your restaurant menu with one click",
+      title: t('how.step1.title'),
+      description: t('how.step1.desc'),
       icon: Upload,
       image: uploadIcon,
       color: "from-primary to-primary-glow"
     },
     {
       number: "02",
-      title: "AI Smart Analysis",
-      description: "Advanced AI technology instantly identifies all ingredient requirements in the menu",
+      title: t('how.step2.title'),
+      description: t('how.step2.desc'),
       icon: Sparkles,
       image: aiIcon,
       color: "from-secondary to-secondary/80"
     },
     {
       number: "03",
-      title: "Supplier Matching",
-      description: "Automatically pairs the most suitable ingredient suppliers with the best quotes",
+      title: t('how.step3.title'),
+      description: t('how.step3.desc'),
       icon: Users,
       image: matchIcon,
       color: "from-primary to-primary-glow"
@@ -36,10 +39,10 @@ const HowItWorks = () => {
       <div className="container px-4 mx-auto">
         <div className="text-center max-w-3xl mx-auto mb-16 space-y-4">
           <h2 className="text-4xl md:text-5xl font-bold">
-            How It Works
+            {t('how.title')}
           </h2>
           <p className="text-xl text-muted-foreground">
-            Three simple steps to complete ingredient procurement matching
+            {t('how.subtitle')}
           </p>
         </div>
 

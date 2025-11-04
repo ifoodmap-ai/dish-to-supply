@@ -1,8 +1,11 @@
 import { Button } from "@/components/ui/button";
-import { ArrowRight } from "lucide-react";
+import { Globe } from "lucide-react";
+import { useLanguage } from "@/contexts/LanguageContext";
 import heroBg from "@/assets/hero-bg.jpg";
 
 const Hero = () => {
+  const { language, setLanguage, t } = useLanguage();
+  
   const scrollToUpload = () => {
     document.getElementById("upload-section")?.scrollIntoView({ behavior: "smooth" });
   };
@@ -19,19 +22,30 @@ const Hero = () => {
       >
         <div className="absolute inset-0 bg-gradient-to-b from-background/95 via-background/90 to-background"></div>
       </div>
+
+      {/* Language Toggle */}
+      <div className="absolute top-6 right-6 z-20">
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => setLanguage(language === 'en' ? 'zh' : 'en')}
+          className="border-primary/30 hover:bg-accent"
+        >
+          <Globe className="mr-2 h-4 w-4" />
+          {language === 'en' ? '中文' : 'English'}
+        </Button>
+      </div>
       
       <div className="container relative z-10 px-4 py-16 mx-auto">
         <div className="max-w-4xl mx-auto text-center space-y-8">
           <h1 className="text-5xl md:text-7xl font-bold leading-tight">
             <span className="bg-gradient-to-r from-primary to-primary-glow bg-clip-text text-transparent">
-              AI-Powered Analysis
+              {t('hero.title')}
             </span>
-            <br />
-            Restaurant Menu Ingredients
           </h1>
           
           <p className="text-xl md:text-2xl text-muted-foreground max-w-2xl mx-auto">
-            Upload your menu, AI instantly analyzes ingredient requirements, and automatically matches the best suppliers. Making procurement simpler and more efficient.
+            {t('hero.subtitle')}
           </p>
           
           <div className="flex flex-col sm:flex-row gap-4 justify-center items-center pt-4">
@@ -41,30 +55,29 @@ const Hero = () => {
               className="text-lg px-8 py-6"
               onClick={scrollToUpload}
             >
-              Start Analysis Now
-              <ArrowRight className="ml-2" />
+              {t('hero.cta')}
             </Button>
             <Button 
               variant="outline" 
               size="lg" 
               className="text-lg px-8 py-6 border-primary hover:bg-accent"
             >
-              Learn More
+              {t('hero.learn')}
             </Button>
           </div>
           
           <div className="pt-12 grid grid-cols-1 md:grid-cols-3 gap-8 max-w-3xl mx-auto">
             <div className="space-y-2">
-              <div className="text-4xl font-bold text-primary">3 Minutes</div>
-              <div className="text-muted-foreground">Analysis Complete</div>
+              <div className="text-4xl font-bold text-primary">{t('hero.stat1.value')}</div>
+              <div className="text-muted-foreground">{t('hero.stat1')}</div>
             </div>
             <div className="space-y-2">
-              <div className="text-4xl font-bold text-primary">98%</div>
-              <div className="text-muted-foreground">Recognition Accuracy</div>
+              <div className="text-4xl font-bold text-primary">{t('hero.stat2.value')}</div>
+              <div className="text-muted-foreground">{t('hero.stat2')}</div>
             </div>
             <div className="space-y-2">
-              <div className="text-4xl font-bold text-primary">500+</div>
-              <div className="text-muted-foreground">Partner Suppliers</div>
+              <div className="text-4xl font-bold text-primary">{t('hero.stat3.value')}</div>
+              <div className="text-muted-foreground">{t('hero.stat3')}</div>
             </div>
           </div>
         </div>

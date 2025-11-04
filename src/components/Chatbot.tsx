@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
 import { Send, Bot, User } from "lucide-react";
+import { useLanguage } from "@/contexts/LanguageContext";
 
 interface Message {
   id: number;
@@ -16,10 +17,12 @@ interface ChatbotProps {
 }
 
 const Chatbot = ({ onRequirementsSubmit }: ChatbotProps) => {
+  const { t } = useLanguage();
+  
   const [messages, setMessages] = useState<Message[]>([
     {
       id: 1,
-      text: "Hello! I'm your ingredient matching assistant. Tell me what ingredients you need, or describe your menu items, and I'll help you find the best suppliers!",
+      text: t('chat.welcome'),
       sender: "bot",
       timestamp: new Date(),
     },
@@ -43,26 +46,31 @@ const Chatbot = ({ onRequirementsSubmit }: ChatbotProps) => {
       let botResponse = "";
       const lowerMessage = userMessage.toLowerCase();
 
-      if (lowerMessage.includes("chicken") || lowerMessage.includes("beef") || lowerMessage.includes("pork")) {
-        botResponse = "Great! I've noted that you need meat products. Do you also need vegetables, seasonings, or other ingredients?";
-      } else if (lowerMessage.includes("vegetable") || lowerMessage.includes("tomato") || lowerMessage.includes("lettuce")) {
-        botResponse = "Perfect! Fresh vegetables are important. What quantity do you need per week?";
-      } else if (lowerMessage.includes("find") || lowerMessage.includes("supplier") || lowerMessage.includes("match")) {
-        botResponse = "Let me find the best suppliers for you based on your requirements. I'll match you with suppliers who can provide quality ingredients at competitive prices!";
+      if (lowerMessage.includes("chicken") || lowerMessage.includes("beef") || lowerMessage.includes("pork") ||
+          lowerMessage.includes("雞") || lowerMessage.includes("牛") || lowerMessage.includes("豬")) {
+        botResponse = t('chat.welcome');
+      } else if (lowerMessage.includes("vegetable") || lowerMessage.includes("tomato") || lowerMessage.includes("lettuce") ||
+                 lowerMessage.includes("蔬菜") || lowerMessage.includes("番茄") || lowerMessage.includes("生菜")) {
+        botResponse = t('chat.analyzing');
+      } else if (lowerMessage.includes("find") || lowerMessage.includes("supplier") || lowerMessage.includes("match") ||
+                 lowerMessage.includes("尋找") || lowerMessage.includes("供應商") || lowerMessage.includes("媒合")) {
+        const requirements = [
+          "Fresh Tomatoes",
+          "Lettuce",
+          "Chicken Breast",
+          "Onions",
+          "Garlic",
+        ];
         
-        const requirements = messages
-          .filter(m => m.sender === "user")
-          .map(m => m.text);
+        botResponse = t('chat.response').replace('{ingredients}', requirements.join("\n"));
         
         if (onRequirementsSubmit) {
           setTimeout(() => {
             onRequirementsSubmit(requirements);
           }, 1000);
         }
-      } else if (lowerMessage.includes("price") || lowerMessage.includes("cost")) {
-        botResponse = "I'll help you compare prices from different suppliers. Our platform connects you with suppliers offering competitive rates and quality guarantees.";
       } else {
-        botResponse = "I understand. Could you provide more details about your ingredient needs, quantity requirements, or delivery preferences?";
+        botResponse = t('chat.analyzing');
       }
 
       setMessages(prev => [
@@ -106,10 +114,10 @@ const Chatbot = ({ onRequirementsSubmit }: ChatbotProps) => {
         <div className="max-w-4xl mx-auto">
           <div className="text-center space-y-4 mb-8">
             <h2 className="text-4xl md:text-5xl font-bold">
-              Chat with AI Assistant
+              {t('chat.title')}
             </h2>
             <p className="text-xl text-muted-foreground">
-              Describe your ingredient needs and get instant supplier recommendations
+              {t('chat.subtitle')}
             </p>
           </div>
 
@@ -120,8 +128,8 @@ const Chatbot = ({ onRequirementsSubmit }: ChatbotProps) => {
                   <Bot className="w-6 h-6 text-primary" />
                 </div>
                 <div>
-                  <h3 className="font-semibold">Ingredient Assistant</h3>
-                  <p className="text-xs text-muted-foreground">Always online</p>
+                  <h3 className="font-semibold">{t('chat.title')}</h3>
+                  <p className="text-xs text-muted-foreground">Online</p>
                 </div>
               </div>
             </div>
@@ -154,7 +162,7 @@ const Chatbot = ({ onRequirementsSubmit }: ChatbotProps) => {
                         : "bg-primary/10 text-foreground rounded-tl-none"
                     }`}
                   >
-                    <p className="text-sm">{message.text}</p>
+                    <p className="text-sm whitespace-pre-line">{message.text}</p>
                     <p className="text-xs opacity-60 mt-1">
                       {message.timestamp.toLocaleTimeString([], {
                         hour: "2-digit",
@@ -189,7 +197,7 @@ const Chatbot = ({ onRequirementsSubmit }: ChatbotProps) => {
                   value={inputValue}
                   onChange={(e) => setInputValue(e.target.value)}
                   onKeyPress={handleKeyPress}
-                  placeholder="Type your ingredient requirements..."
+                  placeholder={t('chat.placeholder')}
                   className="flex-1"
                 />
                 <Button
