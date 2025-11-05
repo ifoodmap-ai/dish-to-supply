@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Star, MapPin, Phone, Mail } from "lucide-react";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { useNavigate } from "react-router-dom";
 
 interface Supplier {
   id: number;
@@ -21,6 +22,7 @@ interface SupplierMatchProps {
 
 const SupplierMatch = ({ show }: SupplierMatchProps) => {
   const { t } = useLanguage();
+  const navigate = useNavigate();
   
   if (!show) return null;
 
@@ -113,7 +115,11 @@ const SupplierMatch = ({ show }: SupplierMatchProps) => {
                     </div>
                   </div>
 
-                  <Button variant="hero" className="w-full">
+                  <Button 
+                    variant="hero" 
+                    className="w-full"
+                    onClick={() => navigate(`/supplier/${supplier.id}`)}
+                  >
                     {t('supplier.contact')}
                   </Button>
                 </div>

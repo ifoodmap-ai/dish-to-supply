@@ -67,6 +67,7 @@ const translations = {
     'supplier.delivery': 'Delivery',
     'supplier.contact': 'Contact Supplier',
     'supplier.specialties': 'Specialties',
+    'supplier.back': 'Back',
     
     // Not Found
     'notfound.title': '404',
@@ -151,6 +152,7 @@ const translations = {
     'supplier.delivery': '配送',
     'supplier.contact': '聯繫供應商',
     'supplier.specialties': '專長',
+    'supplier.back': '返回',
     
     // Not Found
     'notfound.title': '404',
