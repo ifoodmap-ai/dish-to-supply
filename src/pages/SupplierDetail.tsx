@@ -1,15 +1,30 @@
 import { useParams, useNavigate } from "react-router-dom";
+import { useState, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Star, MapPin, Phone, Mail, ArrowLeft, Clock, Package, CheckCircle2, MessageCircle } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Textarea } from "@/components/ui/textarea";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Star, MapPin, Phone, Mail, ArrowLeft, Clock, Package, CheckCircle2, MessageCircle, Search, ShoppingCart, X, Plus } from "lucide-react";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/hooks/use-toast";
 
 const SupplierDetail = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const { t } = useLanguage();
+  const { toast } = useToast();
+  
+  const [searchQuery, setSearchQuery] = useState("");
+  const [selectedCategory, setSelectedCategory] = useState<string>("全部商品");
+  const [cart, setCart] = useState<Array<{ id: number; name: string; desc: string; image: string }>>([]);
+  const [inquiryMessage, setInquiryMessage] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [dialogOpen, setDialogOpen] = useState(false);
 
   // Mock supplier data - in production this would come from an API/database
   const mockSuppliers = [
@@ -93,6 +108,95 @@ const SupplierDetail = () => {
   ];
 
   const supplier = mockSuppliers.find(s => s.id === Number(id));
+
+  // Filter products based on search and category
+  const filteredProducts = useMemo(() => {
+    if (!supplier) return [];
+    
+    return supplier.products.filter(product => {
+      const matchesSearch = product.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                          product.desc.toLowerCase().includes(searchQuery.toLowerCase());
+      const matchesCategory = selectedCategory === "全部商品" || supplier.categories.includes(selectedCategory);
+      return matchesSearch && matchesCategory;
+    });
+  }, [supplier, searchQuery, selectedCategory]);
+
+  const addToCart = (product: typeof supplier.products[0]) => {
+    if (cart.find(item => item.id === product.id)) {
+      toast({
+        title: "已在詢價清單中",
+        description: "此商品已經在您的詢價清單中",
+      });
+      return;
+    }
+    setCart([...cart, product]);
+    toast({
+      title: "已加入詢價清單",
+      description: `${product.name} 已加入詢價清單`,
+    });
+  };
+
+  const removeFromCart = (productId: number) => {
+    setCart(cart.filter(item => item.id !== productId));
+  };
+
+  const handleSubmitInquiry = async () => {
+    if (cart.length === 0) {
+      toast({
+        title: "詢價清單為空",
+        description: "請先將商品加入詢價清單",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const { data: { user } } = await supabase.auth.getUser();
+    
+    if (!user) {
+      toast({
+        title: "請先登入",
+        description: "您需要登入才能提交詢價",
+        variant: "destructive",
+      });
+      navigate("/auth");
+      return;
+    }
+
+    setIsSubmitting(true);
+
+    try {
+      const { error } = await supabase
+        .from('inquiries')
+        .insert({
+          user_id: user.id,
+          supplier_id: Number(id),
+          supplier_name: supplier!.name,
+          products: cart,
+          message: inquiryMessage,
+          status: 'pending'
+        });
+
+      if (error) throw error;
+
+      toast({
+        title: "詢價已送出",
+        description: "供應商將會收到您的詢價通知",
+      });
+
+      setCart([]);
+      setInquiryMessage("");
+      setDialogOpen(false);
+    } catch (error) {
+      console.error("Error submitting inquiry:", error);
+      toast({
+        title: "送出失敗",
+        description: "請稍後再試",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
 
   if (!supplier) {
     return (
@@ -210,28 +314,80 @@ const SupplierDetail = () => {
               </TabsList>
               
               <TabsContent value="products" className="mt-6">
-                <div className="space-y-6">
-                  <div className="flex items-center justify-between">
-                    <h2 className="text-2xl font-bold">產品列表</h2>
-                    <Badge variant="outline">{supplier.products.length} 項產品</Badge>
-                  </div>
-                  
-                  <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-                    {supplier.products.map((product) => (
-                      <Card key={product.id} className="overflow-hidden hover:shadow-lg transition-shadow cursor-pointer">
-                        <div className="aspect-square overflow-hidden bg-muted">
-                          <img 
-                            src={product.image} 
-                            alt={product.name}
-                            className="w-full h-full object-cover hover:scale-110 transition-transform duration-300"
-                          />
-                        </div>
-                        <div className="p-3 space-y-1">
-                          <h3 className="font-semibold">{product.name}</h3>
-                          <p className="text-sm text-muted-foreground">{product.desc}</p>
-                        </div>
-                      </Card>
-                    ))}
+                <div className="flex flex-col lg:flex-row gap-6">
+                  {/* Category Sidebar */}
+                  <Card className="lg:w-64 p-4 h-fit">
+                    <h3 className="font-bold mb-4">所有分類</h3>
+                    <div className="space-y-2">
+                      <Button
+                        variant={selectedCategory === "全部商品" ? "default" : "ghost"}
+                        className="w-full justify-start"
+                        onClick={() => setSelectedCategory("全部商品")}
+                      >
+                        全部商品
+                      </Button>
+                      {supplier.categories.map((category, index) => (
+                        <Button
+                          key={index}
+                          variant={selectedCategory === category ? "default" : "ghost"}
+                          className="w-full justify-start"
+                          onClick={() => setSelectedCategory(category)}
+                        >
+                          {category}
+                        </Button>
+                      ))}
+                    </div>
+                  </Card>
+
+                  {/* Products Area */}
+                  <div className="flex-1 space-y-6">
+                    {/* Search Bar */}
+                    <div className="relative">
+                      <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
+                      <Input
+                        placeholder="搜尋產品..."
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                        className="pl-10"
+                      />
+                    </div>
+
+                    <div className="flex items-center justify-between">
+                      <h2 className="text-2xl font-bold">產品列表</h2>
+                      <Badge variant="outline">{filteredProducts.length} 項產品</Badge>
+                    </div>
+                    
+                    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                      {filteredProducts.map((product) => (
+                        <Card key={product.id} className="overflow-hidden hover:shadow-lg transition-shadow">
+                          <div className="aspect-square overflow-hidden bg-muted">
+                            <img 
+                              src={product.image} 
+                              alt={product.name}
+                              className="w-full h-full object-cover hover:scale-110 transition-transform duration-300"
+                            />
+                          </div>
+                          <div className="p-3 space-y-2">
+                            <h3 className="font-semibold">{product.name}</h3>
+                            <p className="text-sm text-muted-foreground">{product.desc}</p>
+                            <Button 
+                              variant="outline" 
+                              size="sm" 
+                              className="w-full"
+                              onClick={() => addToCart(product)}
+                            >
+                              詢價
+                            </Button>
+                          </div>
+                        </Card>
+                      ))}
+                    </div>
+
+                    {filteredProducts.length === 0 && (
+                      <div className="text-center py-12 text-muted-foreground">
+                        沒有找到符合的產品
+                      </div>
+                    )}
                   </div>
                 </div>
               </TabsContent>
@@ -291,6 +447,83 @@ const SupplierDetail = () => {
           </Card>
         </div>
       </div>
+
+      {/* Floating Cart Button */}
+      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+        <DialogTrigger asChild>
+          <Button
+            size="lg"
+            className="fixed bottom-6 right-6 rounded-full shadow-lg h-14 w-14 p-0"
+          >
+            <ShoppingCart className="w-6 h-6" />
+            {cart.length > 0 && (
+              <span className="absolute -top-2 -right-2 bg-primary text-primary-foreground rounded-full w-6 h-6 flex items-center justify-center text-xs font-bold">
+                {cart.length}
+              </span>
+            )}
+          </Button>
+        </DialogTrigger>
+        <DialogContent className="max-w-2xl max-h-[80vh]">
+          <DialogHeader>
+            <DialogTitle>詢價清單</DialogTitle>
+          </DialogHeader>
+          
+          <ScrollArea className="max-h-[50vh]">
+            {cart.length === 0 ? (
+              <div className="text-center py-8 text-muted-foreground">
+                詢價清單是空的
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {cart.map((item) => (
+                  <Card key={item.id} className="p-3">
+                    <div className="flex items-center gap-3">
+                      <img
+                        src={item.image}
+                        alt={item.name}
+                        className="w-16 h-16 object-cover rounded"
+                      />
+                      <div className="flex-1">
+                        <h4 className="font-semibold">{item.name}</h4>
+                        <p className="text-sm text-muted-foreground">{item.desc}</p>
+                      </div>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => removeFromCart(item.id)}
+                      >
+                        <X className="w-4 h-4" />
+                      </Button>
+                    </div>
+                  </Card>
+                ))}
+              </div>
+            )}
+          </ScrollArea>
+
+          {cart.length > 0 && (
+            <div className="space-y-4 pt-4 border-t">
+              <div>
+                <label className="text-sm font-medium mb-2 block">備註訊息（選填）</label>
+                <Textarea
+                  placeholder="請輸入詢價相關訊息或需求..."
+                  value={inquiryMessage}
+                  onChange={(e) => setInquiryMessage(e.target.value)}
+                  rows={3}
+                />
+              </div>
+              <Button
+                className="w-full"
+                size="lg"
+                onClick={handleSubmitInquiry}
+                disabled={isSubmitting}
+              >
+                {isSubmitting ? "送出中..." : "送出詢價"}
+              </Button>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
