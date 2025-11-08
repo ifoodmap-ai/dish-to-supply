@@ -95,6 +95,16 @@ const translations = {
     'auth.error': 'Error',
     'auth.logout': 'Logout',
     'auth.myAccount': 'My Account',
+    
+    // Buyer Profiles
+    'buyers.title': 'Featured Restaurant Buyers',
+    'buyers.subtitle': 'Connect with professional buyers from leading restaurants',
+    'buyers.experience': 'Experience',
+    'buyers.years': 'Years',
+    'buyers.rating': 'Satisfaction',
+    'buyers.expertise': 'Product Expertise',
+    'buyers.markets': 'Markets of Experience',
+    'buyers.brands': 'Sourced Brands',
   },
   zh: {
     // Hero
@@ -180,6 +190,16 @@ const translations = {
     'auth.error': '錯誤',
     'auth.logout': '登出',
     'auth.myAccount': '我的帳戶',
+    
+    // Buyer Profiles
+    'buyers.title': '精選餐飲採購',
+    'buyers.subtitle': '與來自領先餐飲企業的專業買家建立聯繫',
+    'buyers.experience': '採購經驗',
+    'buyers.years': '年',
+    'buyers.rating': '滿意度',
+    'buyers.expertise': '產品專長',
+    'buyers.markets': '經驗市場',
+    'buyers.brands': '合作品牌',
   },
 };
 
