@@ -37,7 +37,6 @@ const Index = () => {
     <div className="min-h-screen">
       <Hero />
       <HowItWorks />
-      <BuyerProfiles />
       <Chatbot onRequirementsSubmit={handleChatRequirements} />
       <MenuUpload onAnalysisComplete={handleAnalysisComplete} />
       <div id="analysis-results">
@@ -49,6 +48,7 @@ const Index = () => {
       <div id="supplier-section">
         <SupplierMatch show={showSuppliers} />
       </div>
+      <BuyerProfiles />
     </div>
   );
 };
