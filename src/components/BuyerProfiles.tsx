@@ -2,6 +2,13 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { MapPin, Star } from "lucide-react";
 import { useLanguage } from "@/contexts/LanguageContext";
+import {
+  Carousel,
+  CarouselContent,
+  CarouselItem,
+  CarouselNext,
+  CarouselPrevious,
+} from "@/components/ui/carousel";
 
 interface Buyer {
   id: string;
@@ -68,87 +75,101 @@ const BuyerProfiles = () => {
           </p>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 max-w-7xl mx-auto">
-          {mockBuyers.map((buyer) => (
-            <Card key={buyer.id} className="overflow-hidden hover:shadow-lg transition-shadow">
-              <CardContent className="p-6">
-                <div className="flex flex-col items-center text-center space-y-4">
-                  {/* Logo */}
-                  <div className="w-24 h-24 rounded-full overflow-hidden border-4 border-primary/20">
-                    <img 
-                      src={buyer.logo} 
-                      alt={buyer.name}
-                      className="w-full h-full object-cover"
-                    />
-                  </div>
+        <div className="max-w-7xl mx-auto relative px-16">
+          <Carousel
+            opts={{
+              align: "start",
+              loop: true,
+            }}
+            className="w-full"
+          >
+            <CarouselContent className="-ml-4">
+              {mockBuyers.map((buyer) => (
+                <CarouselItem key={buyer.id} className="pl-4 md:basis-1/2 lg:basis-1/3">
+                  <Card className="overflow-hidden hover:shadow-lg transition-shadow h-full">
+                    <CardContent className="p-6">
+                      <div className="flex flex-col items-center text-center space-y-4">
+                        {/* Logo */}
+                        <div className="w-24 h-24 rounded-full overflow-hidden border-4 border-primary/20">
+                          <img 
+                            src={buyer.logo} 
+                            alt={buyer.name}
+                            className="w-full h-full object-cover"
+                          />
+                        </div>
 
-                  {/* Name and Location */}
-                  <div>
-                    <h3 className="text-xl font-semibold mb-2">{buyer.name}</h3>
-                    <div className="flex items-center justify-center gap-1 text-muted-foreground">
-                      <MapPin className="w-4 h-4" />
-                      <span className="text-sm">{buyer.location}</span>
-                    </div>
-                  </div>
+                        {/* Name and Location */}
+                        <div>
+                          <h3 className="text-xl font-semibold mb-2">{buyer.name}</h3>
+                          <div className="flex items-center justify-center gap-1 text-muted-foreground">
+                            <MapPin className="w-4 h-4" />
+                            <span className="text-sm">{buyer.location}</span>
+                          </div>
+                        </div>
 
-                  {/* Experience and Rating */}
-                  <div className="w-full grid grid-cols-2 gap-4 py-4 border-y border-border">
-                    <div>
-                      <div className="text-sm text-muted-foreground mb-1">
-                        {t('buyers.experience')}
+                        {/* Experience and Rating */}
+                        <div className="w-full grid grid-cols-2 gap-4 py-4 border-y border-border">
+                          <div>
+                            <div className="text-sm text-muted-foreground mb-1">
+                              {t('buyers.experience')}
+                            </div>
+                            <div className="text-lg font-semibold">{buyer.experience} {t('buyers.years')}</div>
+                          </div>
+                          <div>
+                            <div className="text-sm text-muted-foreground mb-1">
+                              {t('buyers.rating')}
+                            </div>
+                            <div className="flex items-center justify-center gap-1">
+                              <Star className="w-4 h-4 fill-primary text-primary" />
+                              <span className="text-lg font-semibold">{buyer.rating}%</span>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Expertise */}
+                        <div className="w-full">
+                          <div className="text-sm text-muted-foreground mb-2">
+                            {t('buyers.expertise')}
+                          </div>
+                          <div className="flex flex-wrap gap-2 justify-center">
+                            {buyer.expertise.map((item, index) => (
+                              <Badge key={index} variant="secondary" className="text-xs">
+                                {item}
+                              </Badge>
+                            ))}
+                          </div>
+                        </div>
+
+                        {/* Markets */}
+                        <div className="w-full">
+                          <div className="text-sm text-muted-foreground mb-2">
+                            {t('buyers.markets')}
+                          </div>
+                          <div className="text-sm font-medium">
+                            {buyer.markets.join(' | ')}
+                          </div>
+                        </div>
+
+                        {/* Brands */}
+                        <div className="w-full">
+                          <div className="text-sm text-muted-foreground mb-2">
+                            {t('buyers.brands')}
+                          </div>
+                          <div className="flex flex-wrap gap-2 justify-center text-xs text-muted-foreground">
+                            {buyer.brands.map((brand, index) => (
+                              <span key={index}>{brand}</span>
+                            ))}
+                          </div>
+                        </div>
                       </div>
-                      <div className="text-lg font-semibold">{buyer.experience} {t('buyers.years')}</div>
-                    </div>
-                    <div>
-                      <div className="text-sm text-muted-foreground mb-1">
-                        {t('buyers.rating')}
-                      </div>
-                      <div className="flex items-center justify-center gap-1">
-                        <Star className="w-4 h-4 fill-primary text-primary" />
-                        <span className="text-lg font-semibold">{buyer.rating}%</span>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Expertise */}
-                  <div className="w-full">
-                    <div className="text-sm text-muted-foreground mb-2">
-                      {t('buyers.expertise')}
-                    </div>
-                    <div className="flex flex-wrap gap-2 justify-center">
-                      {buyer.expertise.map((item, index) => (
-                        <Badge key={index} variant="secondary" className="text-xs">
-                          {item}
-                        </Badge>
-                      ))}
-                    </div>
-                  </div>
-
-                  {/* Markets */}
-                  <div className="w-full">
-                    <div className="text-sm text-muted-foreground mb-2">
-                      {t('buyers.markets')}
-                    </div>
-                    <div className="text-sm font-medium">
-                      {buyer.markets.join(' | ')}
-                    </div>
-                  </div>
-
-                  {/* Brands */}
-                  <div className="w-full">
-                    <div className="text-sm text-muted-foreground mb-2">
-                      {t('buyers.brands')}
-                    </div>
-                    <div className="flex flex-wrap gap-2 justify-center text-xs text-muted-foreground">
-                      {buyer.brands.map((brand, index) => (
-                        <span key={index}>{brand}</span>
-                      ))}
-                    </div>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
+                    </CardContent>
+                  </Card>
+                </CarouselItem>
+              ))}
+            </CarouselContent>
+            <CarouselPrevious className="left-0" />
+            <CarouselNext className="right-0" />
+          </Carousel>
         </div>
       </div>
     </section>
