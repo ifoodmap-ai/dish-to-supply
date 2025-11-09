@@ -1,6 +1,7 @@
 import { useState } from "react";
 import Hero from "@/components/Hero";
 import HowItWorks from "@/components/HowItWorks";
+import PartnerBrands from "@/components/PartnerBrands";
 import BuyerProfiles from "@/components/BuyerProfiles";
 import MenuUpload from "@/components/MenuUpload";
 import IngredientAnalysis from "@/components/IngredientAnalysis";
@@ -37,6 +38,7 @@ const Index = () => {
     <div className="min-h-screen">
       <Hero />
       <HowItWorks />
+      <PartnerBrands />
       <Chatbot onRequirementsSubmit={handleChatRequirements} />
       <MenuUpload onAnalysisComplete={handleAnalysisComplete} />
       <div id="analysis-results">

@@ -34,6 +34,9 @@ const translations = {
     'how.step3.title': 'Match Suppliers',
     'how.step3.desc': 'System recommends the most suitable suppliers based on your needs',
     
+    // Partner Brands
+    'partners.title': 'Trusted by Leading Food Suppliers',
+    
     // Chatbot
     'chat.title': 'Ingredient Requirements Chat',
     'chat.subtitle': 'Tell us your ingredient needs, and we\'ll match the best suppliers for you',
@@ -136,6 +139,9 @@ const translations = {
     'how.step2.desc': 'AI自動識別所有需要的食材和數量',
     'how.step3.title': '媒合供應商',
     'how.step3.desc': '系統根據需求推薦最合適的供應商',
+    
+    // Partner Brands
+    'partners.title': '合作供應商品牌',
     
     // Chatbot
     'chat.title': '食材需求對話',
