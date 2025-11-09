@@ -75,13 +75,13 @@ const BuyerProfiles = () => {
           </p>
         </div>
 
-        <div className="max-w-7xl mx-auto relative px-16">
+        <div className="max-w-7xl mx-auto relative">
           <Carousel
             opts={{
               align: "start",
               loop: true,
             }}
-            className="w-full"
+            className="w-full px-16"
           >
             <CarouselContent className="-ml-4">
               {mockBuyers.map((buyer) => (
@@ -167,8 +167,8 @@ const BuyerProfiles = () => {
                 </CarouselItem>
               ))}
             </CarouselContent>
-            <CarouselPrevious className="left-0" />
-            <CarouselNext className="right-0" />
+            <CarouselPrevious className="-left-12" />
+            <CarouselNext className="-right-12" />
           </Carousel>
         </div>
       </div>
