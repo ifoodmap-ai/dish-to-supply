@@ -116,6 +116,7 @@ const translations = {
     'buyers.expertise': 'Product Expertise',
     'buyers.markets': 'Markets of Experience',
     'buyers.brands': 'Sourced Brands',
+    'buyers.viewMore': 'View More',
   },
   zh: {
     // Hero
@@ -222,6 +223,7 @@ const translations = {
     'buyers.expertise': '產品專長',
     'buyers.markets': '經驗市場',
     'buyers.brands': '合作品牌',
+    'buyers.viewMore': '看更多',
   },
 };
 

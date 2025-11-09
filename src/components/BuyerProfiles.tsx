@@ -1,5 +1,6 @@
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { MapPin, Star } from "lucide-react";
 import { useLanguage } from "@/contexts/LanguageContext";
 import {
@@ -170,6 +171,12 @@ const BuyerProfiles = () => {
             <CarouselPrevious className="-left-12" />
             <CarouselNext className="-right-12" />
           </Carousel>
+        </div>
+        
+        <div className="flex justify-center mt-8">
+          <Button variant="outline" size="lg" className="min-w-[200px]">
+            {t('buyers.viewMore')}
+          </Button>
         </div>
       </div>
     </section>
