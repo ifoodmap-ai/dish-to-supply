@@ -58,7 +58,7 @@ const Hero = () => {
         }}
       >
         <div 
-          className="absolute inset-0 opacity-30"
+          className="absolute inset-0 opacity-20"
           style={{
             backgroundImage: `url(${ingredientsBg})`,
             backgroundSize: 'cover',
