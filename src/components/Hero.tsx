@@ -13,6 +13,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import heroBg from "@/assets/hero-bg.jpg";
+import ingredientsBg from "@/assets/ingredients-bg.jpg";
 
 const Hero = () => {
   const { language, setLanguage, t } = useLanguage();
@@ -56,6 +57,14 @@ const Hero = () => {
           backgroundPosition: 'center',
         }}
       >
+        <div 
+          className="absolute inset-0 opacity-30"
+          style={{
+            backgroundImage: `url(${ingredientsBg})`,
+            backgroundSize: 'cover',
+            backgroundPosition: 'center',
+          }}
+        ></div>
         <div className="absolute inset-0 bg-gradient-to-b from-background/95 via-background/90 to-background"></div>
       </div>
 
