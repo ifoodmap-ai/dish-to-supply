@@ -292,8 +292,8 @@ export default function Auth() {
               variant="outline"
               onClick={() => {
                 toast({
-                  title: 'LINE Login',
-                  description: 'LINE login integration coming soon',
+                  title: t('auth.lineLogin'),
+                  description: t('auth.lineLoginDesc'),
                 });
               }}
               className="w-full bg-[#00B900] hover:bg-[#00B900]/90 text-white border-[#00B900]"

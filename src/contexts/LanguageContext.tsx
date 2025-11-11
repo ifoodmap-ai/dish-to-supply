@@ -106,6 +106,8 @@ const translations = {
     'auth.error': 'Error',
     'auth.logout': 'Logout',
     'auth.myAccount': 'My Account',
+    'auth.lineLogin': 'LINE Login',
+    'auth.lineLoginDesc': 'LINE login integration coming soon',
     
     // Buyer Profiles
     'buyers.title': 'Featured Restaurant Buyers',
@@ -213,6 +215,8 @@ const translations = {
     'auth.error': '錯誤',
     'auth.logout': '登出',
     'auth.myAccount': '我的帳戶',
+    'auth.lineLogin': 'LINE 登入',
+    'auth.lineLoginDesc': 'LINE 登入整合即將推出',
     
     // Buyer Profiles
     'buyers.title': '精選餐飲採購',
