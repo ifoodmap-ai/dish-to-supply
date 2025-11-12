@@ -13,7 +13,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import heroBg from "@/assets/hero-bg.jpg";
-import ingredientsBg from "@/assets/ingredients-bg.jpg";
+import freshIngredientsHero from "@/assets/fresh-ingredients-hero.jpg";
 
 const Hero = () => {
   const { language, setLanguage, t } = useLanguage();
@@ -60,7 +60,7 @@ const Hero = () => {
         <div 
           className="absolute inset-0 opacity-50"
           style={{
-            backgroundImage: `url(${ingredientsBg})`,
+            backgroundImage: `url(${freshIngredientsHero})`,
             backgroundSize: 'cover',
             backgroundPosition: 'center',
           }}
