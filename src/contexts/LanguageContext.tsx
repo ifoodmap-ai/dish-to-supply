@@ -22,7 +22,7 @@ const translations = {
     'hero.stat2': 'Recognition Accuracy',
     'hero.stat2.value': '98%',
     'hero.stat3': 'Suppliers',
-    'hero.stat3.value': '500+',
+    'hero.stat3.value': '750+',
     
     // How It Works
     'how.title': 'How It Works',
@@ -131,7 +131,7 @@ const translations = {
     'hero.stat2': '識別準確率',
     'hero.stat2.value': '98%',
     'hero.stat3': '合作供應商',
-    'hero.stat3.value': '500+',
+    'hero.stat3.value': '750+',
     
     // How It Works
     'how.title': '運作方式',
