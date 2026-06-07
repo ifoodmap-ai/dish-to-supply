@@ -31,8 +31,7 @@ jobs:
         env:
           RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
         run: >-
-          railway up ./api
-          --path-as-root
+          railway up
           --service api
           --environment production
           --project de66d9f2-7867-4627-ba63-b4820a1e2f33
