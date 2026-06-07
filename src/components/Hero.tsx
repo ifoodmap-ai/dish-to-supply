@@ -12,8 +12,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import heroBg from "@/assets/hero-bg.jpg";
-import freshIngredientsHero from "@/assets/fresh-ingredients-hero.jpg";
+import chefKitchenHero from "@/assets/chef-kitchen-hero.png";
 
 const Hero = () => {
   const { language, setLanguage, t } = useLanguage();
@@ -48,24 +47,16 @@ const Hero = () => {
   };
 
   return (
-    <section className="relative min-h-[90vh] flex items-center justify-center overflow-hidden">
-      <div 
-        className="absolute inset-0 z-0"
-        style={{
-          backgroundImage: `url(${heroBg})`,
-          backgroundSize: 'cover',
-          backgroundPosition: 'center',
-        }}
-      >
-        <div 
-          className="absolute inset-0 opacity-50"
-          style={{
-            backgroundImage: `url(${freshIngredientsHero})`,
-            backgroundSize: 'cover',
-            backgroundPosition: 'center',
-          }}
-        ></div>
-        <div className="absolute inset-0 bg-gradient-to-b from-background/95 via-background/90 to-background"></div>
+    <section className="relative min-h-[90vh] flex items-center justify-center overflow-hidden bg-slate-950">
+      <div className="absolute inset-0 z-0">
+        <img
+          src={chefKitchenHero}
+          alt=""
+          aria-hidden="true"
+          className="h-full w-full object-cover object-[36%_center] md:object-center"
+        />
+        <div className="absolute inset-0 bg-black/45"></div>
+        <div className="absolute inset-0 bg-gradient-to-b from-slate-950/30 via-slate-950/45 to-slate-950/80"></div>
       </div>
 
       {/* Top Navigation */}
@@ -74,7 +65,7 @@ const Hero = () => {
           variant="outline"
           size="sm"
           onClick={() => setLanguage(language === 'en' ? 'zh' : 'en')}
-          className="border-primary/30 hover:bg-accent"
+          className="border-white/40 bg-black/20 text-white backdrop-blur-sm hover:bg-white/15 hover:text-white"
         >
           <Globe className="mr-2 h-4 w-4" />
           {language === 'en' ? '中文' : 'English'}
@@ -83,7 +74,7 @@ const Hero = () => {
         {user ? (
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="outline" size="sm" className="border-primary/30 hover:bg-accent">
+              <Button variant="outline" size="sm" className="border-white/40 bg-black/20 text-white backdrop-blur-sm hover:bg-white/15 hover:text-white">
                 <User className="mr-2 h-4 w-4" />
                 {t('auth.myAccount')}
               </Button>
@@ -100,7 +91,7 @@ const Hero = () => {
             variant="outline"
             size="sm"
             onClick={() => navigate('/auth')}
-            className="border-primary/30 hover:bg-accent"
+            className="border-white/40 bg-black/20 text-white backdrop-blur-sm hover:bg-white/15 hover:text-white"
           >
             <User className="mr-2 h-4 w-4" />
             {t('auth.login')}
@@ -110,13 +101,13 @@ const Hero = () => {
       
       <div className="container relative z-10 px-4 py-16 mx-auto">
         <div className="max-w-4xl mx-auto text-center space-y-8">
-          <h1 className="text-5xl md:text-7xl font-bold leading-tight">
-            <span className="bg-gradient-to-r from-primary to-primary-glow bg-clip-text text-transparent">
+          <h1 className="text-5xl md:text-7xl font-bold leading-tight drop-shadow-lg">
+            <span className="bg-gradient-to-r from-white via-white to-emerald-300 bg-clip-text text-transparent">
               {t('hero.title')}
             </span>
           </h1>
           
-          <p className="text-xl md:text-2xl text-muted-foreground max-w-2xl mx-auto">
+          <p className="text-xl md:text-2xl text-white/85 max-w-2xl mx-auto drop-shadow-md">
             {t('hero.subtitle')}
           </p>
           
@@ -132,7 +123,7 @@ const Hero = () => {
             <Button 
               variant="outline" 
               size="lg" 
-              className="text-lg px-8 py-6 border-primary hover:bg-accent"
+              className="text-lg px-8 py-6 border-white/60 bg-black/20 text-white backdrop-blur-sm hover:bg-white/15 hover:text-white"
             >
               {t('hero.learn')}
             </Button>
@@ -140,16 +131,16 @@ const Hero = () => {
           
           <div className="pt-12 grid grid-cols-1 md:grid-cols-3 gap-8 max-w-3xl mx-auto">
             <div className="space-y-2">
-              <div className="text-4xl font-bold text-primary">{t('hero.stat1.value')}</div>
-              <div className="text-muted-foreground">{t('hero.stat1')}</div>
+              <div className="text-4xl font-bold text-emerald-300 drop-shadow-md">{t('hero.stat1.value')}</div>
+              <div className="text-white/75">{t('hero.stat1')}</div>
             </div>
             <div className="space-y-2">
-              <div className="text-4xl font-bold text-primary">{t('hero.stat2.value')}</div>
-              <div className="text-muted-foreground">{t('hero.stat2')}</div>
+              <div className="text-4xl font-bold text-emerald-300 drop-shadow-md">{t('hero.stat2.value')}</div>
+              <div className="text-white/75">{t('hero.stat2')}</div>
             </div>
             <div className="space-y-2">
-              <div className="text-4xl font-bold text-primary">{t('hero.stat3.value')}</div>
-              <div className="text-muted-foreground">{t('hero.stat3')}</div>
+              <div className="text-4xl font-bold text-emerald-300 drop-shadow-md">{t('hero.stat3.value')}</div>
+              <div className="text-white/75">{t('hero.stat3')}</div>
             </div>
           </div>
         </div>
