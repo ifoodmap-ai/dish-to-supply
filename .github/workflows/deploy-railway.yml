@@ -1,0 +1,40 @@
+name: Deploy API to Railway
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - "api/**"
+      - ".github/workflows/deploy-railway.yml"
+  workflow_dispatch:
+
+concurrency:
+  group: railway-production
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Install Railway CLI
+        run: npm install --global @railway/cli@4.65.0
+
+      - name: Deploy API
+        env:
+          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+        run: >-
+          railway up ./api
+          --path-as-root
+          --service api
+          --environment production
+          --project de66d9f2-7867-4627-ba63-b4820a1e2f33
+          --detach
+          --message "GitHub Actions deploy ${{ github.sha }}"
