@@ -7,6 +7,7 @@ import MenuUpload from "@/components/MenuUpload";
 import IngredientAnalysis from "@/components/IngredientAnalysis";
 import SupplierMatch from "@/components/SupplierMatch";
 import Chatbot from "@/components/Chatbot";
+import Footer from "@/components/Footer";
 
 const Index = () => {
   const [ingredients, setIngredients] = useState<string[]>([]);
@@ -51,6 +52,7 @@ const Index = () => {
         <SupplierMatch show={showSuppliers} />
       </div>
       <BuyerProfiles />
+      <Footer />
     </div>
   );
 };
