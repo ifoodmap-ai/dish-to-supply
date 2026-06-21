@@ -3,7 +3,9 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
 import { Send, Bot, User } from "lucide-react";
+import { toast } from "sonner";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { analyzeChat, chatReply, formatIngredient } from "@/lib/api";
 
 interface Message {
   id: number;
@@ -39,55 +41,53 @@ const Chatbot = ({ onRequirementsSubmit }: ChatbotProps) => {
     scrollToBottom();
   }, [messages, isTyping]);
 
-  const simulateBotResponse = (userMessage: string) => {
+  const pushBotMessage = (text: string) => {
+    setMessages((prev) => [
+      ...prev,
+      { id: Date.now() + Math.random(), text, sender: "bot", timestamp: new Date() },
+    ]);
+  };
+
+  // Detect when the customer wants us to start supplier matching.
+  const wantsMatching = (msg: string) => {
+    const lower = msg.toLowerCase();
+    return [
+      "find", "supplier", "match", "quote",
+      "尋找", "供應商", "媒合", "報價", "採購", "下單",
+    ].some((kw) => lower.includes(kw));
+  };
+
+  const respond = async (history: Message[], userMessage: string) => {
     setIsTyping(true);
-    
-    setTimeout(() => {
-      let botResponse = "";
-      const lowerMessage = userMessage.toLowerCase();
 
-      if (lowerMessage.includes("chicken") || lowerMessage.includes("beef") || lowerMessage.includes("pork") ||
-          lowerMessage.includes("雞") || lowerMessage.includes("牛") || lowerMessage.includes("豬")) {
-        botResponse = t('chat.welcome');
-      } else if (lowerMessage.includes("vegetable") || lowerMessage.includes("tomato") || lowerMessage.includes("lettuce") ||
-                 lowerMessage.includes("蔬菜") || lowerMessage.includes("番茄") || lowerMessage.includes("生菜")) {
-        botResponse = t('chat.analyzing');
-      } else if (lowerMessage.includes("find") || lowerMessage.includes("supplier") || lowerMessage.includes("match") ||
-                 lowerMessage.includes("尋找") || lowerMessage.includes("供應商") || lowerMessage.includes("媒合")) {
-        const requirements = [
-          "Fresh Tomatoes",
-          "Lettuce",
-          "Chicken Breast",
-          "Onions",
-          "Garlic",
-        ];
-        
-        botResponse = t('chat.response').replace('{ingredients}', requirements.join("\n"));
-        
-        if (onRequirementsSubmit) {
-          setTimeout(() => {
-            onRequirementsSubmit(requirements);
-          }, 1000);
+    const apiMessages = history.map((m) => ({ role: m.sender, text: m.text }));
+
+    try {
+      // Real conversational reply from Gemini.
+      const { reply } = await chatReply(apiMessages);
+      if (reply) pushBotMessage(reply);
+
+      // If the customer is ready to match suppliers, extract requirements via AI
+      // (this also creates a pending analysis record for admin review).
+      if (wantsMatching(userMessage) && onRequirementsSubmit) {
+        const result = await analyzeChat(apiMessages);
+        if (result.ingredients.length > 0) {
+          const formatted = result.ingredients.map(formatIngredient);
+          pushBotMessage(`已為您整理出採購需求:\n${formatted.join("\n")}\n\n正在為您媒合供應商…`);
+          onRequirementsSubmit(formatted);
         }
-      } else {
-        botResponse = t('chat.analyzing');
       }
-
-      setMessages(prev => [
-        ...prev,
-        {
-          id: Date.now(),
-          text: botResponse,
-          sender: "bot",
-          timestamp: new Date(),
-        },
-      ]);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "AI 服務暫時無法使用";
+      pushBotMessage(`抱歉,AI 服務暫時無法回覆,請稍後再試。(${message})`);
+      toast.error(`AI 對話失敗:${message}`);
+    } finally {
       setIsTyping(false);
-    }, 1000 + Math.random() * 500);
+    }
   };
 
   const handleSend = () => {
-    if (!inputValue.trim()) return;
+    if (!inputValue.trim() || isTyping) return;
 
     const userMessage: Message = {
       id: Date.now(),
@@ -96,9 +96,10 @@ const Chatbot = ({ onRequirementsSubmit }: ChatbotProps) => {
       timestamp: new Date(),
     };
 
-    setMessages(prev => [...prev, userMessage]);
+    const history = [...messages, userMessage];
+    setMessages(history);
     setInputValue("");
-    simulateBotResponse(inputValue);
+    void respond(history, userMessage.text);
   };
 
   const handleKeyPress = (e: React.KeyboardEvent) => {

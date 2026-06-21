@@ -16,13 +16,20 @@ import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 
+interface Ingredient {
+  name: string;
+  quantity?: string;
+  unit?: string;
+  category?: string;
+}
+
 interface AnalysisRecord {
   id: string;
   created_at: string;
   source_type: string;
   summary: string | null;
   status: 'pending_review' | 'approved' | 'rejected' | 'sent';
-  ingredient_list: string[] | null;
+  ingredient_list: Ingredient[] | null;
   admin_notes: string | null;
   reviewed_at: string | null;
 }
@@ -31,7 +38,7 @@ interface Supplier {
   id: string;
   name: string;
   contact_email: string | null;
-  contact_phone: string | null;
+  phone: string | null;
 }
 
 const statusBadgeClass: Record<AnalysisRecord['status'], string> = {
@@ -79,7 +86,7 @@ const AnalysisDetailPage = () => {
   const fetchSuppliers = async () => {
     const { data } = await (supabase as never)
       .from('suppliers')
-      .select('id, name, contact_email, contact_phone');
+      .select('id, name, contact_email, phone');
     setSuppliers((data as Supplier[] | null) ?? []);
   };
 
@@ -229,7 +236,9 @@ const AnalysisDetailPage = () => {
                     key={idx}
                     className="px-2.5 py-1 text-xs rounded-full bg-emerald-100 text-emerald-800 border border-emerald-200"
                   >
-                    {item}
+                    {typeof item === 'string'
+                      ? item
+                      : `${item.name}${item.quantity ? ` · ${item.quantity}${item.unit ?? ''}` : ''}`}
                   </span>
                 ))}
               </div>

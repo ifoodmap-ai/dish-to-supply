@@ -4,6 +4,7 @@ import { Card } from "@/components/ui/card";
 import { Upload, FileImage, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { analyzeMenu, formatIngredient } from "@/lib/api";
 
 interface MenuUploadProps {
   onAnalysisComplete: (ingredients: string[]) => void;
@@ -42,26 +43,23 @@ const MenuUpload = ({ onAnalysisComplete }: MenuUploadProps) => {
     }
 
     setIsUploading(true);
-    
-    // Simulate AI analysis process
-    setTimeout(() => {
-      const mockIngredients = [
-        "Beef 2kg",
-        "Pork 1.5kg",
-        "Chicken 1kg",
-        "Fresh Vegetables 3kg",
-        "Tomatoes 1kg",
-        "Onions 0.5kg",
-        "Garlic 0.2kg",
-        "Olive Oil 500ml",
-        "Soy Sauce 300ml",
-        "Rice 5kg"
-      ];
-      
-      onAnalysisComplete(mockIngredients);
+
+    try {
+      const result = await analyzeMenu(selectedFile);
+
+      if (result.ingredients.length === 0) {
+        toast.error("AI 無法從這張菜單辨識出食材,請換一張更清晰的圖片");
+        return;
+      }
+
+      onAnalysisComplete(result.ingredients.map(formatIngredient));
+      toast.success("AI 分析完成!");
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "AI 分析失敗";
+      toast.error(`AI 分析失敗:${message}`);
+    } finally {
       setIsUploading(false);
-      toast.success("AI analysis complete!");
-    }, 3000);
+    }
   };
 
   return (

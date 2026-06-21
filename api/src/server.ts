@@ -3,6 +3,13 @@ import { Hono } from "hono";
 import { cors } from "hono/cors";
 import { z } from "zod";
 import { supabase } from "./lib/supabase.js";
+import {
+  analyzeConversation,
+  analyzeMenuImage,
+  chatReply,
+  isGeminiConfigured,
+  type AnalysisResult
+} from "./lib/gemini.js";
 
 type Bindings = {
   Variables: {
@@ -304,6 +311,137 @@ app.post("/api/inquiries", async (c) => {
   }
 
   return c.json({ data }, 201);
+});
+
+// ---------------------------------------------------------------------------
+// AI analysis (Gemini)
+// ---------------------------------------------------------------------------
+
+const analyzeMenuSchema = z.object({
+  image: z.string().min(1, "image is required (base64 or data URL)"),
+  mimeType: z.string().min(1).default("image/jpeg"),
+  fileName: z.string().optional()
+});
+
+const chatMessageSchema = z.object({
+  role: z.enum(["user", "bot", "model"]),
+  text: z.string()
+});
+
+const analyzeChatSchema = z.object({
+  messages: z.array(chatMessageSchema).min(1).optional(),
+  transcript: z.string().min(1).optional()
+}).refine((v) => Boolean(v.messages?.length) || Boolean(v.transcript), {
+  message: "Provide either messages[] or transcript"
+});
+
+const chatReplySchema = z.object({
+  messages: z.array(chatMessageSchema).min(1)
+});
+
+const buildTranscript = (messages: { role: string; text: string }[]) =>
+  messages
+    .map((m) => `${m.role === "user" ? "客人" : "客服"}: ${m.text}`)
+    .join("\n");
+
+/**
+ * Persist an analysis into analysis_records (status pending_review) so it shows
+ * up in the admin review queue. Best-effort: if the table/insert fails we still
+ * return the AI result to the caller, but we log + surface the persistence error.
+ */
+const persistAnalysis = async (sourceType: string, result: AnalysisResult) => {
+  const { data, error } = await supabase
+    .from("analysis_records")
+    .insert({
+      source_type: sourceType,
+      summary: result.summary,
+      ingredient_list: result.ingredients,
+      status: "pending_review"
+    })
+    .select("id")
+    .single();
+
+  if (error) {
+    console.error(`Failed to persist analysis_records (${sourceType}):`, error.message);
+    return { analysisId: null as string | null, persistError: error.message };
+  }
+
+  return { analysisId: (data as { id: string }).id, persistError: null as string | null };
+};
+
+app.post("/api/analyze/menu", async (c) => {
+  if (!isGeminiConfigured()) {
+    return c.json({ message: "AI 服務尚未設定 (GEMINI_API_KEY missing)" }, 503);
+  }
+
+  const body = await c.req.json().catch(() => null);
+  const parsed = analyzeMenuSchema.safeParse(body);
+
+  if (!parsed.success) {
+    return c.json({ message: "Invalid request body", details: parsed.error.flatten() }, 400);
+  }
+
+  try {
+    const result = await analyzeMenuImage(parsed.data.image, parsed.data.mimeType);
+    const { analysisId, persistError } = await persistAnalysis("menu_upload", result);
+    return c.json({ data: { analysisId, persistError, ...result } });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "AI 分析失敗";
+    console.error("analyze/menu error:", message);
+    return c.json({ message: "AI 分析失敗", details: message }, 502);
+  }
+});
+
+app.post("/api/analyze/chat", async (c) => {
+  if (!isGeminiConfigured()) {
+    return c.json({ message: "AI 服務尚未設定 (GEMINI_API_KEY missing)" }, 503);
+  }
+
+  const body = await c.req.json().catch(() => null);
+  const parsed = analyzeChatSchema.safeParse(body);
+
+  if (!parsed.success) {
+    return c.json({ message: "Invalid request body", details: parsed.error.flatten() }, 400);
+  }
+
+  const transcript = parsed.data.transcript ?? buildTranscript(parsed.data.messages ?? []);
+
+  try {
+    const result = await analyzeConversation(transcript);
+    const { analysisId, persistError } = await persistAnalysis("chatbot", result);
+    return c.json({ data: { analysisId, persistError, ...result } });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "AI 分析失敗";
+    console.error("analyze/chat error:", message);
+    return c.json({ message: "AI 分析失敗", details: message }, 502);
+  }
+});
+
+app.post("/api/chat", async (c) => {
+  if (!isGeminiConfigured()) {
+    return c.json({ message: "AI 服務尚未設定 (GEMINI_API_KEY missing)" }, 503);
+  }
+
+  const body = await c.req.json().catch(() => null);
+  const parsed = chatReplySchema.safeParse(body);
+
+  if (!parsed.success) {
+    return c.json({ message: "Invalid request body", details: parsed.error.flatten() }, 400);
+  }
+
+  const history = parsed.data.messages.map((m) => ({
+    role: m.role === "user" ? ("user" as const) : ("model" as const),
+    text: m.text
+  }));
+
+  try {
+    const reply = await chatReply(history);
+    return c.json({ data: { reply } });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "AI 回覆失敗";
+    console.error("chat error:", message);
+    return c.json({ message: "AI 回覆失敗", details: message }, 502);
+  }
 });
 
 app.notFound((c) => {
