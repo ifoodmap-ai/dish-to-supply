@@ -76,6 +76,11 @@ const AdminOrderDetailPage = () => {
   const [order, setOrder] = useState<Order | null>(null);
   const [supplierName, setSupplierName] = useState('');
   const [analysisSummary, setAnalysisSummary] = useState<string | null>(null);
+  const [buyer, setBuyer] = useState<{
+    company_name: string | null;
+    contact_phone: string | null;
+    contact_line: string | null;
+  } | null>(null);
   const [status, setStatus] = useState('');
   const [notes, setNotes] = useState('');
   const [loading, setLoading] = useState(true);
@@ -107,6 +112,16 @@ const AdminOrderDetailPage = () => {
           .eq('id', o.analysis_id)
           .single()) as { data: { summary: string | null } | null };
         setAnalysisSummary(a?.summary ?? null);
+
+        const { data: leads } = (await (supabase as never)
+          .from('landing_leads')
+          .select('company_name, contact_phone, contact_line')
+          .eq('analysis_id', o.analysis_id)
+          .order('created_at', { ascending: false })
+          .limit(1)) as {
+          data: { company_name: string | null; contact_phone: string | null; contact_line: string | null }[] | null;
+        };
+        setBuyer((leads && leads[0]) ?? null);
       }
     }
   };
@@ -194,6 +209,19 @@ const AdminOrderDetailPage = () => {
             />
           </CardContent>
         </Card>
+
+        {buyer && (
+          <Card className="border-emerald-200">
+            <CardHeader>
+              <CardTitle className="text-base text-emerald-700">買方聯絡資訊 (Buyer Contact)</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-2 text-sm">
+              <InfoRow label="姓名 / 名稱" value={buyer.company_name || '—'} />
+              <InfoRow label="聯絡電話" value={buyer.contact_phone || '—'} />
+              <InfoRow label="LINE ID" value={buyer.contact_line || '—'} />
+            </CardContent>
+          </Card>
+        )}
 
         <Card>
           <CardHeader>

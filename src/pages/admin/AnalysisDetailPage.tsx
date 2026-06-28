@@ -62,6 +62,11 @@ const AnalysisDetailPage = () => {
 
   const [record, setRecord] = useState<AnalysisRecord | null>(null);
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
+  const [buyer, setBuyer] = useState<{
+    company_name: string | null;
+    contact_phone: string | null;
+    contact_line: string | null;
+  } | null>(null);
   const [loading, setLoading] = useState(true);
 
   // Approve dialog state
@@ -81,6 +86,16 @@ const AnalysisDetailPage = () => {
       .eq('id', id)
       .single();
     setRecord(data as AnalysisRecord | null);
+
+    const { data: leads } = (await (supabase as never)
+      .from('landing_leads')
+      .select('company_name, contact_phone, contact_line')
+      .eq('analysis_id', id)
+      .order('created_at', { ascending: false })
+      .limit(1)) as {
+      data: { company_name: string | null; contact_phone: string | null; contact_line: string | null }[] | null;
+    };
+    setBuyer((leads && leads[0]) ?? null);
   };
 
   const fetchSuppliers = async () => {
@@ -223,6 +238,28 @@ const AnalysisDetailPage = () => {
             </p>
           </CardContent>
         </Card>
+
+        {buyer && (
+          <Card className="border-emerald-200">
+            <CardHeader>
+              <CardTitle className="text-base text-emerald-700">買方聯絡資訊 (Buyer Contact)</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-2 text-sm">
+              <div className="flex gap-2">
+                <span className="text-slate-500 w-28 shrink-0">姓名 / 名稱</span>
+                <span className="text-slate-800">{buyer.company_name || '—'}</span>
+              </div>
+              <div className="flex gap-2">
+                <span className="text-slate-500 w-28 shrink-0">聯絡電話</span>
+                <span className="text-slate-800">{buyer.contact_phone || '—'}</span>
+              </div>
+              <div className="flex gap-2">
+                <span className="text-slate-500 w-28 shrink-0">LINE ID</span>
+                <span className="text-slate-800">{buyer.contact_line || '—'}</span>
+              </div>
+            </CardContent>
+          </Card>
+        )}
 
         {record.ingredient_list && record.ingredient_list.length > 0 && (
           <Card>
