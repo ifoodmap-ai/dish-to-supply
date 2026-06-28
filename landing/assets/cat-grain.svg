@@ -1,0 +1,27 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200">
+  <rect width="200" height="200" rx="22" fill="#f5efe0"/>
+  <!-- wheat stalk -->
+  <g transform="translate(108 40)">
+    <line x1="20" y1="18" x2="20" y2="92" stroke="#7fae4a" stroke-width="4" stroke-linecap="round"/>
+    <g fill="#e3b24a">
+      <path d="M20 14 q-7 -6 -4 -14 q7 4 4 14 Z"/>
+      <path d="M20 14 q7 -6 4 -14 q-7 4 -4 14 Z"/>
+      <path d="M20 28 q-12 -4 -12 -14 q11 1 12 14 Z"/>
+      <path d="M20 28 q12 -4 12 -14 q-11 1 -12 14 Z"/>
+      <path d="M20 44 q-12 -4 -12 -14 q11 1 12 14 Z"/>
+      <path d="M20 44 q12 -4 12 -14 q-11 1 -12 14 Z"/>
+      <path d="M20 60 q-12 -4 -12 -14 q11 1 12 14 Z"/>
+      <path d="M20 60 q12 -4 12 -14 q-11 1 -12 14 Z"/>
+      <path d="M20 76 q-12 -4 -12 -14 q11 1 12 14 Z"/>
+      <path d="M20 76 q12 -4 12 -14 q-11 1 -12 14 Z"/>
+    </g>
+    <path d="M20 92 q-14 4 -18 -6 q12 -6 18 6 Z" fill="#7fae4a"/>
+    <path d="M20 92 q14 4 18 -6 q-12 -6 -18 6 Z" fill="#8fbb55"/>
+  </g>
+  <!-- rice grains -->
+  <g fill="#ead9a8" stroke="#d8c285" stroke-width="1">
+    <ellipse cx="58" cy="120" rx="9" ry="4.5" transform="rotate(-25 58 120)"/>
+    <ellipse cx="74" cy="128" rx="9" ry="4.5" transform="rotate(15 74 128)"/>
+    <ellipse cx="60" cy="136" rx="9" ry="4.5" transform="rotate(40 60 136)"/>
+  </g>
+</svg>

@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200">
+  <rect width="200" height="200" rx="22" fill="#f3f6ec"/>
+  <!-- whole egg -->
+  <g transform="translate(96 46)">
+    <path d="M30 4 q22 16 22 44 q0 28 -22 28 q-22 0 -22 -28 q0 -28 22 -44 Z" fill="#f3ece2"/>
+    <path d="M22 18 q-10 14 -10 30 q0 16 12 22 q-16 -4 -16 -24 q0 -16 14 -28 Z" fill="#fff" opacity="0.6"/>
+  </g>
+  <!-- cracked egg with yolk -->
+  <g transform="translate(58 86)">
+    <path d="M-6 30 q-14 -2 -10 -16 q2 -10 14 -10 q4 -10 16 -8 q10 -8 22 0 q14 -4 20 8 q14 0 12 14 q0 12 -14 12 Z" fill="#fbf6ee"/>
+    <path d="M-6 30 q-14 -2 -10 -16 q2 -10 14 -10 q4 -10 16 -8 q10 -8 22 0 q14 -4 20 8 q14 0 12 14 q0 12 -14 12 Z" fill="none" stroke="#ece2d2" stroke-width="2"/>
+    <circle cx="24" cy="14" r="13" fill="#f4b740"/>
+    <circle cx="20" cy="10" r="4" fill="#f8cd6e"/>
+  </g>
+</svg>

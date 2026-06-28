@@ -1,0 +1,49 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 310">
+  <rect width="400" height="310" fill="#e8efe6"/>
+  <!-- phone status bar -->
+  <text x="20" y="28" font-family="'Noto Sans TC', sans-serif" font-size="12" font-weight="700" fill="#3c4d42">9:41</text>
+  <text x="380" y="28" font-family="'Noto Sans TC', sans-serif" font-size="11" fill="#6b7c70" text-anchor="end">LINE</text>
+
+  <!-- chat header -->
+  <rect x="0" y="40" width="400" height="44" fill="#ffffff"/>
+  <circle cx="28" cy="62" r="15" fill="#46c138"/>
+  <path d="M21 62 a7 6 0 1 1 14 0 c0 4 -4 6.5 -7 8.5 c-3 -2 -7 -4.5 -7 -8.5z" fill="#ffffff"/>
+  <text x="50" y="58" font-family="'Noto Sans TC', sans-serif" font-size="13" font-weight="700" fill="#0a1510">食材地圖 iFoodMap</text>
+  <rect x="50" y="64" width="48" height="13" rx="6" fill="#e3f6dd"/>
+  <text x="74" y="74" font-family="'Noto Sans TC', sans-serif" font-size="8" fill="#1f9e4e" text-anchor="middle">官方帳號</text>
+
+  <!-- timestamp -->
+  <rect x="168" y="98" width="64" height="18" rx="9" fill="#dce6d9"/>
+  <text x="200" y="111" font-family="'Noto Sans TC', sans-serif" font-size="10" fill="#6b7c70" text-anchor="middle">今天 14:08</text>
+
+  <!-- avatar for bubble -->
+  <circle cx="28" cy="148" r="14" fill="#46c138"/>
+  <path d="M22 148 a6 5 0 1 1 12 0 c0 3.5 -3.5 5.5 -6 7 c-2.5 -1.5 -6 -3.5 -6 -7z" fill="#ffffff"/>
+
+  <!-- notification bubble -->
+  <rect x="50" y="124" width="316" height="150" rx="16" fill="#ffffff"/>
+  <path d="M50 138 l-9 6 9 6z" fill="#ffffff"/>
+
+  <!-- bell + headline -->
+  <circle cx="74" cy="150" r="14" fill="#e3f6dd"/>
+  <path d="M74 143 a5 5 0 0 1 5 5 v3 l2 3 h-14 l2 -3 v-3 a5 5 0 0 1 5 -5z M71 157 a3 3 0 0 0 6 0z" fill="#1f9e4e"/>
+  <text x="96" y="148" font-family="'Noto Sans TC', sans-serif" font-size="14" font-weight="800" fill="#0a1510">媒合成功！</text>
+  <text x="96" y="164" font-family="'Noto Sans TC', sans-serif" font-size="11" fill="#3c4d42">3 家供應商主動聯繫</text>
+
+  <line x1="66" y1="178" x2="350" y2="178" stroke="#f1f5f0"/>
+
+  <!-- supplier mini rows -->
+  <circle cx="74" cy="196" r="5" fill="#46c138"/>
+  <text x="86" y="200" font-family="'Noto Sans TC', sans-serif" font-size="11" fill="#3c4d42">鮮綠蔬果</text>
+  <text x="350" y="200" font-family="'Noto Sans TC', sans-serif" font-size="11" font-weight="700" fill="#1f9e4e" text-anchor="end">98%</text>
+  <circle cx="74" cy="216" r="5" fill="#1f9e4e"/>
+  <text x="86" y="220" font-family="'Noto Sans TC', sans-serif" font-size="11" fill="#3c4d42">大海漁產</text>
+  <text x="350" y="220" font-family="'Noto Sans TC', sans-serif" font-size="11" font-weight="700" fill="#1f9e4e" text-anchor="end">95%</text>
+
+  <!-- CTA button -->
+  <rect x="66" y="234" width="284" height="30" rx="15" fill="#46c138"/>
+  <text x="208" y="254" font-family="'Noto Sans TC', sans-serif" font-size="12" font-weight="700" fill="#ffffff" text-anchor="middle">查看媒合結果</text>
+
+  <!-- read indicator -->
+  <text x="350" y="286" font-family="'Noto Sans TC', sans-serif" font-size="9" fill="#8a9a8f" text-anchor="end">已讀 · 14:08</text>
+</svg>

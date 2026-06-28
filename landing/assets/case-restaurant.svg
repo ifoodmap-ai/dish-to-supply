@@ -1,0 +1,57 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 480 300">
+  <defs>
+    <radialGradient id="rGlow" cx="50%" cy="35%" r="70%">
+      <stop offset="0%" stop-color="#ffffff"/>
+      <stop offset="100%" stop-color="#edf3eb"/>
+    </radialGradient>
+  </defs>
+  <rect width="480" height="300" fill="url(#rGlow)"/>
+  <rect x="0" y="232" width="480" height="68" fill="#dce6d9"/>
+
+  <!-- storefront facade -->
+  <rect x="70" y="70" width="340" height="170" rx="8" fill="#F6F8F5"/>
+  <rect x="70" y="70" width="340" height="14" rx="7" fill="#1f9e4e"/>
+
+  <!-- awning -->
+  <g>
+    <path d="M64 84 L416 84 L416 116 Q400 130 384 116 Q368 130 352 116 Q336 130 320 116 Q304 130 288 116 Q272 130 256 116 Q240 130 224 116 Q208 130 192 116 Q176 130 160 116 Q144 130 128 116 Q112 130 96 116 Q80 130 64 116 Z" fill="#46c138"/>
+    <path d="M96 84 L96 116 M128 84 L128 116 M160 84 L160 116 M192 84 L192 116 M224 84 L224 116 M256 84 L256 116 M288 84 L288 116 M320 84 L320 116 M352 84 L352 116 M384 84 L384 116" stroke="#bff0b2" stroke-width="14" opacity="0.5"/>
+  </g>
+
+  <!-- window left -->
+  <rect x="92" y="140" width="120" height="92" rx="6" fill="#e3f6dd"/>
+  <rect x="92" y="140" width="120" height="92" rx="6" fill="none" stroke="#cfe0c8" stroke-width="3"/>
+  <line x1="152" y1="140" x2="152" y2="232" stroke="#cfe0c8" stroke-width="3"/>
+  <line x1="92" y1="186" x2="212" y2="186" stroke="#cfe0c8" stroke-width="3"/>
+
+  <!-- door / sign -->
+  <rect x="232" y="130" width="60" height="20" rx="5" fill="#1f9e4e"/>
+  <rect x="245" y="136" width="34" height="8" rx="4" fill="#bff0b2"/>
+
+  <!-- counter inside right window -->
+  <rect x="300" y="148" width="100" height="84" rx="6" fill="#e8efe6"/>
+  <!-- chef figure -->
+  <g transform="translate(330,150)">
+    <ellipse cx="22" cy="6" rx="16" ry="10" fill="#ffffff"/>
+    <rect x="6" y="10" width="32" height="8" fill="#ffffff"/>
+    <circle cx="22" cy="26" r="13" fill="#f0c9a8"/>
+    <path d="M6 70 q-2 -32 16 -38 q18 6 16 38 z" fill="#ffffff"/>
+    <rect x="14" y="44" width="16" height="26" fill="#46c138"/>
+  </g>
+
+  <!-- plates / bowls on counter ledge -->
+  <ellipse cx="120" cy="252" rx="26" ry="9" fill="#ffffff"/>
+  <ellipse cx="120" cy="248" rx="20" ry="7" fill="#7cf06b"/>
+  <ellipse cx="120" cy="247" rx="9" ry="4" fill="#1f9e4e"/>
+
+  <ellipse cx="200" cy="256" rx="30" ry="10" fill="#ffffff"/>
+  <ellipse cx="200" cy="251" rx="22" ry="8" fill="#bff0b2"/>
+  <circle cx="194" cy="249" r="5" fill="#e2563b"/>
+  <circle cx="206" cy="250" r="5" fill="#e8843c"/>
+  <circle cx="200" cy="247" r="5" fill="#f4b740"/>
+
+  <!-- bowl with steam -->
+  <path d="M300 252 q24 22 56 0 z" fill="#ffffff"/>
+  <path d="M306 250 q22 16 44 0 z" fill="#46c138"/>
+  <path d="M318 238 q-6 -8 0 -16 M328 236 q-6 -10 0 -18 M338 238 q-6 -8 0 -16" stroke="#bff0b2" stroke-width="3" fill="none" stroke-linecap="round" opacity="0.8"/>
+</svg>

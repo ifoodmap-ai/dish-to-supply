@@ -1,0 +1,53 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 310">
+  <rect width="400" height="310" fill="#F6F8F5"/>
+  <text x="20" y="34" font-family="'Noto Sans TC', sans-serif" font-size="16" font-weight="700" fill="#0a1510">標章與產銷履歷</text>
+  <text x="20" y="50" font-family="'Noto Sans TC', sans-serif" font-size="10" fill="#6b7c70">鮮綠蔬果 · 已通過 4 項認證</text>
+
+  <!-- badge chips 2x2 -->
+  <g font-family="'Noto Sans TC', sans-serif">
+    <rect x="20" y="62" width="174" height="44" rx="12" fill="#ffffff" stroke="#e8efe6"/>
+    <circle cx="44" cy="84" r="11" fill="#46c138"/>
+    <path d="M39 84 l3.5 3.5 6 -7" stroke="#ffffff" stroke-width="2.4" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+    <text x="64" y="80" font-size="12" font-weight="700" fill="#0a1510">SGS 檢驗</text>
+    <text x="64" y="95" font-size="9" fill="#6b7c70">農藥零檢出</text>
+
+    <rect x="206" y="62" width="174" height="44" rx="12" fill="#ffffff" stroke="#e8efe6"/>
+    <circle cx="230" cy="84" r="11" fill="#1f9e4e"/>
+    <path d="M225 84 l3.5 3.5 6 -7" stroke="#ffffff" stroke-width="2.4" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+    <text x="250" y="80" font-size="12" font-weight="700" fill="#0a1510">產銷履歷</text>
+    <text x="250" y="95" font-size="9" fill="#6b7c70">TAP 認證</text>
+
+    <rect x="20" y="114" width="174" height="44" rx="12" fill="#ffffff" stroke="#e8efe6"/>
+    <circle cx="44" cy="136" r="11" fill="#3DAE2B"/>
+    <path d="M39 136 l3.5 3.5 6 -7" stroke="#ffffff" stroke-width="2.4" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+    <text x="64" y="132" font-size="12" font-weight="700" fill="#0a1510">有機驗證</text>
+    <text x="64" y="147" font-size="9" fill="#6b7c70">慈心有機</text>
+
+    <rect x="206" y="114" width="174" height="44" rx="12" fill="#ffffff" stroke="#e8efe6"/>
+    <circle cx="230" cy="136" r="11" fill="#46c138"/>
+    <path d="M225 136 l3.5 3.5 6 -7" stroke="#ffffff" stroke-width="2.4" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+    <text x="250" y="132" font-size="12" font-weight="700" fill="#0a1510">HACCP</text>
+    <text x="250" y="147" font-size="9" fill="#6b7c70">食安管理</text>
+  </g>
+
+  <!-- traceability timeline -->
+  <rect x="20" y="168" width="360" height="128" rx="14" fill="#ffffff" stroke="#e8efe6"/>
+  <text x="36" y="190" font-family="'Noto Sans TC', sans-serif" font-size="11" font-weight="700" fill="#3c4d42">產銷履歷追溯</text>
+  <line x1="48" y1="204" x2="48" y2="282" stroke="#bff0b2" stroke-width="3"/>
+
+  <circle cx="48" cy="208" r="7" fill="#46c138"/>
+  <text x="64" y="206" font-family="'Noto Sans TC', sans-serif" font-size="11" font-weight="600" fill="#0a1510">產地 · 雲林莿桐</text>
+  <text x="64" y="219" font-family="'Noto Sans TC', sans-serif" font-size="9" fill="#8a9a8f">06/24 採收 · 田間直送</text>
+
+  <circle cx="48" cy="232" r="7" fill="#1f9e4e"/>
+  <text x="64" y="230" font-family="'Noto Sans TC', sans-serif" font-size="11" font-weight="600" fill="#0a1510">加工 · 低溫截切廠</text>
+  <text x="64" y="243" font-family="'Noto Sans TC', sans-serif" font-size="9" fill="#8a9a8f">06/25 清洗分級 · 冷鏈包裝</text>
+
+  <circle cx="48" cy="256" r="7" fill="#3DAE2B"/>
+  <text x="64" y="254" font-family="'Noto Sans TC', sans-serif" font-size="11" font-weight="600" fill="#0a1510">配送 · 冷藏物流</text>
+  <text x="64" y="267" font-family="'Noto Sans TC', sans-serif" font-size="9" fill="#8a9a8f">06/26 全程 4°C 控溫</text>
+
+  <circle cx="48" cy="280" r="7" fill="#46c138"/>
+  <text x="64" y="278" font-family="'Noto Sans TC', sans-serif" font-size="11" font-weight="600" fill="#0a1510">餐廳 · 京饌餐廳</text>
+  <text x="64" y="291" font-family="'Noto Sans TC', sans-serif" font-size="9" fill="#8a9a8f">06/26 簽收驗貨完成</text>
+</svg>

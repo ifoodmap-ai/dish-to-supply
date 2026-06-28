@@ -1,0 +1,42 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 310">
+  <rect width="400" height="310" fill="#0a1510"/>
+  <rect x="0" y="0" width="400" height="60" fill="#15231b"/>
+  <text x="20" y="30" font-family="'Noto Sans TC', sans-serif" font-size="16" font-weight="700" fill="#ffffff">AI 媒合結果</text>
+  <text x="20" y="48" font-family="'Noto Sans TC', sans-serif" font-size="11" fill="#8a9a8f">已比對 1,284 家供應商</text>
+  <!-- live pill -->
+  <rect x="288" y="20" width="92" height="24" rx="12" fill="#1f9e4e"/>
+  <circle cx="304" cy="32" r="4" fill="#7cf06b"/>
+  <text x="314" y="36" font-family="'Noto Sans TC', sans-serif" font-size="11" font-weight="600" fill="#ffffff">即時分析中</text>
+  <!-- progress bar -->
+  <rect x="20" y="74" width="360" height="8" rx="4" fill="#15231b"/>
+  <rect x="20" y="74" width="288" height="8" rx="4" fill="#46c138"/>
+  <text x="20" y="100" font-family="'Noto Sans TC', sans-serif" font-size="10" fill="#6b7c70">分析進度 80%</text>
+  <text x="360" y="100" font-family="'Noto Sans TC', sans-serif" font-size="10" fill="#6b7c70" text-anchor="end">3 筆最佳</text>
+
+  <!-- row 1 -->
+  <rect x="20" y="112" width="360" height="56" rx="14" fill="#15231b"/>
+  <rect x="32" y="124" width="32" height="32" rx="8" fill="#46c138"/>
+  <text x="48" y="146" font-family="'Noto Sans TC', sans-serif" font-size="14" font-weight="700" fill="#0a1510" text-anchor="middle">鮮</text>
+  <text x="74" y="136" font-family="'Noto Sans TC', sans-serif" font-size="13" font-weight="700" fill="#ffffff">鮮綠蔬果</text>
+  <text x="74" y="153" font-family="'Noto Sans TC', sans-serif" font-size="10" fill="#8a9a8f">有機葉菜 · 雲林 · 當日配送</text>
+  <rect x="316" y="130" width="52" height="22" rx="11" fill="#46c138"/>
+  <text x="342" y="145" font-family="'Noto Sans TC', sans-serif" font-size="12" font-weight="700" fill="#0a1510" text-anchor="middle">98%</text>
+
+  <!-- row 2 -->
+  <rect x="20" y="176" width="360" height="56" rx="14" fill="#15231b"/>
+  <rect x="32" y="188" width="32" height="32" rx="8" fill="#1f9e4e"/>
+  <text x="48" y="210" font-family="'Noto Sans TC', sans-serif" font-size="14" font-weight="700" fill="#ffffff" text-anchor="middle">海</text>
+  <text x="74" y="200" font-family="'Noto Sans TC', sans-serif" font-size="13" font-weight="700" fill="#ffffff">大海漁產</text>
+  <text x="74" y="217" font-family="'Noto Sans TC', sans-serif" font-size="10" fill="#8a9a8f">活鮮水產 · 基隆 · HACCP 認證</text>
+  <rect x="316" y="194" width="52" height="22" rx="11" fill="#3DAE2B"/>
+  <text x="342" y="209" font-family="'Noto Sans TC', sans-serif" font-size="12" font-weight="700" fill="#ffffff" text-anchor="middle">95%</text>
+
+  <!-- row 3 -->
+  <rect x="20" y="240" width="360" height="56" rx="14" fill="#15231b"/>
+  <rect x="32" y="252" width="32" height="32" rx="8" fill="#3DAE2B"/>
+  <text x="48" y="274" font-family="'Noto Sans TC', sans-serif" font-size="14" font-weight="700" fill="#ffffff" text-anchor="middle">信</text>
+  <text x="74" y="264" font-family="'Noto Sans TC', sans-serif" font-size="13" font-weight="700" fill="#ffffff">信豐肉品</text>
+  <text x="74" y="281" font-family="'Noto Sans TC', sans-serif" font-size="10" fill="#8a9a8f">冷藏肉品 · 嘉義 · 產銷履歷</text>
+  <rect x="316" y="258" width="52" height="22" rx="11" fill="#1f9e4e"/>
+  <text x="342" y="273" font-family="'Noto Sans TC', sans-serif" font-size="12" font-weight="700" fill="#ffffff" text-anchor="middle">92%</text>
+</svg>

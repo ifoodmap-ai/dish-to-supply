@@ -1,0 +1,67 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 320">
+  <defs>
+    <radialGradient id="sGlow" cx="50%" cy="40%" r="65%">
+      <stop offset="0%" stop-color="#ffffff"/>
+      <stop offset="100%" stop-color="#e8efe6"/>
+    </radialGradient>
+  </defs>
+  <rect width="400" height="320" fill="url(#sGlow)"/>
+  <circle cx="90" cy="80" r="100" fill="#edf3eb" opacity="0.7"/>
+  <rect x="0" y="250" width="400" height="70" fill="#dce6d9"/>
+
+  <!-- delivery truck silhouette -->
+  <g>
+    <rect x="248" y="150" width="92" height="62" rx="8" fill="#46c138"/>
+    <path d="M340 178 l34 0 q8 0 8 8 l0 18 q0 8 -8 8 l-34 0 z" fill="#1f9e4e"/>
+    <rect x="346" y="182" width="22" height="18" rx="3" fill="#bff0b2"/>
+    <rect x="258" y="166" width="40" height="30" rx="4" fill="#ffffff" opacity="0.85"/>
+    <circle cx="278" cy="216" r="14" fill="#15231b"/>
+    <circle cx="278" cy="216" r="6" fill="#6b7c70"/>
+    <circle cx="356" cy="216" r="14" fill="#15231b"/>
+    <circle cx="356" cy="216" r="6" fill="#6b7c70"/>
+  </g>
+
+  <!-- pallet -->
+  <rect x="40" y="232" width="150" height="14" rx="3" fill="#c9b18a"/>
+  <rect x="46" y="246" width="20" height="10" fill="#b89c6f"/>
+  <rect x="106" y="246" width="20" height="10" fill="#b89c6f"/>
+  <rect x="166" y="246" width="20" height="10" fill="#b89c6f"/>
+
+  <!-- stacked crates of produce -->
+  <g>
+    <!-- bottom crates -->
+    <rect x="46" y="186" width="64" height="46" rx="6" fill="#1f9e4e"/>
+    <rect x="52" y="192" width="52" height="34" rx="4" fill="#46c138"/>
+    <rect x="118" y="186" width="64" height="46" rx="6" fill="#1f9e4e"/>
+    <rect x="124" y="192" width="52" height="34" rx="4" fill="#46c138"/>
+    <!-- top crate -->
+    <rect x="82" y="138" width="64" height="48" rx="6" fill="#7cf06b"/>
+    <rect x="88" y="144" width="52" height="36" rx="4" fill="#bff0b2"/>
+    <!-- produce poking out -->
+    <circle cx="62" cy="190" r="9" fill="#e2563b"/>
+    <circle cx="82" cy="190" r="9" fill="#e8843c"/>
+    <circle cx="102" cy="190" r="9" fill="#f4b740"/>
+    <circle cx="134" cy="190" r="9" fill="#46c138"/>
+    <circle cx="154" cy="190" r="9" fill="#e2563b"/>
+    <circle cx="172" cy="190" r="9" fill="#1f9e4e"/>
+    <circle cx="98" cy="142" r="9" fill="#46c138"/>
+    <circle cx="118" cy="142" r="9" fill="#e2563b"/>
+    <path d="M128 134 q12 -10 22 -2 q-6 12 -22 6 z" fill="#1f9e4e"/>
+  </g>
+
+  <!-- worker with clipboard -->
+  <g>
+    <circle cx="222" cy="118" r="22" fill="#f0c9a8"/>
+    <path d="M200 116 q0 -26 22 -26 q22 0 22 26 q-10 -12 -22 -12 q-12 0 -22 12 z" fill="#15231b"/>
+    <path d="M192 246 q-2 -64 30 -72 q32 8 30 72 z" fill="#46c138"/>
+    <path d="M210 246 l0 -50 q12 -8 24 0 l0 50 z" fill="#1f9e4e"/>
+    <!-- clipboard -->
+    <g transform="translate(176,170) rotate(-10)">
+      <rect x="0" y="0" width="36" height="46" rx="4" fill="#ffffff"/>
+      <rect x="11" y="-5" width="14" height="9" rx="3" fill="#8a9a8f"/>
+      <rect x="7" y="12" width="22" height="4" rx="2" fill="#dce6d9"/>
+      <rect x="7" y="22" width="22" height="4" rx="2" fill="#dce6d9"/>
+      <path d="M9 34 l5 6 l12 -14" stroke="#46c138" stroke-width="4" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+    </g>
+  </g>
+</svg>

@@ -1,0 +1,54 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 310">
+  <rect width="400" height="310" fill="#F6F8F5"/>
+  <!-- sidebar -->
+  <rect x="0" y="0" width="44" height="310" fill="#15231b"/>
+  <rect x="12" y="18" width="20" height="20" rx="6" fill="#46c138"/>
+  <rect x="14" y="62" width="16" height="4" rx="2" fill="#7cf06b"/>
+  <rect x="14" y="74" width="16" height="4" rx="2" fill="#6b7c70"/>
+  <rect x="14" y="86" width="16" height="4" rx="2" fill="#6b7c70"/>
+  <rect x="14" y="98" width="16" height="4" rx="2" fill="#6b7c70"/>
+  <!-- header -->
+  <text x="60" y="32" font-family="'Noto Sans TC', sans-serif" font-size="16" font-weight="700" fill="#0a1510">採購管理後台</text>
+  <text x="60" y="48" font-family="'Noto Sans TC', sans-serif" font-size="10" fill="#6b7c70">本月概覽 · 2026年6月</text>
+
+  <!-- KPI cards -->
+  <rect x="60" y="60" width="100" height="56" rx="12" fill="#ffffff" stroke="#e8efe6"/>
+  <text x="72" y="80" font-family="'Noto Sans TC', sans-serif" font-size="10" fill="#6b7c70">本月訂單</text>
+  <text x="72" y="102" font-family="'Noto Sans TC', sans-serif" font-size="20" font-weight="700" fill="#1f9e4e">348</text>
+  <rect x="170" y="60" width="100" height="56" rx="12" fill="#ffffff" stroke="#e8efe6"/>
+  <text x="182" y="80" font-family="'Noto Sans TC', sans-serif" font-size="10" fill="#6b7c70">合作供應商</text>
+  <text x="182" y="102" font-family="'Noto Sans TC', sans-serif" font-size="20" font-weight="700" fill="#1f9e4e">52</text>
+  <rect x="280" y="60" width="100" height="56" rx="12" fill="#ffffff" stroke="#e8efe6"/>
+  <text x="292" y="80" font-family="'Noto Sans TC', sans-serif" font-size="10" fill="#6b7c70">採購金額</text>
+  <text x="292" y="102" font-family="'Noto Sans TC', sans-serif" font-size="18" font-weight="700" fill="#1f9e4e">82萬</text>
+
+  <!-- bar chart -->
+  <rect x="60" y="126" width="150" height="120" rx="12" fill="#ffffff" stroke="#e8efe6"/>
+  <text x="72" y="146" font-family="'Noto Sans TC', sans-serif" font-size="10" font-weight="600" fill="#3c4d42">每週採購量</text>
+  <rect x="74" y="210" width="16" height="24" rx="3" fill="#bff0b2"/>
+  <rect x="98" y="190" width="16" height="44" rx="3" fill="#7cf06b"/>
+  <rect x="122" y="170" width="16" height="64" rx="3" fill="#46c138"/>
+  <rect x="146" y="184" width="16" height="50" rx="3" fill="#3DAE2B"/>
+  <rect x="170" y="160" width="16" height="74" rx="3" fill="#1f9e4e"/>
+
+  <!-- orders table -->
+  <rect x="220" y="126" width="160" height="120" rx="12" fill="#ffffff" stroke="#e8efe6"/>
+  <text x="232" y="146" font-family="'Noto Sans TC', sans-serif" font-size="10" font-weight="600" fill="#3c4d42">最新訂單</text>
+  <line x1="232" y1="156" x2="368" y2="156" stroke="#e8efe6"/>
+  <text x="232" y="172" font-family="'Noto Sans TC', sans-serif" font-size="10" fill="#3c4d42">鮮綠蔬果</text>
+  <rect x="330" y="163" width="38" height="14" rx="7" fill="#e3f6dd"/>
+  <text x="349" y="173" font-family="'Noto Sans TC', sans-serif" font-size="9" fill="#1f9e4e" text-anchor="middle">已出貨</text>
+  <line x1="232" y1="182" x2="368" y2="182" stroke="#f1f5f0"/>
+  <text x="232" y="198" font-family="'Noto Sans TC', sans-serif" font-size="10" fill="#3c4d42">大海漁產</text>
+  <rect x="330" y="189" width="38" height="14" rx="7" fill="#e3f6dd"/>
+  <text x="349" y="199" font-family="'Noto Sans TC', sans-serif" font-size="9" fill="#1f9e4e" text-anchor="middle">已出貨</text>
+  <line x1="232" y1="208" x2="368" y2="208" stroke="#f1f5f0"/>
+  <text x="232" y="224" font-family="'Noto Sans TC', sans-serif" font-size="10" fill="#3c4d42">信豐肉品</text>
+  <rect x="330" y="215" width="38" height="14" rx="7" fill="#fdecc8"/>
+  <text x="349" y="225" font-family="'Noto Sans TC', sans-serif" font-size="9" fill="#b8860b" text-anchor="middle">處理中</text>
+
+  <!-- footer note card -->
+  <rect x="60" y="256" width="320" height="38" rx="12" fill="#15231b"/>
+  <text x="74" y="280" font-family="'Noto Sans TC', sans-serif" font-size="11" font-weight="600" fill="#7cf06b">本月節省採購成本 12.4%</text>
+  <text x="368" y="280" font-family="'Noto Sans TC', sans-serif" font-size="10" fill="#b4c0b6" text-anchor="end">查看報表 ›</text>
+</svg>

@@ -1,0 +1,72 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 480 300">
+  <defs>
+    <radialGradient id="kGlow" cx="50%" cy="30%" r="75%">
+      <stop offset="0%" stop-color="#ffffff"/>
+      <stop offset="100%" stop-color="#e8efe6"/>
+    </radialGradient>
+  </defs>
+  <rect width="480" height="300" fill="url(#kGlow)"/>
+  <!-- wall tiles -->
+  <rect x="0" y="0" width="480" height="200" fill="#f1f5f0"/>
+  <g stroke="#e8efe6" stroke-width="2">
+    <line x1="0" y1="50" x2="480" y2="50"/>
+    <line x1="0" y1="100" x2="480" y2="100"/>
+    <line x1="0" y1="150" x2="480" y2="150"/>
+    <line x1="80" y1="0" x2="80" y2="200"/>
+    <line x1="160" y1="0" x2="160" y2="200"/>
+    <line x1="240" y1="0" x2="240" y2="200"/>
+    <line x1="320" y1="0" x2="320" y2="200"/>
+    <line x1="400" y1="0" x2="400" y2="200"/>
+  </g>
+
+  <!-- floor -->
+  <rect x="0" y="200" width="480" height="100" fill="#dce6d9"/>
+
+  <!-- range hood -->
+  <path d="M150 30 L330 30 L350 70 L130 70 Z" fill="#cfe0c8"/>
+  <rect x="160" y="70" width="160" height="8" fill="#bccab6"/>
+
+  <!-- steam rising -->
+  <g opacity="0.6">
+    <path d="M210 96 q-10 -14 0 -28 q10 -14 0 -28" stroke="#bff0b2" stroke-width="5" fill="none" stroke-linecap="round"/>
+    <path d="M240 96 q-10 -14 0 -28 q10 -14 0 -28" stroke="#7cf06b" stroke-width="5" fill="none" stroke-linecap="round"/>
+    <path d="M270 96 q-10 -14 0 -28 q10 -14 0 -28" stroke="#bff0b2" stroke-width="5" fill="none" stroke-linecap="round"/>
+  </g>
+
+  <!-- stainless counter -->
+  <rect x="20" y="180" width="440" height="50" rx="6" fill="#e8efe6"/>
+  <rect x="20" y="180" width="440" height="10" rx="5" fill="#f6f8f5"/>
+  <rect x="20" y="222" width="440" height="8" fill="#cfe0c8"/>
+  <!-- cabinet doors -->
+  <rect x="40" y="234" width="90" height="56" rx="4" fill="#dce6d9"/>
+  <rect x="350" y="234" width="90" height="56" rx="4" fill="#dce6d9"/>
+  <rect x="80" y="240" width="10" height="3" rx="1.5" fill="#8a9a8f"/>
+  <rect x="390" y="240" width="10" height="3" rx="1.5" fill="#8a9a8f"/>
+
+  <!-- big pots on counter -->
+  <g>
+    <ellipse cx="210" cy="180" rx="40" ry="10" fill="#15231b"/>
+    <path d="M170 180 q0 -44 40 -44 q40 0 40 44 z" fill="#46c138"/>
+    <ellipse cx="210" cy="136" rx="40" ry="9" fill="#1f9e4e"/>
+    <ellipse cx="210" cy="134" rx="30" ry="6" fill="#7cf06b"/>
+    <rect x="156" y="156" width="14" height="6" rx="3" fill="#15231b"/>
+    <rect x="250" y="156" width="14" height="6" rx="3" fill="#15231b"/>
+  </g>
+  <g>
+    <path d="M286 180 q0 -32 28 -32 q28 0 28 32 z" fill="#1f9e4e"/>
+    <ellipse cx="314" cy="148" rx="28" ry="7" fill="#15231b"/>
+    <rect x="338" y="160" width="14" height="5" rx="2.5" fill="#15231b"/>
+  </g>
+
+  <!-- cook figure -->
+  <g transform="translate(78,118)">
+    <ellipse cx="22" cy="4" rx="16" ry="9" fill="#ffffff"/>
+    <rect x="6" y="8" width="32" height="7" fill="#ffffff"/>
+    <circle cx="22" cy="24" r="13" fill="#f0c9a8"/>
+    <path d="M4 62 q-2 -30 18 -36 q20 6 18 36 z" fill="#ffffff"/>
+    <rect x="12" y="40" width="20" height="22" fill="#46c138"/>
+    <!-- arm holding ladle toward pot -->
+    <path d="M40 44 q26 -2 40 8" stroke="#f0c9a8" stroke-width="10" fill="none" stroke-linecap="round"/>
+    <circle cx="84" cy="54" r="7" fill="#cfe0c8"/>
+  </g>
+</svg>

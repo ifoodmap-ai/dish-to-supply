@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200">
+  <rect width="200" height="200" rx="22" fill="#e8f6e2"/>
+  <!-- carrot -->
+  <g transform="rotate(28 138 70)">
+    <path d="M138 52 L150 116 Q138 126 126 116 Z" fill="#e8843c"/>
+    <path d="M138 52 L150 116 Q144 121 138 121 Z" fill="#d9742e"/>
+    <path d="M133 48 q-6 -9 -12 -8 q5 4 6 11 Z" fill="#3DAE2B"/>
+    <path d="M138 47 q0 -11 5 -15 q1 6 -1 16 Z" fill="#1f9e4e"/>
+    <path d="M143 49 q7 -7 14 -5 q-6 3 -10 11 Z" fill="#3DAE2B"/>
+    <line x1="130" y1="70" x2="135" y2="71" stroke="#c4641f" stroke-width="2" stroke-linecap="round"/>
+    <line x1="133" y1="84" x2="138" y2="85" stroke="#c4641f" stroke-width="2" stroke-linecap="round"/>
+  </g>
+  <!-- broccoli -->
+  <g transform="translate(72 46)">
+    <circle cx="14" cy="20" r="15" fill="#3DAE2B"/>
+    <circle cx="32" cy="16" r="16" fill="#1f9e4e"/>
+    <circle cx="26" cy="34" r="15" fill="#46c138"/>
+    <circle cx="8" cy="34" r="12" fill="#1f9e4e"/>
+    <path d="M16 42 q4 18 6 30 q-4 4 -10 1 q-2 -16 -2 -30 Z" fill="#a7d99a"/>
+    <path d="M28 42 q3 16 5 28 q-4 4 -9 1 q-2 -14 -3 -27 Z" fill="#bff0b2"/>
+  </g>
+  <!-- leafy green -->
+  <path d="M52 118 q-22 -8 -30 -30 q22 2 32 22 q-2 6 -2 8 Z" fill="#7cf06b"/>
+  <path d="M52 118 q-2 -22 12 -38 q8 18 -4 36 q-4 4 -8 2 Z" fill="#46c138"/>
+</svg>

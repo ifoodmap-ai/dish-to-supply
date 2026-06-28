@@ -981,11 +981,52 @@ class Component extends DCLogic {
     return v.trim().split(/\s+/).length;
   }
 
+  // 缺圖佔位框 → on-brand SVG 對照表（精確文字比對）
+  var IMG_MAP = {
+    '[ 餐廳採購情境照 ]': 'assets/scene-buyer.svg',
+    '[ 供應商出貨情境照 ]': 'assets/scene-supplier.svg',
+    '[ 餐廳實拍 ]': 'assets/case-restaurant.svg',
+    '[ 團膳廚房實拍 ]': 'assets/case-kitchen.svg',
+    '[ 生鮮團購實拍 ]': 'assets/case-fresh.svg',
+    '[ AI 媒合流程介面 ]': 'assets/ui-match.svg',
+    '[ 採購管理後台介面 ]': 'assets/ui-admin.svg',
+    '[ 評價機制介面 ]': 'assets/ui-rating.svg',
+    '[ 標章與履歷展示 ]': 'assets/ui-cert.svg',
+    '[ LINE 通知示意 ]': 'assets/ui-line.svg',
+    '蔬菜': 'assets/cat-vegetable.svg',
+    '水果': 'assets/cat-fruit.svg',
+    '海鮮': 'assets/cat-seafood.svg',
+    '肉品': 'assets/cat-meat.svg',
+    '穀類': 'assets/cat-grain.svg',
+    '雜貨': 'assets/cat-grocery.svg',
+    '蛋品': 'assets/cat-egg.svg',
+    '加工食品': 'assets/cat-processed.svg',
+    '酒、飲品': 'assets/cat-drink.svg'
+  };
+
   function tag() {
     var els = root.querySelectorAll('*');
     for (var i = 0; i < els.length; i++) {
       var el = els[i], s = el.style;
       if (!s) continue;
+
+      // 缺圖佔位框（條紋）→ 換成對應 SVG（cover）
+      if (!el.getAttribute('data-img-done') &&
+          /repeating-linear-gradient/.test((s.background || '') + (s.backgroundImage || ''))) {
+        var imgKey = (el.textContent || '').trim();
+        var imgSrc = IMG_MAP[imgKey];
+        if (imgSrc) {
+          el.style.backgroundImage = "url('" + imgSrc + "')";
+          el.style.backgroundSize = 'cover';
+          el.style.backgroundPosition = 'center';
+          el.style.backgroundRepeat = 'no-repeat';
+          el.setAttribute('data-img-done', '1');
+          if (imgKey.charAt(0) === '[') {            // 情境/案例/UI：隱藏等寬字標籤
+            var lbl = el.querySelector('span');
+            if (lbl) lbl.style.display = 'none';
+          }
+        }
+      }
 
       // 導覽列（sticky, z-index:50）：標記其內層三個群組
       if (s.position === 'sticky' && s.zIndex === '50' && !el.classList.contains('m-header')) {

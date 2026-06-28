@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200">
+  <rect width="200" height="200" rx="22" fill="#f3ece9"/>
+  <!-- steak -->
+  <g transform="translate(58 44)">
+    <path d="M40 8 q40 -10 60 18 q16 26 -8 50 q-30 28 -66 14 q-30 -12 -28 -44 q4 -30 42 -38 Z" fill="#c96f6f"/>
+    <path d="M40 8 q34 -8 54 14 q-30 -6 -56 8 q-24 12 -22 40 q-14 -10 -12 -28 q4 -28 36 -34 Z" fill="#e08a8a"/>
+    <path d="M52 28 q22 4 34 24 q8 16 -4 30" stroke="#fff" stroke-width="3" fill="none" stroke-linecap="round" opacity="0.55"/>
+    <path d="M40 44 q18 0 30 16" stroke="#fff" stroke-width="2.5" fill="none" stroke-linecap="round" opacity="0.45"/>
+    <!-- bone -->
+    <g transform="rotate(-32 96 86)">
+      <rect x="86" y="78" width="40" height="12" rx="6" fill="#f3ece2"/>
+      <circle cx="86" cy="80" r="7" fill="#f3ece2"/>
+      <circle cx="86" cy="88" r="7" fill="#f3ece2"/>
+      <circle cx="128" cy="80" r="7" fill="#f3ece2"/>
+      <circle cx="128" cy="88" r="7" fill="#f3ece2"/>
+    </g>
+  </g>
+</svg>
