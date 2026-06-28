@@ -803,5 +803,213 @@ class Component extends DCLogic {
   }, true);
 })();
 </script>
+
+<!-- ============ 手機 RWD 強化（漸進增強，不動框架 markup / state）============ -->
+<style id="m-rwd">
+  /* 預設（桌機）：漢堡 / 選單隱藏，桌機視覺 100% 維持原狀 */
+  .m-hamburger, .m-menu, .m-scrim { display: none; }
+
+  @media (max-width: 768px) {
+    /* 導覽列：隱藏桌機選單與右側群組，露出 logo + 漢堡 */
+    .m-header .m-navlinks  { display: none !important; }
+    .m-header .m-rightgroup{ display: none !important; }
+
+    .m-hamburger { display: block !important; }
+    .m-menu, .m-scrim { display: block !important; }
+
+    /* 左右留白與過大的上下留白 */
+    .m-padx { padding-left: 20px !important; padding-right: 20px !important; }
+    .m-pady { padding-top: 56px !important; padding-bottom: 56px !important; }
+
+    /* 格線收合 */
+    .m-grid-1 { grid-template-columns: 1fr !important; }
+    .m-grid-2 { grid-template-columns: 1fr 1fr !important; }
+    .m-grid-1, .m-grid-2 { gap: 18px !important; }
+
+    /* 標題字級自適應 */
+    .m-h1 { font-size: 34px !important; line-height: 1.18 !important; }
+    .m-h2 { font-size: 25px !important; line-height: 1.28 !important; }
+
+    /* Hero 浮動玻璃卡 → 改為正常流、單卡全寬堆疊 */
+    .m-floatwrap { height: auto !important; margin-top: 26px !important; }
+    .m-floatwrap > div {
+      position: static !important;
+      width: auto !important;
+      right: auto !important; left: auto !important; top: auto !important; bottom: auto !important;
+    }
+    .m-floatwrap > div + div { margin-top: 14px !important; }
+
+    /* 並排按鈕在窄螢幕允許換行 */
+    .m-wrap { flex-wrap: wrap !important; }
+  }
+
+  /* 漢堡按鈕 */
+  .m-hamburger {
+    position: fixed; top: 12px; right: 14px; z-index: 60;
+    width: 44px; height: 44px; border-radius: 12px;
+    background: #fff; border: 1px solid #e6ece4;
+    box-shadow: 0 6px 18px rgba(20,60,30,.14); cursor: pointer;
+  }
+  .m-hamburger span {
+    position: absolute; left: 12px; top: 21px; width: 20px; height: 2px;
+    background: #16301f; border-radius: 2px; transition: transform .25s ease, opacity .2s ease;
+  }
+  .m-hamburger span:nth-child(1) { transform: translateY(-6px); }
+  .m-hamburger span:nth-child(3) { transform: translateY(6px); }
+  .m-hamburger.open span:nth-child(1) { transform: rotate(45deg); }
+  .m-hamburger.open span:nth-child(2) { opacity: 0; }
+  .m-hamburger.open span:nth-child(3) { transform: rotate(-45deg); }
+
+  /* 滑出選單 + 遮罩 */
+  .m-scrim {
+    position: fixed; inset: 0; z-index: 58;
+    background: rgba(8,18,12,.45); opacity: 0; pointer-events: none;
+    transition: opacity .28s ease;
+  }
+  .m-scrim.open { opacity: 1; pointer-events: auto; }
+  .m-menu {
+    position: fixed; top: 0; right: 0; bottom: 0; z-index: 59;
+    width: 80%; max-width: 320px;
+    background: #fff; box-shadow: -20px 0 60px rgba(0,0,0,.2);
+    transform: translateX(100%); transition: transform .3s cubic-bezier(.4,0,.2,1);
+    box-sizing: border-box; padding: 80px 24px 32px;
+    flex-direction: column;
+  }
+  .m-menu.open { transform: translateX(0); }
+  .m-menu-item {
+    font-size: 18px; font-weight: 700; color: #16301f;
+    padding: 16px 6px; border-bottom: 1px solid #f0f3ef; cursor: pointer;
+  }
+  .m-menu-item:active { color: #1f9e4e; }
+  .m-menu-cta {
+    margin-top: 20px; text-align: center;
+    background: linear-gradient(135deg,#46c138,#1f9e4e); color: #fff;
+    font-weight: 700; font-size: 16px; padding: 15px; border-radius: 100px; cursor: pointer;
+    box-shadow: 0 12px 30px rgba(61,174,43,.32);
+  }
+</style>
+<script>
+(function () {
+  function init(root) {
+
+  function colsOf(v) {
+    if (!v || v === 'none') return 1;
+    var m = /repeat\(\s*(\d+)/.exec(v);
+    if (m) return parseInt(m[1], 10);
+    return v.trim().split(/\s+/).length;
+  }
+
+  function tag() {
+    var els = root.querySelectorAll('*');
+    for (var i = 0; i < els.length; i++) {
+      var el = els[i], s = el.style;
+      if (!s) continue;
+
+      // 導覽列（sticky, z-index:50）：標記其內層三個群組
+      if (s.position === 'sticky' && s.zIndex === '50' && !el.classList.contains('m-header')) {
+        el.classList.add('m-header');
+        var inner = el.firstElementChild;
+        if (inner) {
+          var k = inner.children;
+          if (k[1]) k[1].classList.add('m-navlinks');   // 中間選單
+          if (k[2]) k[2].classList.add('m-rightgroup'); // 右側（登入 + CTA）
+        }
+      }
+
+      // 格線
+      if (s.display === 'grid' && s.gridTemplateColumns) {
+        var c = colsOf(s.gridTemplateColumns);
+        if (c >= 4) el.classList.add('m-grid-2');
+        else if (c >= 2) el.classList.add('m-grid-1');
+      }
+
+      // 留白
+      if (parseFloat(s.paddingLeft || '0') >= 36) el.classList.add('m-padx');
+      if (parseFloat(s.paddingTop  || '0') >= 80) el.classList.add('m-pady');
+
+      // 標題字級
+      var fs = parseFloat(s.fontSize || '0');
+      if (fs >= 50) el.classList.add('m-h1');
+      else if (fs >= 33) el.classList.add('m-h2');
+
+      // Hero 浮動卡容器
+      if (s.height === '440px') el.classList.add('m-floatwrap');
+
+      // 並排 CTA 列允許換行
+      if (s.display === 'flex' && s.gap && parseFloat(s.gap) >= 12 &&
+          /margin-bottom:\s*38px/.test(el.getAttribute('style') || '')) {
+        el.classList.add('m-wrap');
+      }
+    }
+  }
+
+  tag();
+  var t;
+  new MutationObserver(function () { clearTimeout(t); t = setTimeout(tag, 60); })
+    .observe(root, { childList: true, subtree: true });
+
+  // ---- 漢堡選單（注入 #dc-root 之外，避免被框架重繪清掉）----
+  var LABELS = ['首頁', '服務', '客戶案例', '關於我們', '聯絡我們'];
+
+  var btn = document.createElement('div');
+  btn.className = 'm-hamburger';
+  btn.setAttribute('role', 'button');
+  btn.setAttribute('aria-label', '開啟選單');
+  btn.innerHTML = '<span></span><span></span><span></span>';
+
+  var scrim = document.createElement('div');
+  scrim.className = 'm-scrim';
+
+  var menu = document.createElement('nav');
+  menu.className = 'm-menu';
+
+  function closeMenu() {
+    menu.classList.remove('open'); scrim.classList.remove('open'); btn.classList.remove('open');
+    document.body.style.overflow = '';
+  }
+  function openMenu() {
+    menu.classList.add('open'); scrim.classList.add('open'); btn.classList.add('open');
+    document.body.style.overflow = 'hidden';
+  }
+  function navTo(label) {
+    var header = root.querySelector('.m-header') || root;
+    var spans = header.querySelectorAll('span');
+    for (var i = 0; i < spans.length; i++) {
+      if (spans[i].textContent.trim() === label) { spans[i].click(); break; }
+    }
+    closeMenu();
+    window.scrollTo(0, 0);
+  }
+
+  LABELS.forEach(function (label) {
+    var item = document.createElement('div');
+    item.className = 'm-menu-item';
+    item.textContent = label;
+    item.addEventListener('click', function () { navTo(label); });
+    menu.appendChild(item);
+  });
+  var cta = document.createElement('div');
+  cta.className = 'm-menu-cta';
+  cta.textContent = '免費媒合需求 →';
+  cta.addEventListener('click', function () { navTo('聯絡我們'); });
+  menu.appendChild(cta);
+
+  btn.addEventListener('click', function () {
+    menu.classList.contains('open') ? closeMenu() : openMenu();
+  });
+  scrim.addEventListener('click', closeMenu);
+
+  document.body.appendChild(scrim);
+  document.body.appendChild(menu);
+  document.body.appendChild(btn);
+  }
+
+  (function boot() {
+    var root = document.getElementById('dc-root');
+    if (root) init(root);
+    else setTimeout(boot, 50);
+  })();
+})();
+</script>
 </body>
 </html>
