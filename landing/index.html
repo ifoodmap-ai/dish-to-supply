@@ -817,21 +817,24 @@ class Component extends DCLogic {
     .m-hamburger { display: block !important; }
     .m-menu, .m-scrim { display: block !important; }
 
-    /* 左右留白與過大的上下留白 */
+    /* 左右留白 + 一致的上下節奏 */
     .m-padx { padding-left: 20px !important; padding-right: 20px !important; }
-    .m-pady { padding-top: 56px !important; padding-bottom: 56px !important; }
+    .m-pady { padding-top: 48px !important; padding-bottom: 48px !important; }
 
     /* 格線收合 */
     .m-grid-1 { grid-template-columns: 1fr !important; }
     .m-grid-2 { grid-template-columns: 1fr 1fr !important; }
-    .m-grid-1, .m-grid-2 { gap: 18px !important; }
+    .m-grid-1, .m-grid-2 { gap: 16px !important; }
+
+    /* 統計格：收斂垂直留白，節奏更緊湊 */
+    .m-statcell { padding-top: 24px !important; padding-bottom: 24px !important; }
 
     /* 標題字級自適應 */
-    .m-h1 { font-size: 34px !important; line-height: 1.18 !important; }
-    .m-h2 { font-size: 25px !important; line-height: 1.28 !important; }
+    .m-h1 { font-size: clamp(28px, 7.5vw, 34px) !important; line-height: 1.2 !important; }
+    .m-h2 { font-size: clamp(22px, 6vw, 25px) !important; line-height: 1.3 !important; }
 
     /* Hero 浮動玻璃卡 → 改為正常流、單卡全寬堆疊 */
-    .m-floatwrap { height: auto !important; margin-top: 26px !important; }
+    .m-floatwrap { height: auto !important; margin-top: 24px !important; }
     .m-floatwrap > div {
       position: static !important;
       width: auto !important;
@@ -841,11 +844,25 @@ class Component extends DCLogic {
 
     /* 並排按鈕在窄螢幕允許換行 */
     .m-wrap { flex-wrap: wrap !important; }
+
+    /* 觸控區 ≥44px */
+    .m-menu-item { min-height: 44px; display: flex; align-items: center; }
+  }
+
+  /* 小機（≤400）：Hero CTA 全寬堆疊，觸控更舒適 */
+  @media (max-width: 400px) {
+    .m-wrap { flex-direction: column !important; align-items: stretch !important; }
+    .m-wrap > span { width: 100% !important; justify-content: center !important; min-height: 48px !important; }
+  }
+  /* 極小機（≤360）：再收一點留白 */
+  @media (max-width: 360px) {
+    .m-padx { padding-left: 16px !important; padding-right: 16px !important; }
+    .m-pady { padding-top: 40px !important; padding-bottom: 40px !important; }
   }
 
   /* 漢堡按鈕 */
   .m-hamburger {
-    position: fixed; top: 12px; right: 14px; z-index: 60;
+    position: fixed; top: calc(12px + env(safe-area-inset-top)); right: calc(14px + env(safe-area-inset-right)); z-index: 60;
     width: 44px; height: 44px; border-radius: 12px;
     background: #fff; border: 1px solid #e6ece4;
     box-shadow: 0 6px 18px rgba(20,60,30,.14); cursor: pointer;
@@ -886,6 +903,71 @@ class Component extends DCLogic {
     background: linear-gradient(135deg,#46c138,#1f9e4e); color: #fff;
     font-weight: 700; font-size: 16px; padding: 15px; border-radius: 100px; cursor: pointer;
     box-shadow: 0 12px 30px rgba(61,174,43,.32);
+  }
+</style>
+
+<!-- ============ 全站動態特效（疊加動態，不改原配色/排版；含 reduced-motion 關閉）============ -->
+<style id="m-fx">
+  /* ① 滾動進場 + 分階：JS 啟用時才隱藏（無 JS 仍可見）。覆蓋 head 的 animation-timeline 進場 */
+  html.ifm-js [data-reveal] {
+    opacity: 0; transform: translateY(24px);
+    animation: none !important;
+    transition: opacity .7s cubic-bezier(.22,1,.36,1), transform .7s cubic-bezier(.22,1,.36,1);
+    will-change: opacity, transform;
+  }
+  html.ifm-js [data-reveal].ifm-in { opacity: 1; transform: none; }
+
+  /* ② CTA 按鈕：斜向高光掃過 + 按壓回饋 */
+  .m-cta { position: relative; overflow: hidden; }
+  .m-cta::after {
+    content: ''; position: absolute; top: 0; left: -60%; width: 45%; height: 100%;
+    background: linear-gradient(100deg, transparent, rgba(255,255,255,.45), transparent);
+    transform: skewX(-18deg); pointer-events: none;
+    animation: ifmSheen 4.5s ease-in-out 1.5s infinite;
+  }
+  .m-cta:active { transform: scale(.97); }
+  @keyframes ifmSheen { 0%, 22% { left: -60%; } 42%, 100% { left: 130%; } }
+
+  /* ③ Hero 動態背景光暈 + 漸層文字流光 */
+  .m-hero { position: relative; isolation: isolate; overflow: hidden; }
+  .m-hero::before {
+    content: ''; position: absolute; inset: -20%; z-index: 0; pointer-events: none;
+    background:
+      radial-gradient(420px 320px at 20% 28%, rgba(74,209,90,.20), transparent 60%),
+      radial-gradient(360px 300px at 84% 72%, rgba(31,158,78,.18), transparent 60%);
+    mix-blend-mode: screen; animation: ifmAura 14s ease-in-out infinite;
+  }
+  @keyframes ifmAura {
+    0%, 100% { transform: translate3d(0,0,0) scale(1);    opacity: .85; }
+    50%      { transform: translate3d(0,-16px,0) scale(1.08); opacity: 1; }
+  }
+  /* 內容須在光暈之上（hero 內容容器通常是最後一個子元素） */
+  .m-hero > div:last-child { position: relative; z-index: 1; }
+
+  .m-gradtext { background-size: 220% auto !important; animation: ifmTextFlow 6s linear infinite; }
+  @keyframes ifmTextFlow { to { background-position: 220% center; } }
+
+  /* ④ 滾動進度條 */
+  .m-progress {
+    position: fixed; top: 0; left: 0; height: 3px; width: 0;
+    background: linear-gradient(90deg, #46c138, #7cf06b); z-index: 70;
+    box-shadow: 0 0 10px rgba(74,209,90,.6); transition: width .1s linear;
+  }
+  /* ④ 導覽列：捲動陰影 + 下滑隱藏 / 上滑顯示 */
+  .m-header { transition: transform .32s ease, box-shadow .3s ease; }
+  .m-header.m-scrolled { box-shadow: 0 6px 24px rgba(20,60,30,.10); }
+  .m-header.m-hide { transform: translateY(-100%); }
+
+  /* 卡片微互動（明顯動感、低成本） */
+  .m-cta { transition: transform .18s ease; }
+
+  /* 尊重「減少動態」：全部停用 */
+  @media (prefers-reduced-motion: reduce) {
+    html.ifm-js [data-reveal] { opacity: 1 !important; transform: none !important; transition: none !important; }
+    .m-cta::after, .m-hero::before, .m-gradtext { animation: none !important; }
+    .m-gradtext { background-size: auto !important; }
+    .m-header.m-hide { transform: none !important; }
+    .m-progress { display: none !important; }
   }
 </style>
 <script>
@@ -940,12 +1022,78 @@ class Component extends DCLogic {
           /margin-bottom:\s*38px/.test(el.getAttribute('style') || '')) {
         el.classList.add('m-wrap');
       }
+
+      // CTA 膠囊按鈕（綠漸層 + 圓角 100px + 可點）→ 光澤/按壓
+      if (s.borderRadius === '100px' && s.cursor === 'pointer' &&
+          /linear-gradient/.test(s.backgroundImage || s.background || '')) {
+        el.classList.add('m-cta');
+      }
+      // 漸層裁切文字（hero 綠字、統計數字）→ 流光
+      if (s.webkitBackgroundClip === 'text' || s.backgroundClip === 'text') {
+        el.classList.add('m-gradtext');
+      }
+      // 深色 hero 外層（radial-gradient 背景）→ 動態光暈
+      if (/radial-gradient/.test(s.background || s.backgroundImage || '')) {
+        el.classList.add('m-hero');
+      }
+      // 統計數字的父層（卡格）→ 手機收斂垂直留白
+      if (el.hasAttribute('data-countup') && el.parentElement) {
+        el.parentElement.classList.add('m-statcell');
+      }
     }
   }
 
-  tag();
+  // ===== 動態特效引擎 =====
+  var RM = !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+  var hasIO = 'IntersectionObserver' in window;
+  if (!RM) document.documentElement.classList.add('ifm-js');
+
+  // ① 滾動進場 + 分階（同容器子項依序淡入）
+  var revealIO = (!RM && hasIO) ? new IntersectionObserver(function (entries) {
+    entries.forEach(function (en) {
+      if (!en.isIntersecting) return;
+      var el = en.target, idx = 0;
+      try {
+        var sibs = el.parentElement.querySelectorAll(':scope > [data-reveal]');
+        idx = Array.prototype.indexOf.call(sibs, el);
+      } catch (e) {}
+      if (idx > 0) el.style.transitionDelay = Math.min(idx, 6) * 70 + 'ms';
+      el.classList.add('ifm-in');
+      revealIO.unobserve(el);
+    });
+  }, { rootMargin: '0px 0px -8% 0px', threshold: 0.06 }) : null;
+  function observeReveals() {
+    if (!revealIO) return;
+    root.querySelectorAll('[data-reveal]:not(.ifm-in)').forEach(function (el) { revealIO.observe(el); });
+  }
+
+  // ② 數字滾動（保留千分位與後綴，如 3,000+ / 28 類 / 24hr）
+  function runCountup(el) {
+    if (el.__cu) return; el.__cu = 1;
+    var raw = (el.textContent || '').trim();
+    var m = raw.match(/[\d,]+(\.\d+)?/);
+    if (!m) return;
+    var target = parseFloat(m[0].replace(/,/g, ''));
+    if (!isFinite(target)) return;
+    var hasComma = m[0].indexOf(',') > -1;
+    var prefix = raw.slice(0, m.index), suffix = raw.slice(m.index + m[0].length);
+    function fmt(n) { var s = Math.round(n).toString(); if (hasComma) s = s.replace(/\B(?=(\d{3})+(?!\d))/g, ','); return prefix + s + suffix; }
+    var dur = 1100, start = null;
+    function step(ts) { if (!start) start = ts; var p = Math.min(1, (ts - start) / dur); el.textContent = fmt(target * (1 - Math.pow(1 - p, 3))); if (p < 1) requestAnimationFrame(step); }
+    requestAnimationFrame(step);
+  }
+  var countIO = (!RM && hasIO) ? new IntersectionObserver(function (entries) {
+    entries.forEach(function (en) { if (en.isIntersecting) { runCountup(en.target); countIO.unobserve(en.target); } });
+  }, { threshold: 0.6 }) : null;
+  function observeCountups() {
+    if (!countIO) return;
+    root.querySelectorAll('[data-countup]').forEach(function (el) { if (!el.__cu) countIO.observe(el); });
+  }
+
+  function enhance() { tag(); observeReveals(); observeCountups(); }
+  enhance();
   var t;
-  new MutationObserver(function () { clearTimeout(t); t = setTimeout(tag, 60); })
+  new MutationObserver(function () { clearTimeout(t); t = setTimeout(enhance, 60); })
     .observe(root, { childList: true, subtree: true });
 
   // ---- 漢堡選單（注入 #dc-root 之外，避免被框架重繪清掉）----
@@ -1002,6 +1150,28 @@ class Component extends DCLogic {
   document.body.appendChild(scrim);
   document.body.appendChild(menu);
   document.body.appendChild(btn);
+
+  // ④ 滾動進度條 + 導覽列行為（注入 body，passive + rAF 節流）
+  var prog = document.createElement('div');
+  prog.className = 'm-progress';
+  document.body.appendChild(prog);
+  var lastY = window.scrollY || 0, ticking = false;
+  function onScroll() {
+    ticking = false;
+    var y = window.scrollY || window.pageYOffset || 0;
+    var max = document.documentElement.scrollHeight - window.innerHeight;
+    if (!RM) prog.style.width = (max > 0 ? (y / max * 100) : 0) + '%';
+    var header = root.querySelector('.m-header');
+    if (header) {
+      if (y > 10) header.classList.add('m-scrolled'); else header.classList.remove('m-scrolled');
+      var menuOpen = menu.classList.contains('open');
+      if (!RM && !menuOpen && y > 140 && y > lastY + 4) header.classList.add('m-hide');       // 下滑隱藏
+      else if (menuOpen || y <= 140 || y < lastY - 4) header.classList.remove('m-hide');        // 上滑/置頂/選單開→顯示
+    }
+    lastY = y;
+  }
+  window.addEventListener('scroll', function () { if (!ticking) { ticking = true; requestAnimationFrame(onScroll); } }, { passive: true });
+  onScroll();
   }
 
   (function boot() {
