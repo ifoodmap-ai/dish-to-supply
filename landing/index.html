@@ -721,5 +721,87 @@ class Component extends DCLogic {
   }
 }
 </script>
+
+<!-- 漸進增強：把「填寫食材需求」表單接到 Supabase（landing_leads，匿名只寫不讀）。
+     不動原框架 state / markup，用事件委派攔截送出鈕，避免破壞 100% 還原視覺。 -->
+<script>
+(function () {
+  var SUPA_URL  = 'https://cwvpehqcvbfuynabpqop.supabase.co';
+  var SUPA_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImN3dnBlaHFjdmJmdXluYWJwcW9wIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzk5NzQ5NjgsImV4cCI6MjA5NTU1MDk2OH0.QMkcOlGjRTP5XeddI4IAzSkGJoUjaRtcjI_Tjl6rj2k';
+
+  function findDemandCard(node) {
+    var el = node;
+    for (var i = 0; i < 8 && el; i++) {
+      if (el.querySelector) {
+        var h = el.querySelector('h2');
+        if (h && h.textContent.indexOf('填寫食材需求') !== -1) return el;
+      }
+      el = el.parentElement;
+    }
+    return null;
+  }
+
+  document.addEventListener('click', function (e) {
+    var t = e.target;
+    if (!t || !t.textContent || t.tagName !== 'SPAN') return;
+    if (t.textContent.indexOf('送出需求') === -1) return;       // 只攔送出鈕
+    if (t.getAttribute('data-busy') === '1' || t.getAttribute('data-done') === '1') return;
+
+    var card = findDemandCard(t);
+    if (!card) return;
+    var fields = card.querySelectorAll('input, textarea');
+    if (fields.length < 5) return;
+
+    var company = (fields[0].value || '').trim();
+    var phone   = (fields[1].value || '').trim();
+    var lineId  = (fields[2].value || '').trim();
+    var items   = (fields[3].value || '').trim();
+    var detail  = (fields[4].value || '').trim();
+    var original = t.textContent;
+
+    if (!company || !phone) {
+      t.textContent = '請填寫公司名稱與聯絡電話';
+      setTimeout(function () { t.textContent = original; }, 2200);
+      return;
+    }
+
+    t.setAttribute('data-busy', '1');
+    t.textContent = '送出中…';
+
+    fetch(SUPA_URL + '/rest/v1/landing_leads', {
+      method: 'POST',
+      headers: {
+        'apikey': SUPA_ANON,
+        'Authorization': 'Bearer ' + SUPA_ANON,
+        'Content-Type': 'application/json',
+        'Prefer': 'return=minimal'
+      },
+      body: JSON.stringify({
+        company_name: company,
+        contact_phone: phone,
+        contact_line: lineId || null,
+        items_text: items || null,
+        detail: detail || null,
+        user_agent: (navigator.userAgent || '').slice(0, 300)
+      })
+    }).then(function (r) {
+      t.removeAttribute('data-busy');
+      if (r.status === 201 || r.ok) {
+        t.setAttribute('data-done', '1');
+        t.textContent = '✓ 已送出，我們會盡快與您聯繫';
+        t.style.opacity = '0.85';
+        for (var i = 0; i < 5; i++) fields[i].value = '';
+      } else {
+        t.textContent = '送出失敗，請稍後再試或加 LINE';
+        setTimeout(function () { t.textContent = original; }, 2600);
+      }
+    }).catch(function () {
+      t.removeAttribute('data-busy');
+      t.textContent = '送出失敗，請稍後再試或加 LINE';
+      setTimeout(function () { t.textContent = original; }, 2600);
+    });
+  }, true);
+})();
+</script>
 </body>
 </html>
