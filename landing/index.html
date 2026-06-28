@@ -1322,6 +1322,7 @@ class Component extends DCLogic {
   var leadShown = false;
   var ctaShown = false;
   var convPersisted = false;
+  var collect = { active: false, step: '', name: '', phone: '' };
 
   // ---- DOM ----
   var fab = document.createElement('button');
@@ -1378,6 +1379,7 @@ class Component extends DCLogic {
     var v = (textInput.value || '').trim();
     if (!v) return;
     textInput.value = '';
+    if (collect.active) { handleCollect(v); return; }
     history.push({ role: 'user', text: v });
     addMsg('user', v);
     addTyping();
@@ -1462,42 +1464,59 @@ class Component extends DCLogic {
     var b = addRow('bot');
     if (prefix) { var p = document.createElement('div'); p.textContent = prefix; p.style.marginBottom = '4px'; b.appendChild(p); }
     var btn = document.createElement('button'); btn.className = 'ai-cta'; btn.textContent = '送出免費媒合 →';
-    btn.addEventListener('click', function () { btn.remove(); showLeadForm(b); });
+    btn.addEventListener('click', function () { if (b.parentNode) b.parentNode.remove(); startCollect(); });
     b.appendChild(btn); scrollDown();
   }
 
-  function showLeadForm(container) {
-    if (leadShown) return; leadShown = true;
+  // 對話式收集：先問姓名，再問手機，最後寫入 landing_leads
+  function startCollect() {
+    if (collect.active || collect.step === 'done') return;
     persistConversation();
-    var wrap = document.createElement('div'); wrap.className = 'ai-lead';
-    var c1 = mkInput('餐廳 / 公司名稱'); var c2 = mkInput('聯絡電話'); var c3 = mkInput('LINE ID（選填）');
-    var btn = document.createElement('button'); btn.textContent = '送出需求';
-    wrap.appendChild(c1); wrap.appendChild(c2); wrap.appendChild(c3); wrap.appendChild(btn);
-    container.appendChild(wrap); scrollDown();
-    btn.addEventListener('click', function () {
-      var company = c1.value.trim(), phone = c2.value.trim(), line = c3.value.trim();
-      if (!company || !phone) { btn.textContent = '請填公司名稱與電話'; setTimeout(function () { btn.textContent = '送出需求'; }, 2000); return; }
-      btn.disabled = true; btn.textContent = '送出中…';
-      var detail = '【AI 採購助手】';
-      if (lastAnalysis && lastAnalysis.summary) detail += lastAnalysis.summary;
-      var items = '';
-      if (lastAnalysis && lastAnalysis.ingredients && lastAnalysis.ingredients.length) {
-        items = lastAnalysis.ingredients.map(function (i) { return i.name + (i.quantity ? i.quantity : '') + (i.unit || ''); }).join('、');
-        detail += '\n採購清單：' + items;
-      } else if (history.length) {
-        detail += '\n對話：' + history.map(function (m) { return (m.role === 'user' ? '客' : 'AI') + '：' + m.text; }).join(' / ');
-      }
-      fetch(SUPA_URL + '/rest/v1/landing_leads', {
-        method: 'POST',
-        headers: { 'apikey': SUPA_ANON, 'Authorization': 'Bearer ' + SUPA_ANON, 'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
-        body: JSON.stringify({ company_name: company, contact_phone: phone, contact_line: line || null, items_text: items || null, detail: detail, source: 'ai_widget', user_agent: (navigator.userAgent || '').slice(0, 300) })
-      }).then(function (r) {
-        if (r.status === 201 || r.ok) { wrap.remove(); addMsg('bot', '✓ 已送出！我們會盡快與你聯繫，為你免費媒合最合適的供應商 🙌'); }
-        else { btn.disabled = false; btn.textContent = '送出失敗，再試一次'; }
-      }).catch(function () { btn.disabled = false; btn.textContent = '送出失敗，再試一次'; });
-    });
+    collect.active = true; collect.step = 'name';
+    addMsg('bot', '好的！為了幫你免費媒合，請問怎麼稱呼您？😊');
+    textInput.placeholder = '請輸入您的姓名…'; textInput.focus();
   }
-  function mkInput(ph) { var i = document.createElement('input'); i.type = 'text'; i.placeholder = ph; return i; }
+
+  function handleCollect(v) {
+    addMsg('user', v);
+    if (collect.step === 'name') {
+      collect.name = v; collect.step = 'phone';
+      addMsg('bot', '謝謝 ' + v + '！方便留下您的手機嗎？我們會請專人盡快與您聯繫 📱');
+      textInput.placeholder = '請輸入您的手機…';
+      return;
+    }
+    if (collect.step === 'phone') {
+      var digits = v.replace(/[^0-9]/g, '');
+      if (digits.length < 8 || digits.length > 11) {
+        addMsg('bot', '手機號碼看起來不太完整，可以再給我一次嗎？例如 0912-345-678');
+        return;
+      }
+      collect.phone = v; saveLead();
+    }
+  }
+
+  function saveLead() {
+    var detail = '【AI 採購助手】客戶姓名：' + collect.name;
+    var items = '';
+    if (lastAnalysis && lastAnalysis.summary) detail += '\n' + lastAnalysis.summary;
+    if (lastAnalysis && lastAnalysis.ingredients && lastAnalysis.ingredients.length) {
+      items = lastAnalysis.ingredients.map(function (i) { return i.name + (i.quantity || '') + (i.unit || ''); }).join('、');
+      detail += '\n採購清單：' + items;
+    } else if (history.length) {
+      detail += '\n對話：' + history.map(function (m) { return (m.role === 'user' ? '客' : 'AI') + '：' + m.text; }).join(' / ');
+    }
+    var bub = addMsg('bot', '送出中…');
+    fetch(SUPA_URL + '/rest/v1/landing_leads', {
+      method: 'POST',
+      headers: { 'apikey': SUPA_ANON, 'Authorization': 'Bearer ' + SUPA_ANON, 'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
+      body: JSON.stringify({ company_name: collect.name, contact_phone: collect.phone, items_text: items || null, detail: detail, source: 'ai_widget', user_agent: (navigator.userAgent || '').slice(0, 300) })
+    }).then(function (r) {
+      if (r.status === 201 || r.ok) {
+        bub.textContent = '✓ 收到了，' + collect.name + '！我們會盡快用手機 ' + collect.phone + ' 與您聯繫，為您免費媒合最合適的供應商 🙌';
+        collect.active = false; collect.step = 'done'; textInput.placeholder = '輸入你的食材需求…';
+      } else { bub.textContent = '送出失敗，請稍後再試一次 🙏'; }
+    }).catch(function () { bub.textContent = '送出失敗，請稍後再試一次 🙏'; });
+  }
 
   // ---- open / close ----
   function openPanel() { panel.classList.add('ai-open'); fab.classList.add('ai-open'); if (window.innerWidth <= 520) backdrop.classList.add('ai-show'); setTimeout(function () { textInput.focus(); }, 200); }
