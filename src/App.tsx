@@ -15,6 +15,7 @@ import AdminDashboard from "./pages/admin/AdminDashboard";
 import AnalysisListPage from "./pages/admin/AnalysisListPage";
 import AnalysisDetailPage from "./pages/admin/AnalysisDetailPage";
 import AdminOrdersPage from "./pages/admin/AdminOrdersPage";
+import AdminOrderDetailPage from "./pages/admin/AdminOrderDetailPage";
 import SupplierRoute from "./components/SupplierRoute";
 import SupplierLayout from "./pages/supplier/SupplierLayout";
 import SupplierOrdersPage from "./pages/supplier/SupplierOrdersPage";
@@ -39,6 +40,7 @@ const App = () => (
               <Route path="analyses" element={<AnalysisListPage />} />
               <Route path="analyses/:id" element={<AnalysisDetailPage />} />
               <Route path="orders" element={<AdminOrdersPage />} />
+              <Route path="orders/:id" element={<AdminOrderDetailPage />} />
             </Route>
             <Route path="/supplier" element={<SupplierRoute><SupplierLayout /></SupplierRoute>}>
               <Route index element={<SupplierOrdersPage />} />

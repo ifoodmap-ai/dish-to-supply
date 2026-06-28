@@ -1,5 +1,7 @@
 import { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Badge } from '@/components/ui/badge';
+import { Input } from '@/components/ui/input';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
   Table,
@@ -54,10 +56,12 @@ const tabs: { value: string; label: string }[] = [
 ];
 
 const AdminOrdersPage = () => {
+  const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState<string>('all');
   const [orders, setOrders] = useState<OrderRow[]>([]);
   const [supplierMap, setSupplierMap] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(true);
+  const [search, setSearch] = useState('');
 
   useEffect(() => {
     const fetchData = async () => {
@@ -97,19 +101,35 @@ const AdminOrdersPage = () => {
     return `${head}${names.length > 3 ? ` …(共 ${names.length} 項)` : ''}`;
   };
 
+  const filtered = orders.filter((o) => {
+    const q = search.trim().toLowerCase();
+    if (!q) return true;
+    const sup = (o.supplier_id && supplierMap[o.supplier_id]) || '';
+    const ings = (o.ingredient_list || []).map((i) => i.name).filter(Boolean).join(' ');
+    return `${sup} ${ings}`.toLowerCase().includes(q);
+  });
+
   return (
     <div>
       <h1 className="text-2xl font-bold text-slate-800 mb-6">供應商訂單 (Orders)</h1>
 
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="mb-4">
-        <TabsList>
-          {tabs.map(({ value, label }) => (
-            <TabsTrigger key={value} value={value}>
-              {label}
-            </TabsTrigger>
-          ))}
-        </TabsList>
-      </Tabs>
+      <div className="flex flex-col sm:flex-row sm:items-center gap-3 mb-4">
+        <Tabs value={activeTab} onValueChange={setActiveTab}>
+          <TabsList>
+            {tabs.map(({ value, label }) => (
+              <TabsTrigger key={value} value={value}>
+                {label}
+              </TabsTrigger>
+            ))}
+          </TabsList>
+        </Tabs>
+        <Input
+          placeholder="搜尋供應商 / 食材…"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          className="sm:ml-auto sm:max-w-xs"
+        />
+      </div>
 
       <div className="rounded-md border border-slate-200 bg-white overflow-hidden">
         <Table>
@@ -133,15 +153,19 @@ const AdminOrdersPage = () => {
                   ))}
                 </TableRow>
               ))
-            ) : orders.length === 0 ? (
+            ) : filtered.length === 0 ? (
               <TableRow>
                 <TableCell colSpan={5} className="text-center py-10 text-slate-400">
                   沒有訂單 (No orders found)
                 </TableCell>
               </TableRow>
             ) : (
-              orders.map((o) => (
-                <TableRow key={o.id} className="hover:bg-slate-50">
+              filtered.map((o) => (
+                <TableRow
+                  key={o.id}
+                  className="cursor-pointer hover:bg-slate-50"
+                  onClick={() => navigate(`/admin/orders/${o.id}`)}
+                >
                   <TableCell className="text-sm text-slate-600 whitespace-nowrap">
                     {new Date(o.created_at).toLocaleString('zh-TW')}
                   </TableCell>
