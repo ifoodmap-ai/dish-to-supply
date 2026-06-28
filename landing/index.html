@@ -1320,6 +1320,8 @@ class Component extends DCLogic {
   var history = [];        // {role:'user'|'bot', text}
   var lastAnalysis = null; // {summary, ingredients}
   var leadShown = false;
+  var ctaShown = false;
+  var convPersisted = false;
 
   // ---- DOM ----
   var fab = document.createElement('button');
@@ -1385,6 +1387,7 @@ class Component extends DCLogic {
         var reply = r.json.data.reply;
         history.push({ role: 'bot', text: reply });
         addMsg('bot', reply);
+        setTimeout(function () { showLeadCTA('需要的話，我可以幫你把需求送給專人免費媒合 👇'); }, 500);
       } else {
         addMsg('bot', ERR_MSG);
         showLeadCTA();
@@ -1446,8 +1449,16 @@ class Component extends DCLogic {
   }
 
   // ---- 留名媒合 ----
+  // 把對話需求送進後台媒合佇列（analysis_records，pending_review）
+  function persistConversation() {
+    if (convPersisted) return;
+    var conv = history.filter(function (m) { return m && m.text; });
+    if (!conv.length) return;
+    convPersisted = true;
+    fetch('/api/ai-extract', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ messages: conv }) }).catch(function () {});
+  }
   function showLeadCTA(prefix) {
-    if (leadShown) return;
+    if (leadShown || ctaShown) return; ctaShown = true;
     var b = addRow('bot');
     if (prefix) { var p = document.createElement('div'); p.textContent = prefix; p.style.marginBottom = '4px'; b.appendChild(p); }
     var btn = document.createElement('button'); btn.className = 'ai-cta'; btn.textContent = '送出免費媒合 →';
@@ -1457,6 +1468,7 @@ class Component extends DCLogic {
 
   function showLeadForm(container) {
     if (leadShown) return; leadShown = true;
+    persistConversation();
     var wrap = document.createElement('div'); wrap.className = 'ai-lead';
     var c1 = mkInput('餐廳 / 公司名稱'); var c2 = mkInput('聯絡電話'); var c3 = mkInput('LINE ID（選填）');
     var btn = document.createElement('button'); btn.textContent = '送出需求';
@@ -1489,7 +1501,7 @@ class Component extends DCLogic {
 
   // ---- open / close ----
   function openPanel() { panel.classList.add('ai-open'); fab.classList.add('ai-open'); if (window.innerWidth <= 520) backdrop.classList.add('ai-show'); setTimeout(function () { textInput.focus(); }, 200); }
-  function closePanel() { panel.classList.remove('ai-open'); fab.classList.remove('ai-open'); backdrop.classList.remove('ai-show'); }
+  function closePanel() { persistConversation(); panel.classList.remove('ai-open'); fab.classList.remove('ai-open'); backdrop.classList.remove('ai-show'); }
   fab.addEventListener('click', function () { panel.classList.contains('ai-open') ? closePanel() : openPanel(); });
   panel.querySelector('.ai-x').addEventListener('click', closePanel);
   backdrop.addEventListener('click', closePanel);
