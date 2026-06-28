@@ -1323,6 +1323,8 @@ class Component extends DCLogic {
   var ctaShown = false;
   var convPersisted = false;
   var collect = { active: false, step: '', name: '', phone: '' };
+  var lastAnalysisId = null;   // 連結 landing_leads ↔ analysis_records
+  var extractPromise = null;
 
   // ---- DOM ----
   var fab = document.createElement('button');
@@ -1435,6 +1437,7 @@ class Component extends DCLogic {
 
   function renderAnalysis(data) {
     lastAnalysis = { summary: data.summary || '', ingredients: data.ingredients || [] };
+    if (data.analysisId) lastAnalysisId = data.analysisId;
     var b = addRow('bot');
     var head = document.createElement('div'); head.textContent = data.summary || 'AI 已分析出你的採購需求：'; b.appendChild(head);
     if (data.ingredients && data.ingredients.length) {
@@ -1457,7 +1460,10 @@ class Component extends DCLogic {
     var conv = history.filter(function (m) { return m && m.text; });
     if (!conv.length) return;
     convPersisted = true;
-    fetch('/api/ai-extract', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ messages: conv }) }).catch(function () {});
+    extractPromise = fetch('/api/ai-extract', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ messages: conv }) })
+      .then(function (r) { return r.json(); })
+      .then(function (j) { if (j && j.data && j.data.analysisId) lastAnalysisId = j.data.analysisId; })
+      .catch(function () {});
   }
   function showLeadCTA(prefix) {
     if (leadShown || ctaShown) return; ctaShown = true;
@@ -1506,10 +1512,12 @@ class Component extends DCLogic {
       detail += '\n對話：' + history.map(function (m) { return (m.role === 'user' ? '客' : 'AI') + '：' + m.text; }).join(' / ');
     }
     var bub = addMsg('bot', '送出中…');
-    fetch(SUPA_URL + '/rest/v1/landing_leads', {
-      method: 'POST',
-      headers: { 'apikey': SUPA_ANON, 'Authorization': 'Bearer ' + SUPA_ANON, 'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
-      body: JSON.stringify({ company_name: collect.name, contact_phone: collect.phone, items_text: items || null, detail: detail, source: 'ai_widget', user_agent: (navigator.userAgent || '').slice(0, 300) })
+    Promise.resolve(extractPromise).then(function () {
+      return fetch(SUPA_URL + '/rest/v1/landing_leads', {
+        method: 'POST',
+        headers: { 'apikey': SUPA_ANON, 'Authorization': 'Bearer ' + SUPA_ANON, 'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
+        body: JSON.stringify({ company_name: collect.name, contact_phone: collect.phone, items_text: items || null, detail: detail, source: 'ai_widget', analysis_id: lastAnalysisId || null, user_agent: (navigator.userAgent || '').slice(0, 300) })
+      });
     }).then(function (r) {
       if (r.status === 201 || r.ok) {
         bub.textContent = '✓ 收到了，' + collect.name + '！我們會盡快用手機 ' + collect.phone + ' 與您聯繫，為您免費媒合最合適的供應商 🙌';
