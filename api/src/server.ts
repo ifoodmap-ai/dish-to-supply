@@ -330,7 +330,10 @@ const chatMessageSchema = z.object({
 
 const analyzeChatSchema = z.object({
   messages: z.array(chatMessageSchema).min(1).optional(),
-  transcript: z.string().min(1).optional()
+  transcript: z.string().min(1).optional(),
+  // 若同一 session 已有分析紀錄（例如先上傳了菜單），帶上它的 id：
+  // 後端只把對話逐字稿併進該筆，不另開新紀錄。
+  analysisId: z.string().uuid().optional()
 }).refine((v) => Boolean(v.messages?.length) || Boolean(v.transcript), {
   message: "Provide either messages[] or transcript"
 });
@@ -406,6 +409,17 @@ app.post("/api/analyze/chat", async (c) => {
   }
 
   const transcript = parsed.data.transcript ?? buildTranscript(parsed.data.messages ?? []);
+
+  // 同一 session 已有分析紀錄 → 只把逐字稿併進該筆（不重新分析、不另開新紀錄）
+  if (parsed.data.analysisId) {
+    const { error } = await supabase
+      .from("analysis_records")
+      .update({ transcript })
+      .eq("id", parsed.data.analysisId);
+    return c.json({
+      data: { analysisId: parsed.data.analysisId, persistError: error?.message ?? null, summary: null, ingredients: [] }
+    });
+  }
 
   try {
     const result = await analyzeConversation(transcript);
