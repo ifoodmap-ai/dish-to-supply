@@ -1260,6 +1260,15 @@ class Component extends DCLogic {
   }
   .ai-panel.ai-open { transform: none; opacity: 1; pointer-events: auto; }
 
+  /* 拖曳圖片進面板時的提示 */
+  .ai-panel.ai-drag { outline: 2px dashed #46c138; outline-offset: -8px; }
+  .ai-panel.ai-drag::after {
+    content: '放開以上傳菜單 📷'; position: absolute; inset: 0; z-index: 5;
+    background: rgba(70,193,56,.12);
+    display: flex; align-items: center; justify-content: center;
+    color: #1f7a37; font-weight: 800; font-size: 16px; pointer-events: none;
+  }
+
   .ai-head {
     display: flex; align-items: center; gap: 11px; padding: 15px 16px;
     background: linear-gradient(135deg,#0f2417,#0a1510); color: #fff; flex-shrink: 0;
@@ -1417,9 +1426,7 @@ class Component extends DCLogic {
     });
   }
 
-  fileInput.addEventListener('change', function () {
-    var f = fileInput.files && fileInput.files[0];
-    fileInput.value = '';
+  function handleImageFile(f) {
     if (!f) return;
     if (f.type.indexOf('image/') !== 0) { addMsg('bot', '請上傳圖片檔（JPG / PNG）。'); return; }
     downscale(f).then(function (dataUrl) {
@@ -1435,6 +1442,27 @@ class Component extends DCLogic {
         addMsg('bot', ERR_MSG); showLeadCTA();
       }
     }).catch(function () { clearTyping(); addMsg('bot', ERR_MSG); showLeadCTA(); });
+  }
+
+  fileInput.addEventListener('change', function () {
+    var f = fileInput.files && fileInput.files[0];
+    fileInput.value = '';
+    handleImageFile(f);
+  });
+
+  // 桌機：直接把圖片拖曳進面板即上傳分析
+  panel.addEventListener('dragenter', function (e) { e.preventDefault(); e.stopPropagation(); panel.classList.add('ai-drag'); });
+  panel.addEventListener('dragover', function (e) { e.preventDefault(); e.stopPropagation(); if (e.dataTransfer) e.dataTransfer.dropEffect = 'copy'; panel.classList.add('ai-drag'); });
+  panel.addEventListener('dragleave', function (e) { e.preventDefault(); e.stopPropagation(); if (!e.relatedTarget || !panel.contains(e.relatedTarget)) panel.classList.remove('ai-drag'); });
+  panel.addEventListener('drop', function (e) {
+    e.preventDefault(); e.stopPropagation(); panel.classList.remove('ai-drag');
+    var files = e.dataTransfer && e.dataTransfer.files;
+    if (!files || !files.length) return;
+    var found = false;
+    for (var i = 0; i < files.length; i++) {
+      if (files[i].type.indexOf('image/') === 0) { handleImageFile(files[i]); found = true; }
+    }
+    if (!found) addMsg('bot', '請拖曳圖片檔（JPG / PNG）。');
   });
 
   function renderAnalysis(data) {
