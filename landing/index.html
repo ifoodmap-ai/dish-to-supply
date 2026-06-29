@@ -1460,7 +1460,9 @@ class Component extends DCLogic {
     var conv = history.filter(function (m) { return m && m.text; });
     if (!conv.length) return;
     convPersisted = true;
-    extractPromise = fetch('/api/ai-extract', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ messages: conv }) })
+    var payload = { messages: conv };
+    if (lastAnalysisId) payload.analysisId = lastAnalysisId;   // 已有菜單分析 → 併進該筆，不另開
+    extractPromise = fetch('/api/ai-extract', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) })
       .then(function (r) { return r.json(); })
       .then(function (j) { if (j && j.data && j.data.analysisId) lastAnalysisId = j.data.analysisId; })
       .catch(function () {});
@@ -1543,7 +1545,9 @@ class Component extends DCLogic {
     if (!conv.length) return;
     convPersisted = true;
     try {
-      var blob = new Blob([JSON.stringify({ messages: conv })], { type: 'application/json' });
+      var bp = { messages: conv };
+      if (lastAnalysisId) bp.analysisId = lastAnalysisId;
+      var blob = new Blob([JSON.stringify(bp)], { type: 'application/json' });
       navigator.sendBeacon('/api/ai-extract', blob);
     } catch (e) {}
   });
