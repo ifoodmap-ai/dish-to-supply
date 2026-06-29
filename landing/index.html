@@ -1385,7 +1385,8 @@ class Component extends DCLogic {
     history.push({ role: 'user', text: v });
     addMsg('user', v);
     addTyping();
-    postJSON('/api/ai-chat', { messages: history }).then(function (r) {
+    var textHistory = history.map(function (m) { return { role: m.role, text: m.text }; }); // 對話回覆不需附圖
+    postJSON('/api/ai-chat', { messages: textHistory }).then(function (r) {
       clearTyping();
       if (r.ok && r.json && r.json.data && r.json.data.reply) {
         var reply = r.json.data.reply;
@@ -1423,6 +1424,7 @@ class Component extends DCLogic {
     if (f.type.indexOf('image/') !== 0) { addMsg('bot', '請上傳圖片檔（JPG / PNG）。'); return; }
     downscale(f).then(function (dataUrl) {
       var b = addRow('user'); var im = document.createElement('img'); im.src = dataUrl; im.alt = '菜單'; b.appendChild(im); scrollDown();
+      history.push({ role: 'user', text: '', image: dataUrl });   // 把圖片放進對話序列
       addTyping();
       return postJSON('/api/ai-menu', { image: dataUrl, mimeType: 'image/jpeg', fileName: f.name || 'menu.jpg' });
     }).then(function (r) {
@@ -1457,7 +1459,7 @@ class Component extends DCLogic {
   // 把對話需求送進後台媒合佇列（analysis_records，pending_review）
   function persistConversation() {
     if (convPersisted) return;
-    var conv = history.filter(function (m) { return m && m.text; });
+    var conv = history.filter(function (m) { return m && (m.text || m.image); });
     if (!conv.length) return;
     convPersisted = true;
     var payload = { messages: conv };
@@ -1541,7 +1543,7 @@ class Component extends DCLogic {
   // 離開頁面時，若還沒記錄過對話就用 beacon 補記（確保「所有對話」都留存）
   window.addEventListener('pagehide', function () {
     if (convPersisted) return;
-    var conv = history.filter(function (m) { return m && m.text; });
+    var conv = history.filter(function (m) { return m && (m.text || m.image); });
     if (!conv.length) return;
     convPersisted = true;
     try {
