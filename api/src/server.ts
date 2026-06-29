@@ -349,13 +349,14 @@ const buildTranscript = (messages: { role: string; text: string }[]) =>
  * up in the admin review queue. Best-effort: if the table/insert fails we still
  * return the AI result to the caller, but we log + surface the persistence error.
  */
-const persistAnalysis = async (sourceType: string, result: AnalysisResult) => {
+const persistAnalysis = async (sourceType: string, result: AnalysisResult, transcript?: string) => {
   const { data, error } = await supabase
     .from("analysis_records")
     .insert({
       source_type: sourceType,
       summary: result.summary,
       ingredient_list: result.ingredients,
+      transcript: transcript ?? null,
       status: "pending_review"
     })
     .select("id")
@@ -408,7 +409,7 @@ app.post("/api/analyze/chat", async (c) => {
 
   try {
     const result = await analyzeConversation(transcript);
-    const { analysisId, persistError } = await persistAnalysis("chatbot", result);
+    const { analysisId, persistError } = await persistAnalysis("chatbot", result, transcript);
     return c.json({ data: { analysisId, persistError, ...result } });
   } catch (error) {
     const message = error instanceof Error ? error.message : "AI 分析失敗";

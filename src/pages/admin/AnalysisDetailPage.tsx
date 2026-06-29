@@ -32,6 +32,7 @@ interface AnalysisRecord {
   ingredient_list: Ingredient[] | null;
   admin_notes: string | null;
   reviewed_at: string | null;
+  transcript: string | null;
 }
 
 interface Supplier {
@@ -279,6 +280,19 @@ const AnalysisDetailPage = () => {
                   </span>
                 ))}
               </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {record.transcript && (
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base text-slate-700">完整對話紀錄 (Conversation Log)</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <pre className="text-sm text-slate-700 whitespace-pre-wrap font-sans leading-relaxed">
+                {record.transcript}
+              </pre>
             </CardContent>
           </Card>
         )}
