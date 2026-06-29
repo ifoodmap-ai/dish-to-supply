@@ -44,7 +44,10 @@ interface AnalysisRecord {
   reviewed_at: string | null;
   transcript: string | null;
   images: string[] | null;
+  messages: { role: string; text: string; image?: string }[] | null;
 }
+
+const asDataUrl = (s: string) => (s.startsWith('data:') ? s : `data:image/jpeg;base64,${s}`);
 
 interface Supplier {
   id: string;
@@ -94,6 +97,8 @@ const AnalysisDetailPage = () => {
   // Delete state
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [deleting, setDeleting] = useState(false);
+
+  const [lightbox, setLightbox] = useState<string | null>(null);
 
   const handleDelete = async () => {
     if (!record) return;
@@ -331,31 +336,42 @@ const AnalysisDetailPage = () => {
           </Card>
         )}
 
-        {record.images && record.images.length > 0 && (
+        {/* 對話紀錄：有結構化訊息 → 聊天泡泡（圖文穿插）；否則退回純文字逐字稿 */}
+        {record.messages && record.messages.length > 0 ? (
           <Card>
             <CardHeader>
-              <CardTitle className="text-base text-slate-700">上傳的圖片 (Uploaded Images)</CardTitle>
+              <CardTitle className="text-base text-slate-700">完整對話紀錄 (Conversation Log)</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="flex flex-wrap gap-3">
-                {record.images.map((src, i) => {
-                  const url = src.startsWith('data:') ? src : `data:image/jpeg;base64,${src}`;
+              <div className="space-y-3">
+                {record.messages.map((m, i) => {
+                  const isUser = m.role === 'user';
                   return (
-                    <a key={i} href={url} target="_blank" rel="noreferrer">
-                      <img
-                        src={url}
-                        alt={`上傳圖片 ${i + 1}`}
-                        className="h-40 w-auto rounded-lg border border-slate-200 object-cover hover:opacity-90 transition"
-                      />
-                    </a>
+                    <div key={i} className={`flex ${isUser ? 'justify-end' : 'justify-start'}`}>
+                      <div
+                        className={`max-w-[80%] rounded-2xl px-3.5 py-2.5 text-sm ${
+                          isUser
+                            ? 'bg-emerald-600 text-white rounded-br-sm'
+                            : 'bg-slate-100 text-slate-800 rounded-bl-sm'
+                        }`}
+                      >
+                        {m.text && <p className="whitespace-pre-wrap leading-relaxed">{m.text}</p>}
+                        {m.image && (
+                          <img
+                            src={asDataUrl(m.image)}
+                            alt="上傳圖片"
+                            onClick={() => setLightbox(asDataUrl(m.image as string))}
+                            className={`${m.text ? 'mt-2 ' : ''}max-h-56 w-auto rounded-lg cursor-zoom-in`}
+                          />
+                        )}
+                      </div>
+                    </div>
                   );
                 })}
               </div>
             </CardContent>
           </Card>
-        )}
-
-        {record.transcript && (
+        ) : record.transcript ? (
           <Card>
             <CardHeader>
               <CardTitle className="text-base text-slate-700">完整對話紀錄 (Conversation Log)</CardTitle>
@@ -364,6 +380,28 @@ const AnalysisDetailPage = () => {
               <pre className="text-sm text-slate-700 whitespace-pre-wrap font-sans leading-relaxed">
                 {record.transcript}
               </pre>
+            </CardContent>
+          </Card>
+        ) : null}
+
+        {/* 沒有結構化訊息時，才另外顯示上傳圖片卡（避免與對話內嵌圖重複） */}
+        {record.images && record.images.length > 0 && !(record.messages && record.messages.length > 0) && (
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base text-slate-700">上傳的圖片 (Uploaded Images)</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="flex flex-wrap gap-3">
+                {record.images.map((src, i) => (
+                  <img
+                    key={i}
+                    src={asDataUrl(src)}
+                    alt={`上傳圖片 ${i + 1}`}
+                    onClick={() => setLightbox(asDataUrl(src))}
+                    className="h-40 w-auto rounded-lg border border-slate-200 object-cover cursor-zoom-in hover:opacity-90 transition"
+                  />
+                ))}
+              </div>
             </CardContent>
           </Card>
         )}
@@ -477,6 +515,15 @@ const AnalysisDetailPage = () => {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {lightbox && (
+        <div
+          className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-6 cursor-zoom-out"
+          onClick={() => setLightbox(null)}
+        >
+          <img src={lightbox} alt="放大圖片" className="max-h-full max-w-full rounded-lg shadow-2xl" />
+        </div>
+      )}
     </div>
   );
 };

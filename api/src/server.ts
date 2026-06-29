@@ -325,7 +325,8 @@ const analyzeMenuSchema = z.object({
 
 const chatMessageSchema = z.object({
   role: z.enum(["user", "bot", "model"]),
-  text: z.string()
+  text: z.string(),
+  image: z.string().optional() // 可選：該則訊息附帶的圖片（data URL）
 });
 
 const analyzeChatSchema = z.object({
@@ -342,9 +343,9 @@ const chatReplySchema = z.object({
   messages: z.array(chatMessageSchema).min(1)
 });
 
-const buildTranscript = (messages: { role: string; text: string }[]) =>
+const buildTranscript = (messages: { role: string; text: string; image?: string }[]) =>
   messages
-    .map((m) => `${m.role === "user" ? "客人" : "客服"}: ${m.text}`)
+    .map((m) => `${m.role === "user" ? "客人" : "客服"}: ${m.text || (m.image ? "[圖片]" : "")}`)
     .join("\n");
 
 /**
@@ -356,7 +357,8 @@ const persistAnalysis = async (
   sourceType: string,
   result: AnalysisResult,
   transcript?: string,
-  images?: string[]
+  images?: string[],
+  messages?: unknown[]
 ) => {
   const { data, error } = await supabase
     .from("analysis_records")
@@ -366,6 +368,7 @@ const persistAnalysis = async (
       ingredient_list: result.ingredients,
       transcript: transcript ?? null,
       images: images && images.length ? images : null,
+      messages: messages && messages.length ? messages : null,
       status: "pending_review"
     })
     .select("id")
@@ -419,11 +422,13 @@ app.post("/api/analyze/chat", async (c) => {
 
   const transcript = parsed.data.transcript ?? buildTranscript(parsed.data.messages ?? []);
 
-  // 同一 session 已有分析紀錄 → 只把逐字稿併進該筆（不重新分析、不另開新紀錄）
+  // 同一 session 已有分析紀錄 → 只把逐字稿/訊息併進該筆（不重新分析、不另開新紀錄）
   if (parsed.data.analysisId) {
+    const patch: Record<string, unknown> = { transcript };
+    if (parsed.data.messages) patch.messages = parsed.data.messages;
     const { error } = await supabase
       .from("analysis_records")
-      .update({ transcript })
+      .update(patch)
       .eq("id", parsed.data.analysisId);
     return c.json({
       data: { analysisId: parsed.data.analysisId, persistError: error?.message ?? null, summary: null, ingredients: [] }
@@ -432,7 +437,7 @@ app.post("/api/analyze/chat", async (c) => {
 
   try {
     const result = await analyzeConversation(transcript);
-    const { analysisId, persistError } = await persistAnalysis("chatbot", result, transcript);
+    const { analysisId, persistError } = await persistAnalysis("chatbot", result, transcript, undefined, parsed.data.messages);
     return c.json({ data: { analysisId, persistError, ...result } });
   } catch (error) {
     const message = error instanceof Error ? error.message : "AI 分析失敗";
