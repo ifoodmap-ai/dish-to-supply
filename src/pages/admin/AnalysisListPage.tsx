@@ -11,6 +11,19 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Button } from '@/components/ui/button';
+import { Trash2 } from 'lucide-react';
+import { useToast } from '@/hooks/use-toast';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { supabase } from '@/integrations/supabase/client';
 
 type AnalysisStatus = 'pending_review' | 'approved' | 'rejected' | 'sent';
@@ -47,9 +60,34 @@ const tabs: { value: TabValue; label: string }[] = [
 
 const AnalysisListPage = () => {
   const navigate = useNavigate();
+  const { toast } = useToast();
   const [activeTab, setActiveTab] = useState<TabValue>('all');
   const [records, setRecords] = useState<AnalysisRecord[]>([]);
   const [loading, setLoading] = useState(true);
+  const [deleteId, setDeleteId] = useState<string | null>(null);
+  const [deleting, setDeleting] = useState(false);
+
+  const handleDelete = async () => {
+    if (!deleteId) return;
+    const id = deleteId;
+    setDeleting(true);
+    const { error } = await (supabase as never)
+      .from('analysis_records')
+      .delete()
+      .eq('id', id);
+    setDeleting(false);
+    setDeleteId(null);
+    if (error) {
+      toast({
+        title: '刪除失敗 (Delete failed)',
+        description: (error as { message?: string }).message,
+        variant: 'destructive',
+      });
+      return;
+    }
+    toast({ title: '已刪除 (Deleted)' });
+    setRecords((prev) => prev.filter((r) => r.id !== id));
+  };
 
   useEffect(() => {
     const fetchRecords = async () => {
@@ -94,13 +132,14 @@ const AnalysisListPage = () => {
               <TableHead className="text-slate-600">來源</TableHead>
               <TableHead className="text-slate-600">摘要</TableHead>
               <TableHead className="text-slate-600">狀態</TableHead>
+              <TableHead className="text-slate-600 w-12 text-right">操作</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {loading ? (
               Array.from({ length: 5 }).map((_, i) => (
                 <TableRow key={i}>
-                  {Array.from({ length: 4 }).map((_, j) => (
+                  {Array.from({ length: 5 }).map((_, j) => (
                     <TableCell key={j}>
                       <Skeleton className="h-4 w-full" />
                     </TableCell>
@@ -109,7 +148,7 @@ const AnalysisListPage = () => {
               ))
             ) : records.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={4} className="text-center py-10 text-slate-400">
+                <TableCell colSpan={5} className="text-center py-10 text-slate-400">
                   沒有紀錄 (No records found)
                 </TableCell>
               </TableRow>
@@ -139,12 +178,42 @@ const AnalysisListPage = () => {
                       {statusLabel[record.status]}
                     </Badge>
                   </TableCell>
+                  <TableCell className="text-right" onClick={(e) => e.stopPropagation()}>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8 text-slate-400 hover:text-red-600 hover:bg-red-50"
+                      onClick={() => setDeleteId(record.id)}
+                      aria-label="刪除"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </TableCell>
                 </TableRow>
               ))
             )}
           </TableBody>
         </Table>
       </div>
+
+      <AlertDialog open={!!deleteId} onOpenChange={(o) => { if (!o) setDeleteId(null); }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>確定刪除這筆紀錄？</AlertDialogTitle>
+            <AlertDialogDescription>此操作無法復原，紀錄將永久刪除。</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>取消</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDelete}
+              disabled={deleting}
+              className="bg-red-600 hover:bg-red-700"
+            >
+              {deleting ? '刪除中…' : '確定刪除'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };

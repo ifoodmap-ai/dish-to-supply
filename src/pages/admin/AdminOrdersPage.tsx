@@ -12,6 +12,19 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Button } from '@/components/ui/button';
+import { Trash2 } from 'lucide-react';
+import { useToast } from '@/hooks/use-toast';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { supabase } from '@/integrations/supabase/client';
 
 interface Ingredient {
@@ -57,11 +70,36 @@ const tabs: { value: string; label: string }[] = [
 
 const AdminOrdersPage = () => {
   const navigate = useNavigate();
+  const { toast } = useToast();
   const [activeTab, setActiveTab] = useState<string>('all');
   const [orders, setOrders] = useState<OrderRow[]>([]);
   const [supplierMap, setSupplierMap] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
+  const [deleteId, setDeleteId] = useState<string | null>(null);
+  const [deleting, setDeleting] = useState(false);
+
+  const handleDelete = async () => {
+    if (!deleteId) return;
+    const id = deleteId;
+    setDeleting(true);
+    const { error } = await (supabase as never)
+      .from('supplier_orders')
+      .delete()
+      .eq('id', id);
+    setDeleting(false);
+    setDeleteId(null);
+    if (error) {
+      toast({
+        title: '刪除失敗 (Delete failed)',
+        description: (error as { message?: string }).message,
+        variant: 'destructive',
+      });
+      return;
+    }
+    toast({ title: '已刪除 (Deleted)' });
+    setOrders((prev) => prev.filter((o) => o.id !== id));
+  };
 
   useEffect(() => {
     const fetchData = async () => {
@@ -140,13 +178,14 @@ const AdminOrdersPage = () => {
               <TableHead className="text-slate-600">食材清單</TableHead>
               <TableHead className="text-slate-600">狀態</TableHead>
               <TableHead className="text-slate-600">發送時間</TableHead>
+              <TableHead className="text-slate-600 w-12 text-right">操作</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {loading ? (
               Array.from({ length: 5 }).map((_, i) => (
                 <TableRow key={i}>
-                  {Array.from({ length: 5 }).map((_, j) => (
+                  {Array.from({ length: 6 }).map((_, j) => (
                     <TableCell key={j}>
                       <Skeleton className="h-4 w-full" />
                     </TableCell>
@@ -155,7 +194,7 @@ const AdminOrdersPage = () => {
               ))
             ) : filtered.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={5} className="text-center py-10 text-slate-400">
+                <TableCell colSpan={6} className="text-center py-10 text-slate-400">
                   沒有訂單 (No orders found)
                 </TableCell>
               </TableRow>
@@ -190,12 +229,42 @@ const AdminOrdersPage = () => {
                   <TableCell className="text-sm text-slate-500 whitespace-nowrap">
                     {o.sent_at ? new Date(o.sent_at).toLocaleString('zh-TW') : '—'}
                   </TableCell>
+                  <TableCell className="text-right" onClick={(e) => e.stopPropagation()}>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8 text-slate-400 hover:text-red-600 hover:bg-red-50"
+                      onClick={() => setDeleteId(o.id)}
+                      aria-label="刪除"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </TableCell>
                 </TableRow>
               ))
             )}
           </TableBody>
         </Table>
       </div>
+
+      <AlertDialog open={!!deleteId} onOpenChange={(o) => { if (!o) setDeleteId(null); }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>確定刪除這筆訂單？</AlertDialogTitle>
+            <AlertDialogDescription>此操作無法復原，訂單將永久刪除。</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>取消</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDelete}
+              disabled={deleting}
+              className="bg-red-600 hover:bg-red-700"
+            >
+              {deleting ? '刪除中…' : '確定刪除'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };

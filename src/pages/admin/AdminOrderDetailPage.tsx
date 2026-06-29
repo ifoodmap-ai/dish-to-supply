@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Loader2 } from 'lucide-react';
+import { ArrowLeft, Loader2, Trash2 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -20,6 +20,16 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -85,6 +95,29 @@ const AdminOrderDetailPage = () => {
   const [notes, setNotes] = useState('');
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [deleteOpen, setDeleteOpen] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+
+  const handleDelete = async () => {
+    if (!order) return;
+    setDeleting(true);
+    const { error } = await (supabase as never)
+      .from('supplier_orders')
+      .delete()
+      .eq('id', order.id);
+    setDeleting(false);
+    setDeleteOpen(false);
+    if (error) {
+      toast({
+        title: '刪除失敗 (Delete failed)',
+        description: (error as { message?: string }).message,
+        variant: 'destructive',
+      });
+      return;
+    }
+    toast({ title: '已刪除 (Deleted)' });
+    navigate('/admin/orders');
+  };
 
   const fetchOrder = async () => {
     const { data } = await (supabase as never)
@@ -187,12 +220,23 @@ const AdminOrderDetailPage = () => {
 
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-2xl font-bold text-slate-800">訂單詳情 (Order Detail)</h1>
-        <Badge
-          variant="outline"
-          className={statusBadgeClass[order.status] ?? 'bg-slate-100 text-slate-700 border-slate-300'}
-        >
-          {statusLabel[order.status] ?? order.status}
-        </Badge>
+        <div className="flex items-center gap-3">
+          <Badge
+            variant="outline"
+            className={statusBadgeClass[order.status] ?? 'bg-slate-100 text-slate-700 border-slate-300'}
+          >
+            {statusLabel[order.status] ?? order.status}
+          </Badge>
+          <Button
+            variant="outline"
+            size="sm"
+            className="text-red-600 border-red-200 hover:bg-red-50 hover:text-red-700"
+            onClick={() => setDeleteOpen(true)}
+          >
+            <Trash2 className="h-4 w-4 mr-1.5" />
+            刪除
+          </Button>
+        </div>
       </div>
 
       <div className="space-y-4">
@@ -308,6 +352,25 @@ const AdminOrderDetailPage = () => {
           </CardContent>
         </Card>
       </div>
+
+      <AlertDialog open={deleteOpen} onOpenChange={setDeleteOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>確定刪除這筆訂單？</AlertDialogTitle>
+            <AlertDialogDescription>此操作無法復原，訂單將永久刪除。</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>取消</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDelete}
+              disabled={deleting}
+              className="bg-red-600 hover:bg-red-700"
+            >
+              {deleting ? '刪除中…' : '確定刪除'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };
