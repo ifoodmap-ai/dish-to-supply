@@ -43,6 +43,7 @@ interface AnalysisRecord {
   admin_notes: string | null;
   reviewed_at: string | null;
   transcript: string | null;
+  images: string[] | null;
 }
 
 interface Supplier {
@@ -325,6 +326,30 @@ const AnalysisDetailPage = () => {
                       : `${item.name}${item.quantity ? ` · ${item.quantity}${item.unit ?? ''}` : ''}`}
                   </span>
                 ))}
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {record.images && record.images.length > 0 && (
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base text-slate-700">上傳的圖片 (Uploaded Images)</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="flex flex-wrap gap-3">
+                {record.images.map((src, i) => {
+                  const url = src.startsWith('data:') ? src : `data:image/jpeg;base64,${src}`;
+                  return (
+                    <a key={i} href={url} target="_blank" rel="noreferrer">
+                      <img
+                        src={url}
+                        alt={`上傳圖片 ${i + 1}`}
+                        className="h-40 w-auto rounded-lg border border-slate-200 object-cover hover:opacity-90 transition"
+                      />
+                    </a>
+                  );
+                })}
               </div>
             </CardContent>
           </Card>

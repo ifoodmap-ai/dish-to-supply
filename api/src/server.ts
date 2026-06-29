@@ -352,7 +352,12 @@ const buildTranscript = (messages: { role: string; text: string }[]) =>
  * up in the admin review queue. Best-effort: if the table/insert fails we still
  * return the AI result to the caller, but we log + surface the persistence error.
  */
-const persistAnalysis = async (sourceType: string, result: AnalysisResult, transcript?: string) => {
+const persistAnalysis = async (
+  sourceType: string,
+  result: AnalysisResult,
+  transcript?: string,
+  images?: string[]
+) => {
   const { data, error } = await supabase
     .from("analysis_records")
     .insert({
@@ -360,6 +365,7 @@ const persistAnalysis = async (sourceType: string, result: AnalysisResult, trans
       summary: result.summary,
       ingredient_list: result.ingredients,
       transcript: transcript ?? null,
+      images: images && images.length ? images : null,
       status: "pending_review"
     })
     .select("id")
@@ -387,7 +393,10 @@ app.post("/api/analyze/menu", async (c) => {
 
   try {
     const result = await analyzeMenuImage(parsed.data.image, parsed.data.mimeType);
-    const { analysisId, persistError } = await persistAnalysis("menu_upload", result);
+    const dataUrl = parsed.data.image.startsWith("data:")
+      ? parsed.data.image
+      : `data:${parsed.data.mimeType};base64,${parsed.data.image}`;
+    const { analysisId, persistError } = await persistAnalysis("menu_upload", result, undefined, [dataUrl]);
     return c.json({ data: { analysisId, persistError, ...result } });
   } catch (error) {
     const message = error instanceof Error ? error.message : "AI 分析失敗";
