@@ -1535,6 +1535,18 @@ class Component extends DCLogic {
   panel.querySelector('.ai-upload').addEventListener('click', function () { fileInput.click(); });
   sendBtn.addEventListener('click', sendText);
   textInput.addEventListener('keydown', function (e) { if (e.key === 'Enter') { e.preventDefault(); sendText(); } });
+
+  // 離開頁面時，若還沒記錄過對話就用 beacon 補記（確保「所有對話」都留存）
+  window.addEventListener('pagehide', function () {
+    if (convPersisted) return;
+    var conv = history.filter(function (m) { return m && m.text; });
+    if (!conv.length) return;
+    convPersisted = true;
+    try {
+      var blob = new Blob([JSON.stringify({ messages: conv })], { type: 'application/json' });
+      navigator.sendBeacon('/api/ai-extract', blob);
+    } catch (e) {}
+  });
 })();
 </script>
 </body>
