@@ -1330,7 +1330,7 @@ class Component extends DCLogic {
   var lastAnalysis = null; // {summary, ingredients}
   var leadShown = false;
   var ctaShown = false;
-  var convPersisted = false;
+  var lastPersistedLen = 0;   // 上次已送到後台的訊息數（>0 後續追加會再更新同一筆）
   var collect = { active: false, step: '', name: '', phone: '' };
   var lastAnalysisId = null;   // 連結 landing_leads ↔ analysis_records
   var extractPromise = null;
@@ -1486,16 +1486,17 @@ class Component extends DCLogic {
   // ---- 留名媒合 ----
   // 把對話需求送進後台媒合佇列（analysis_records，pending_review）
   function persistConversation() {
-    if (convPersisted) return;
     var conv = history.filter(function (m) { return m && (m.text || m.image); });
-    if (!conv.length) return;
-    convPersisted = true;
-    var payload = { messages: conv };
-    if (lastAnalysisId) payload.analysisId = lastAnalysisId;   // 已有菜單分析 → 併進該筆，不另開
-    extractPromise = fetch('/api/ai-extract', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) })
-      .then(function (r) { return r.json(); })
-      .then(function (j) { if (j && j.data && j.data.analysisId) lastAnalysisId = j.data.analysisId; })
-      .catch(function () {});
+    if (!conv.length || conv.length <= lastPersistedLen) return;   // 沒有新訊息就不重送
+    lastPersistedLen = conv.length;
+    // 串接在上一個請求之後：確保第一次拿到 analysisId 後，後續追加都更新同一筆（不另開）
+    extractPromise = Promise.resolve(extractPromise).then(function () {
+      var payload = { messages: conv };
+      if (lastAnalysisId) payload.analysisId = lastAnalysisId;
+      return fetch('/api/ai-extract', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) })
+        .then(function (r) { return r.json(); })
+        .then(function (j) { if (j && j.data && j.data.analysisId) lastAnalysisId = j.data.analysisId; });
+    }).catch(function () {});
   }
   function showLeadCTA(prefix) {
     if (leadShown || ctaShown) return; ctaShown = true;
@@ -1570,10 +1571,9 @@ class Component extends DCLogic {
 
   // 離開頁面時，若還沒記錄過對話就用 beacon 補記（確保「所有對話」都留存）
   window.addEventListener('pagehide', function () {
-    if (convPersisted) return;
     var conv = history.filter(function (m) { return m && (m.text || m.image); });
-    if (!conv.length) return;
-    convPersisted = true;
+    if (!conv.length || conv.length <= lastPersistedLen) return;
+    lastPersistedLen = conv.length;
     try {
       var bp = { messages: conv };
       if (lastAnalysisId) bp.analysisId = lastAnalysisId;
