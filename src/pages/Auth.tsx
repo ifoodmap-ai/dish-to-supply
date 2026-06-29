@@ -11,6 +11,16 @@ import { useLanguage } from '@/contexts/LanguageContext';
 import { Eye, EyeOff } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
 
+// 依使用者角色決定登入後要去哪：管理員→後台、供應商→供應商後台、其他→首頁
+const destForSession = (
+  session: { user?: { app_metadata?: { role?: string } } } | null
+) => {
+  const role = session?.user?.app_metadata?.role;
+  if (role === 'admin') return '/admin';
+  if (role === 'supplier') return '/supplier';
+  return '/';
+};
+
 export default function Auth() {
   const [isLogin, setIsLogin] = useState(true);
   const [loginMethod, setLoginMethod] = useState<'email' | 'phone'>('email');
@@ -30,7 +40,7 @@ export default function Auth() {
     const checkSession = async () => {
       const { data: { session } } = await supabase.auth.getSession();
       if (session) {
-        navigate('/');
+        navigate(destForSession(session));
       }
     };
     checkSession();
@@ -38,7 +48,7 @@ export default function Auth() {
     // Subscribe to auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       if (session) {
-        navigate('/');
+        navigate(destForSession(session));
       }
     });
 
