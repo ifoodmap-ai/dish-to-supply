@@ -8,7 +8,8 @@ import {
   analyzeMenuImage,
   chatReply,
   isGeminiConfigured,
-  type AnalysisResult
+  type AnalysisResult,
+  type Ingredient
 } from "./lib/gemini.js";
 
 type Bindings = {
@@ -422,17 +423,67 @@ app.post("/api/analyze/chat", async (c) => {
 
   const transcript = parsed.data.transcript ?? buildTranscript(parsed.data.messages ?? []);
 
-  // 同一 session 已有分析紀錄 → 只把逐字稿/訊息併進該筆（不重新分析、不另開新紀錄）
+  // 同一 session 已有分析紀錄 → 重新萃取整段對話的食材，與既有清單合併去重後更新同一筆
+  // （不另開新紀錄；先上傳菜單再追加的情境，原本菜單品項不會被洗掉）
   if (parsed.data.analysisId) {
-    const patch: Record<string, unknown> = { transcript };
-    if (parsed.data.messages) patch.messages = parsed.data.messages;
-    const { error } = await supabase
-      .from("analysis_records")
-      .update(patch)
-      .eq("id", parsed.data.analysisId);
-    return c.json({
-      data: { analysisId: parsed.data.analysisId, persistError: error?.message ?? null, summary: null, ingredients: [] }
-    });
+    try {
+      // 1. 取既有紀錄（保留先前已萃取的食材，例如菜單照分析結果）
+      const { data: existing } = await supabase
+        .from("analysis_records")
+        .select("ingredient_list, summary")
+        .eq("id", parsed.data.analysisId)
+        .maybeSingle();
+      const prevIngredients: Ingredient[] = Array.isArray((existing as any)?.ingredient_list)
+        ? ((existing as any).ingredient_list as Ingredient[])
+        : [];
+
+      // 2. 重新萃取整段對話
+      const result = await analyzeConversation(transcript);
+
+      // 3. 合併去重（以食材名稱為鍵，新萃取結果覆蓋舊的同名項目）
+      const byName = new Map<string, Ingredient>();
+      for (const ing of prevIngredients) {
+        if (ing && ing.name) byName.set(ing.name.trim().toLowerCase(), ing);
+      }
+      for (const ing of result.ingredients) {
+        if (ing && ing.name) byName.set(ing.name.trim().toLowerCase(), ing);
+      }
+      const mergedIngredients = Array.from(byName.values());
+
+      const patch: Record<string, unknown> = {
+        transcript,
+        ingredient_list: mergedIngredients
+      };
+      if (result.summary) patch.summary = result.summary;
+      if (parsed.data.messages) patch.messages = parsed.data.messages;
+
+      const { error } = await supabase
+        .from("analysis_records")
+        .update(patch)
+        .eq("id", parsed.data.analysisId);
+
+      return c.json({
+        data: {
+          analysisId: parsed.data.analysisId,
+          persistError: error?.message ?? null,
+          summary: result.summary,
+          ingredients: mergedIngredients
+        }
+      });
+    } catch (error) {
+      // 萃取失敗時退回只更新逐字稿/訊息，至少不漏掉對話紀錄
+      const patch: Record<string, unknown> = { transcript };
+      if (parsed.data.messages) patch.messages = parsed.data.messages;
+      const { error: updErr } = await supabase
+        .from("analysis_records")
+        .update(patch)
+        .eq("id", parsed.data.analysisId);
+      const message = error instanceof Error ? error.message : "AI 萃取失敗";
+      console.error("analyze/chat (append) extract error:", message);
+      return c.json({
+        data: { analysisId: parsed.data.analysisId, persistError: updErr?.message ?? null, summary: null, ingredients: [] }
+      });
+    }
   }
 
   try {
