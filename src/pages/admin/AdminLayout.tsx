@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { NavLink, Outlet, useNavigate } from 'react-router-dom';
-import { LayoutDashboard, ClipboardList, Package, LogOut, Menu, X } from 'lucide-react';
+import { LayoutDashboard, ClipboardList, Package, Map, LogOut, Menu, X } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 
@@ -8,6 +8,7 @@ const navItems = [
   { label: '儀表板 (Dashboard)', icon: LayoutDashboard, to: '/admin' },
   { label: '分析紀錄 (Analyses)', icon: ClipboardList, to: '/admin/analyses' },
   { label: '供應商訂單 (Orders)', icon: Package, to: '/admin/orders' },
+  { label: '發展藍圖 (Roadmap)', icon: Map, to: '/admin/roadmap' },
 ];
 
 const AdminLayout = () => {

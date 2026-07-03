@@ -9,6 +9,7 @@ import Auth from "./pages/Auth";
 import SupplierDetail from "./pages/SupplierDetail";
 import NotFound from "./pages/NotFound";
 import Architecture from "./pages/Architecture";
+import InvestorsPage from "./pages/InvestorsPage";
 import AdminRoute from "./components/AdminRoute";
 import AdminLayout from "./pages/admin/AdminLayout";
 import AdminDashboard from "./pages/admin/AdminDashboard";
@@ -16,6 +17,7 @@ import AnalysisListPage from "./pages/admin/AnalysisListPage";
 import AnalysisDetailPage from "./pages/admin/AnalysisDetailPage";
 import AdminOrdersPage from "./pages/admin/AdminOrdersPage";
 import AdminOrderDetailPage from "./pages/admin/AdminOrderDetailPage";
+import AdminRoadmapPage from "./pages/admin/AdminRoadmapPage";
 import SupplierRoute from "./components/SupplierRoute";
 import SupplierLayout from "./pages/supplier/SupplierLayout";
 import SupplierOrdersPage from "./pages/supplier/SupplierOrdersPage";
@@ -35,12 +37,14 @@ const App = () => (
             <Route path="/auth" element={<Auth />} />
             <Route path="/supplier/:id" element={<SupplierDetail />} />
             <Route path="/architecture" element={<Architecture />} />
+            <Route path="/investors" element={<InvestorsPage />} />
             <Route path="/admin" element={<AdminRoute><AdminLayout /></AdminRoute>}>
               <Route index element={<AdminDashboard />} />
               <Route path="analyses" element={<AnalysisListPage />} />
               <Route path="analyses/:id" element={<AnalysisDetailPage />} />
               <Route path="orders" element={<AdminOrdersPage />} />
               <Route path="orders/:id" element={<AdminOrderDetailPage />} />
+              <Route path="roadmap" element={<AdminRoadmapPage />} />
             </Route>
             <Route path="/supplier" element={<SupplierRoute><SupplierLayout /></SupplierRoute>}>
               <Route index element={<SupplierOrdersPage />} />
