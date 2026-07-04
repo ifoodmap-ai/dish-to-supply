@@ -9,6 +9,7 @@ CREATE TABLE public.roadmap_features (
   title TEXT NOT NULL,
   description TEXT,
   status TEXT NOT NULL DEFAULT 'planned' CHECK (status IN ('done', 'in_progress', 'planned')),
+  image_url TEXT,
   sort_order INT NOT NULL DEFAULT 0,
   created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(),
   updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now()

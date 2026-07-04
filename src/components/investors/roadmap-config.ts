@@ -12,6 +12,7 @@ export interface RoadmapFeature {
   status: RoadmapStatus;
   sort_order: number;
   updated_at: string;
+  image_url?: string | null;
 }
 
 export interface PhaseMeta {

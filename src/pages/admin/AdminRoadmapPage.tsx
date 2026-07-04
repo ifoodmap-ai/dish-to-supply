@@ -61,6 +61,7 @@ interface FormState {
   block: RoadmapBlock;
   phase: number;
   status: RoadmapStatus;
+  image_url: string;
 }
 
 const emptyForm: FormState = {
@@ -70,6 +71,7 @@ const emptyForm: FormState = {
   block: 'ai_matching',
   phase: 1,
   status: 'planned',
+  image_url: '',
 };
 
 const AdminRoadmapPage = () => {
@@ -130,6 +132,7 @@ const AdminRoadmapPage = () => {
       block: f.block,
       phase: f.phase,
       status: f.status,
+      image_url: f.image_url ?? '',
     });
     setFormOpen(true);
   };
@@ -147,6 +150,7 @@ const AdminRoadmapPage = () => {
           block: form.block,
           phase: form.phase,
           status: form.status,
+          image_url: form.image_url.trim() || null,
         })
         .eq('id', form.id);
       setSaving(false);
@@ -164,6 +168,7 @@ const AdminRoadmapPage = () => {
         block: form.block,
         phase: form.phase,
         status: form.status,
+        image_url: form.image_url.trim() || null,
         sort_order: maxSort + 1,
       });
       setSaving(false);
@@ -362,6 +367,23 @@ const AdminRoadmapPage = () => {
                 rows={2}
                 placeholder="一句話說明這個功能(投資人頁點擊方塊時顯示)"
               />
+            </div>
+            <div>
+              <label className="text-sm text-slate-600 mb-1.5 block">畫面截圖網址</label>
+              <Input
+                value={form.image_url}
+                onChange={(e) => setForm((f) => ({ ...f, image_url: e.target.value }))}
+                placeholder="/roadmap/xxx.png 或完整圖片網址"
+              />
+              {form.image_url.trim() && (
+                <img
+                  src={form.image_url}
+                  alt="預覽"
+                  className="mt-2 max-h-40 rounded border border-slate-200"
+                  onError={(e) => ((e.target as HTMLImageElement).style.display = 'none')}
+                  onLoad={(e) => ((e.target as HTMLImageElement).style.display = '')}
+                />
+              )}
             </div>
             <div className="grid grid-cols-3 gap-3">
               <div>
