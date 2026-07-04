@@ -18,11 +18,17 @@ import AnalysisDetailPage from "./pages/admin/AnalysisDetailPage";
 import AdminOrdersPage from "./pages/admin/AdminOrdersPage";
 import AdminOrderDetailPage from "./pages/admin/AdminOrderDetailPage";
 import AdminRoadmapPage from "./pages/admin/AdminRoadmapPage";
+import AdminMatchingPage from "./pages/admin/AdminMatchingPage";
+import AdminForecastPage from "./pages/admin/AdminForecastPage";
+import AdminBillingPage from "./pages/admin/AdminBillingPage";
+import AdminNotificationsPage from "./pages/admin/AdminNotificationsPage";
 import SupplierRoute from "./components/SupplierRoute";
 import SupplierLayout from "./pages/supplier/SupplierLayout";
 import SupplierOrdersPage from "./pages/supplier/SupplierOrdersPage";
 import SupplierShipmentsPage from "./pages/supplier/SupplierShipmentsPage";
 import SupplierCatalogPage from "./pages/supplier/SupplierCatalogPage";
+import SupplierQuotesPage from "./pages/supplier/SupplierQuotesPage";
+import SupplierLogisticsPage from "./pages/supplier/SupplierLogisticsPage";
 
 const queryClient = new QueryClient();
 
@@ -45,11 +51,17 @@ const App = () => (
               <Route path="analyses/:id" element={<AnalysisDetailPage />} />
               <Route path="orders" element={<AdminOrdersPage />} />
               <Route path="orders/:id" element={<AdminOrderDetailPage />} />
+              <Route path="matching" element={<AdminMatchingPage />} />
+              <Route path="forecast" element={<AdminForecastPage />} />
+              <Route path="billing" element={<AdminBillingPage />} />
+              <Route path="notifications" element={<AdminNotificationsPage />} />
               <Route path="roadmap" element={<AdminRoadmapPage />} />
             </Route>
             <Route path="/supplier" element={<SupplierRoute><SupplierLayout /></SupplierRoute>}>
               <Route index element={<SupplierOrdersPage />} />
               <Route path="catalog" element={<SupplierCatalogPage />} />
+              <Route path="quotes" element={<SupplierQuotesPage />} />
+              <Route path="logistics" element={<SupplierLogisticsPage />} />
               <Route path="shipments" element={<SupplierShipmentsPage />} />
             </Route>
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
