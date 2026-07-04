@@ -1,13 +1,15 @@
-import { useEffect, useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Skeleton } from '@/components/ui/skeleton';
 import InvestorsHero from '@/components/investors/InvestorsHero';
 import PhaseTimeline from '@/components/investors/PhaseTimeline';
 import FeatureMap from '@/components/investors/FeatureMap';
+import FeatureModal from '@/components/investors/FeatureModal';
 import { useRoadmapFeatures } from '@/components/investors/useRoadmapFeatures';
-import type { RoadmapStatus } from '@/components/investors/roadmap-config';
+import type { RoadmapFeature, RoadmapStatus } from '@/components/investors/roadmap-config';
 
 const InvestorsPage = () => {
   const { data, isLoading } = useRoadmapFeatures();
+  const [selected, setSelected] = useState<RoadmapFeature | null>(null);
 
   useEffect(() => {
     const prevTitle = document.title;
@@ -51,8 +53,8 @@ const InvestorsPage = () => {
         ) : (
           <>
             <InvestorsHero overallPercent={stats.overallPercent} counts={stats.counts} />
-            <PhaseTimeline features={data.features} />
-            <FeatureMap features={data.features} />
+            <PhaseTimeline features={data.features} onOpen={setSelected} />
+            <FeatureMap features={data.features} onOpen={setSelected} />
             <footer className="border-t border-slate-800 pt-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 text-xs text-slate-500">
               <span>ifoodmap © 2026 — 本頁進度即時同步於系統開發狀態</span>
               {!data.isFallback && data.lastUpdated && (
@@ -62,6 +64,7 @@ const InvestorsPage = () => {
           </>
         )}
       </div>
+      <FeatureModal feature={selected} onClose={() => setSelected(null)} />
     </div>
   );
 };

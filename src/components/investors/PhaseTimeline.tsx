@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { ChevronDown, CheckCircle2 } from 'lucide-react';
+import { ChevronDown, CheckCircle2, ImageIcon } from 'lucide-react';
 import { Progress } from '@/components/ui/progress';
 import {
   BLOCKS,
@@ -11,6 +11,7 @@ import {
 
 interface PhaseTimelineProps {
   features: RoadmapFeature[];
+  onOpen: (f: RoadmapFeature) => void;
 }
 
 const phaseState = (done: number, inProgress: number, total: number) => {
@@ -25,10 +26,12 @@ const PhaseCard = ({
   phase,
   inPhase,
   index,
+  onOpen,
 }: {
   phase: PhaseMeta;
   inPhase: RoadmapFeature[];
   index: number;
+  onOpen: (f: RoadmapFeature) => void;
 }) => {
   const [open, setOpen] = useState(false);
   const done = inPhase.filter((f) => f.status === 'done').length;
@@ -78,24 +81,42 @@ const PhaseCard = ({
             return (
               <div key={block.key} className="border-t border-slate-800 pt-3">
                 <p className="text-[11px] font-medium text-slate-500 mb-2">{block.title}</p>
-                <ul className="space-y-2">
+                <ul className="space-y-1">
                   {items.map((f) => {
                     const meta = STATUS_META[f.status];
                     return (
-                      <li key={f.id} className="flex items-start gap-2">
-                        {f.status === 'done' ? (
-                          <CheckCircle2 className="w-3.5 h-3.5 shrink-0 mt-0.5 text-emerald-400" />
-                        ) : (
-                          <span className={`w-2.5 h-2.5 rounded-full shrink-0 mt-1 ${meta.dotClass}`} />
-                        )}
-                        <span
-                          className={`text-xs leading-snug ${
-                            f.status === 'done' ? 'text-slate-200' : 'text-slate-400'
-                          }`}
+                      <li key={f.id}>
+                        <button
+                          type="button"
+                          onClick={() => onOpen(f)}
+                          className="w-full flex items-center gap-2.5 text-left rounded-md p-1 hover:bg-slate-800/70 transition-colors"
                         >
-                          {f.title}
-                          <span className="text-slate-600"> · {meta.label}</span>
-                        </span>
+                          {f.image_url ? (
+                            <img
+                              src={f.image_url}
+                              alt=""
+                              loading="lazy"
+                              className="w-11 h-7 object-cover rounded border border-slate-700 shrink-0"
+                            />
+                          ) : (
+                            <span className="w-11 h-7 rounded border border-dashed border-slate-700 shrink-0 flex items-center justify-center">
+                              <ImageIcon className="w-3 h-3 text-slate-600" />
+                            </span>
+                          )}
+                          {f.status === 'done' ? (
+                            <CheckCircle2 className="w-3.5 h-3.5 shrink-0 text-emerald-400" />
+                          ) : (
+                            <span className={`w-2.5 h-2.5 rounded-full shrink-0 ${meta.dotClass}`} />
+                          )}
+                          <span
+                            className={`text-xs leading-snug flex-1 ${
+                              f.status === 'done' ? 'text-slate-200' : 'text-slate-400'
+                            }`}
+                          >
+                            {f.title}
+                            <span className="text-slate-600"> · {meta.label}</span>
+                          </span>
+                        </button>
                       </li>
                     );
                   })}
@@ -109,11 +130,11 @@ const PhaseCard = ({
   );
 };
 
-const PhaseTimeline = ({ features }: PhaseTimelineProps) => {
+const PhaseTimeline = ({ features, onOpen }: PhaseTimelineProps) => {
   return (
     <section aria-label="發展階段">
       <h2 className="text-2xl font-bold text-white mb-1">發展階段</h2>
-      <p className="text-sm text-slate-500 mb-6">Development Phases — 點擊卡片查看完成細項</p>
+      <p className="text-sm text-slate-500 mb-6">Development Phases — 點擊卡片展開,再點細項看畫面</p>
 
       <div className="relative grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 items-start">
         {/* connecting line (desktop, decorative) */}
@@ -125,6 +146,7 @@ const PhaseTimeline = ({ features }: PhaseTimelineProps) => {
             phase={p}
             index={idx}
             inPhase={features.filter((f) => f.phase === p.phase)}
+            onOpen={onOpen}
           />
         ))}
       </div>
