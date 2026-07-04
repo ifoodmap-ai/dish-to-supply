@@ -1,5 +1,5 @@
 import { useParams, useNavigate } from "react-router-dom";
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -25,6 +25,53 @@ const SupplierDetail = () => {
   const [inquiryMessage, setInquiryMessage] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [dialogOpen, setDialogOpen] = useState(false);
+
+  // Reviews
+  interface Review { id: string; rating: number; comment: string | null; reviewer_name: string | null; created_at: string; }
+  const [reviews, setReviews] = useState<Review[]>([]);
+  const [newRating, setNewRating] = useState(5);
+  const [newComment, setNewComment] = useState("");
+  const [newName, setNewName] = useState("");
+  const [submittingReview, setSubmittingReview] = useState(false);
+
+  const fetchReviews = async () => {
+    const { data } = (await (supabase as never)
+      .from("supplier_reviews")
+      .select("id, rating, comment, reviewer_name, created_at")
+      .eq("supplier_ref", Number(id))
+      .order("created_at", { ascending: false })) as { data: Review[] | null };
+    setReviews(data ?? []);
+  };
+
+  useEffect(() => { fetchReviews(); /* eslint-disable-next-line */ }, [id]);
+
+  const reviewStats = useMemo(() => {
+    if (reviews.length === 0) return null;
+    const avg = reviews.reduce((s, r) => s + r.rating, 0) / reviews.length;
+    const dist = [5, 4, 3, 2, 1].map((star) => ({
+      star,
+      count: reviews.filter((r) => r.rating === star).length,
+    }));
+    return { avg, dist };
+  }, [reviews]);
+
+  const submitReview = async () => {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) { toast({ title: "請先登入", description: "登入後即可撰寫評價", variant: "destructive" }); navigate("/auth"); return; }
+    setSubmittingReview(true);
+    const { error } = await (supabase as never).from("supplier_reviews").insert({
+      supplier_ref: Number(id),
+      rating: newRating,
+      comment: newComment.trim() || null,
+      reviewer_name: newName.trim() || user.email?.split("@")[0] || "匿名買家",
+      user_id: user.id,
+    });
+    setSubmittingReview(false);
+    if (error) { toast({ title: "送出失敗", description: (error as { message?: string }).message, variant: "destructive" }); return; }
+    toast({ title: "感謝您的評價!" });
+    setNewComment(""); setNewName(""); setNewRating(5);
+    await fetchReviews();
+  };
 
   // Mock supplier data - in production this would come from an API/database
   const mockSuppliers = [
@@ -308,9 +355,12 @@ const SupplierDetail = () => {
           {/* Tabs for Content */}
           <Card className="p-8">
             <Tabs defaultValue="products" className="w-full">
-              <TabsList className="grid w-full max-w-md grid-cols-2">
+              <TabsList className="grid w-full max-w-lg grid-cols-3">
                 <TabsTrigger value="products">食材目錄</TabsTrigger>
                 <TabsTrigger value="certifications">相關證明</TabsTrigger>
+                <TabsTrigger value="reviews">
+                  買家評價{reviews.length > 0 ? ` (${reviews.length})` : ""}
+                </TabsTrigger>
               </TabsList>
               
               <TabsContent value="products" className="mt-6">
@@ -441,6 +491,76 @@ const SupplierDetail = () => {
                     <h3 className="text-xl font-semibold mb-4">公司簡介</h3>
                     <p className="text-muted-foreground leading-relaxed">{supplier.description}</p>
                   </Card>
+                </div>
+              </TabsContent>
+
+              <TabsContent value="reviews" className="mt-6">
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                  {/* Summary */}
+                  <Card className="p-6 h-fit">
+                    <h3 className="text-lg font-semibold mb-4">整體評價</h3>
+                    {reviewStats ? (
+                      <>
+                        <div className="flex items-end gap-2 mb-3">
+                          <span className="text-4xl font-bold text-primary">{reviewStats.avg.toFixed(1)}</span>
+                          <span className="text-muted-foreground mb-1">/ 5.0</span>
+                        </div>
+                        <div className="flex gap-0.5 mb-1">
+                          {[1, 2, 3, 4, 5].map((i) => (
+                            <Star key={i} className={`w-5 h-5 ${i <= Math.round(reviewStats.avg) ? "fill-amber-400 text-amber-400" : "text-muted-foreground/30"}`} />
+                          ))}
+                        </div>
+                        <p className="text-sm text-muted-foreground mb-4">共 {reviews.length} 則買家評價</p>
+                        <div className="space-y-1.5">
+                          {reviewStats.dist.map(({ star, count }) => (
+                            <div key={star} className="flex items-center gap-2 text-sm">
+                              <span className="w-8 text-muted-foreground">{star}★</span>
+                              <div className="flex-1 h-2 rounded-full bg-muted overflow-hidden">
+                                <div className="h-full bg-amber-400" style={{ width: `${reviews.length ? (count / reviews.length) * 100 : 0}%` }} />
+                              </div>
+                              <span className="w-6 text-right text-muted-foreground">{count}</span>
+                            </div>
+                          ))}
+                        </div>
+                      </>
+                    ) : (
+                      <p className="text-muted-foreground">尚無評價,成為第一個評價的買家!</p>
+                    )}
+                  </Card>
+
+                  {/* Review list + submit */}
+                  <div className="lg:col-span-2 space-y-4">
+                    <Card className="p-5">
+                      <h3 className="font-semibold mb-3">撰寫評價</h3>
+                      <div className="flex items-center gap-1 mb-3">
+                        {[1, 2, 3, 4, 5].map((i) => (
+                          <button key={i} type="button" onClick={() => setNewRating(i)} aria-label={`${i} 星`}>
+                            <Star className={`w-6 h-6 transition-colors ${i <= newRating ? "fill-amber-400 text-amber-400" : "text-muted-foreground/30 hover:text-amber-300"}`} />
+                          </button>
+                        ))}
+                      </div>
+                      <Input placeholder="店家名稱(選填)" value={newName} onChange={(e) => setNewName(e.target.value)} className="mb-2" />
+                      <Textarea placeholder="分享您的採購體驗…" value={newComment} onChange={(e) => setNewComment(e.target.value)} rows={2} className="mb-3" />
+                      <Button onClick={submitReview} disabled={submittingReview} className="bg-primary">
+                        {submittingReview ? "送出中…" : "送出評價"}
+                      </Button>
+                    </Card>
+
+                    {reviews.map((r) => (
+                      <Card key={r.id} className="p-5">
+                        <div className="flex items-center justify-between mb-1.5">
+                          <span className="font-medium">{r.reviewer_name ?? "匿名買家"}</span>
+                          <span className="text-xs text-muted-foreground">{new Date(r.created_at).toLocaleDateString("zh-TW")}</span>
+                        </div>
+                        <div className="flex gap-0.5 mb-2">
+                          {[1, 2, 3, 4, 5].map((i) => (
+                            <Star key={i} className={`w-4 h-4 ${i <= r.rating ? "fill-amber-400 text-amber-400" : "text-muted-foreground/30"}`} />
+                          ))}
+                        </div>
+                        {r.comment && <p className="text-sm text-muted-foreground leading-relaxed">{r.comment}</p>}
+                      </Card>
+                    ))}
+                  </div>
                 </div>
               </TabsContent>
             </Tabs>
