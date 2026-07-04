@@ -9,10 +9,12 @@ interface InvestorsHeroProps {
 const InvestorsHero = ({ overallPercent, counts }: InvestorsHeroProps) => {
   return (
     <header className="animate-in fade-in slide-in-from-bottom-4 duration-700">
-      <div className="flex items-center gap-2 mb-10">
-        <span className="text-2xl">🍽️</span>
-        <span className="text-lg font-semibold tracking-tight text-white">ifoodmap</span>
-        <span className="ml-2 text-[11px] font-medium text-emerald-300 bg-emerald-500/10 border border-emerald-500/30 rounded-full px-2.5 py-0.5">
+      <div className="flex flex-wrap items-center gap-2.5 mb-10">
+        <img src="/icon.png" alt="iFoodmap 食材地圖" className="w-9 h-9 shrink-0" />
+        <span className="text-lg font-bold tracking-tight text-white whitespace-nowrap">
+          iFoodmap <span className="text-sm font-normal text-slate-400">食材地圖</span>
+        </span>
+        <span className="text-[11px] font-medium text-emerald-300 bg-emerald-500/10 border border-emerald-500/30 rounded-full px-2.5 py-0.5 whitespace-nowrap">
           Investor Update
         </span>
       </div>
