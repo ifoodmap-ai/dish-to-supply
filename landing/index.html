@@ -8,6 +8,26 @@
 <body>
 <x-dc>
 <helmet>
+<title>iFoodmap 食材地圖 | 全台 B2B 餐飲食材採購媒合平台</title>
+<meta name="description" content="iFoodmap 食材地圖：用 AI 串接台灣餐飲供應鏈。餐飲業者填寫一次需求即時媒合最適合的供應商，供應商也被更多人看見。從產地到餐桌，讓採購更簡單。">
+<meta name="keywords" content="食材採購,餐飲供應鏈,供應商媒合,B2B 食材,餐廳進貨,食材地圖,ifoodmap,AI 採購,產地直送">
+<meta name="author" content="iFoodmap 食材地圖">
+<link rel="icon" type="image/x-icon" href="/favicon.ico">
+<link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
+<link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
+<link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
+<meta name="theme-color" content="#1f9e4e">
+<meta property="og:title" content="iFoodmap 食材地圖 | 全台 B2B 餐飲食材採購媒合平台">
+<meta property="og:description" content="用 AI 串接台灣餐飲供應鏈。餐飲業者填寫一次需求即時媒合最適合的供應商，從產地到餐桌讓採購更簡單。">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://ifoodmap-landing.vercel.app/">
+<meta property="og:image" content="https://ifoodmap-landing.vercel.app/og-image.png">
+<meta property="og:site_name" content="iFoodmap 食材地圖">
+<meta property="og:locale" content="zh_TW">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="iFoodmap 食材地圖 | 全台 B2B 餐飲食材採購媒合平台">
+<meta name="twitter:description" content="用 AI 串接台灣餐飲供應鏈，餐飲業者一次需求即時媒合最適合的供應商。">
+<meta name="twitter:image" content="https://ifoodmap-landing.vercel.app/og-image.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700;900&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -38,8 +58,7 @@
   <div style="position:sticky; top:0; z-index:50; background:rgba(255,255,255,.82); backdrop-filter:blur(16px); border-bottom:1px solid #eef1ee;">
     <div style="max-width:1240px; margin:0 auto; display:flex; align-items:center; justify-content:space-between; padding:15px 40px;">
       <div onClick="{{ goHome }}" style="display:flex; align-items:center; gap:10px; cursor:pointer;">
-        <div style="width:32px; height:32px; border-radius:9px; background:linear-gradient(135deg,#46c138,#1f9e4e); display:flex; align-items:center; justify-content:center; color:#fff; font-weight:900; font-size:18px; box-shadow:0 6px 16px rgba(61,174,43,.32);">食</div>
-        <div style="font-weight:900; font-size:19px; color:#0e1a12;">iFoodMap <span style="font-weight:500; color:#8a9a8f; font-size:14px;">食材地圖</span></div>
+        <img src="/logo.png" alt="iFoodmap 食材地圖" style="height:40px; width:auto; display:block;" />
       </div>
       <div style="display:flex; align-items:center; gap:32px;">
         <span onClick="{{ goHome }}" style="{{ navHome }}">首頁</span>
@@ -465,8 +484,8 @@
       <div style="display:grid; grid-template-columns:1.6fr 1fr 1fr 1fr; gap:40px; padding-bottom:48px; border-bottom:1px solid #16271b;">
         <div>
           <div style="display:flex; align-items:center; gap:10px; margin-bottom:18px;">
-            <div style="width:32px; height:32px; border-radius:9px; background:linear-gradient(135deg,#46c138,#1f9e4e); display:flex; align-items:center; justify-content:center; color:#fff; font-weight:900; font-size:18px;">食</div>
-            <div style="font-weight:900; font-size:19px; color:#fff;">iFoodMap 食材地圖</div>
+            <img src="/icon.png" alt="" style="width:34px; height:34px; display:block;" />
+            <div style="font-weight:900; font-size:19px; color:#fff;">iFoodmap <span style="font-weight:500; color:#9fb0a4; font-size:14px;">食材地圖</span></div>
           </div>
           <p style="font-size:14px;line-height:1.8;margin:0 0 20px; max-width:280px;">全台最大 B2B 食材採購媒合平台，用 AI 串接產地到餐桌的每一個供應環節。</p>
           <div style="font-size:14px; line-height:2;">
