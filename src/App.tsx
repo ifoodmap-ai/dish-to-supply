@@ -22,6 +22,7 @@ import SupplierRoute from "./components/SupplierRoute";
 import SupplierLayout from "./pages/supplier/SupplierLayout";
 import SupplierOrdersPage from "./pages/supplier/SupplierOrdersPage";
 import SupplierShipmentsPage from "./pages/supplier/SupplierShipmentsPage";
+import SupplierCatalogPage from "./pages/supplier/SupplierCatalogPage";
 
 const queryClient = new QueryClient();
 
@@ -48,6 +49,7 @@ const App = () => (
             </Route>
             <Route path="/supplier" element={<SupplierRoute><SupplierLayout /></SupplierRoute>}>
               <Route index element={<SupplierOrdersPage />} />
+              <Route path="catalog" element={<SupplierCatalogPage />} />
               <Route path="shipments" element={<SupplierShipmentsPage />} />
             </Route>
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}

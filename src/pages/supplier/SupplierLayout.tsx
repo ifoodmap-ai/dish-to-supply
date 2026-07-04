@@ -1,10 +1,11 @@
 import { NavLink, Outlet, useNavigate } from "react-router-dom";
-import { Inbox, Truck, LogOut } from "lucide-react";
+import { Inbox, Truck, Boxes, LogOut } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useEffect, useState } from "react";
 
 const navItems = [
   { to: "/supplier", label: "收單紀錄", icon: Inbox, end: true },
+  { to: "/supplier/catalog", label: "商品目錄", icon: Boxes, end: false },
   { to: "/supplier/shipments", label: "出貨紀錄", icon: Truck, end: false },
 ];
 
