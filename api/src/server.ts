@@ -524,6 +524,219 @@ app.post("/api/chat", async (c) => {
   }
 });
 
+// ---------------------------------------------------------------------------
+// Public supplier matching (real matching for the buyer-facing home page)
+// ---------------------------------------------------------------------------
+
+const matchSchema = z.object({
+  ingredients: z
+    .array(
+      z.union([
+        z.string().min(1),
+        z.object({ name: z.string().min(1), category: z.string().optional() })
+      ])
+    )
+    .min(1)
+});
+
+const normalize = (s: string) =>
+  s.toLowerCase().replace(/\s+/g, "").replace(/[（(].*?[)）]/g, "");
+
+app.post("/api/match", async (c) => {
+  const body = await c.req.json().catch(() => null);
+  const parsed = matchSchema.safeParse(body);
+  if (!parsed.success) {
+    return c.json({ message: "Invalid request body", details: parsed.error.flatten() }, 400);
+  }
+
+  const wanted = parsed.data.ingredients.map((i) =>
+    typeof i === "string" ? { name: i } : i
+  );
+
+  const [{ data: supplies, error: se }, { data: suppliers, error: pe }] = await Promise.all([
+    supabase.from("supplies").select("id, supplier_id, name, category, unit, pack_size, price").eq("is_available", true),
+    supabase.from("suppliers").select("id, name, description, service_areas").eq("is_active", true)
+  ]);
+
+  if (se || pe) {
+    return c.json({ message: "Failed to load catalog", details: (se ?? pe)?.message }, 500);
+  }
+
+  type SupplyRow = { id: string; supplier_id: string; name: string; category: string | null; unit: string | null; pack_size: string | null; price: number | null };
+  const supplierMap = new Map((suppliers ?? []).map((s) => [s.id, s]));
+
+  // match each wanted ingredient against supplies by fuzzy name containment
+  type Hit = { ingredient: string; supply: SupplyRow };
+  const hits: Hit[] = [];
+  for (const w of wanted) {
+    const wn = normalize(w.name);
+    if (!wn) continue;
+    for (const s of (supplies ?? []) as SupplyRow[]) {
+      const sn = normalize(s.name);
+      if (sn.includes(wn) || wn.includes(sn)) {
+        hits.push({ ingredient: w.name, supply: s });
+      }
+    }
+  }
+
+  // cheapest price per matched ingredient (for price competitiveness scoring)
+  const cheapest = new Map<string, number>();
+  for (const h of hits) {
+    if (h.supply.price == null) continue;
+    const cur = cheapest.get(h.ingredient);
+    if (cur == null || Number(h.supply.price) < cur) cheapest.set(h.ingredient, Number(h.supply.price));
+  }
+
+  // group by supplier and score (same idea as the admin matching page:
+  // base 70 + up to 25 price competitiveness + 5 availability)
+  const bySupplier = new Map<string, { matched: Hit[]; score: number }>();
+  for (const h of hits) {
+    const g = bySupplier.get(h.supply.supplier_id) ?? { matched: [], score: 0 };
+    g.matched.push(h);
+    bySupplier.set(h.supply.supplier_id, g);
+  }
+  const results = [...bySupplier.entries()]
+    .map(([sid, g]) => {
+      let priceScore = 0;
+      let priced = 0;
+      for (const h of g.matched) {
+        const min = cheapest.get(h.ingredient);
+        if (min != null && h.supply.price != null && Number(h.supply.price) > 0) {
+          priceScore += (min / Number(h.supply.price)) * 25;
+          priced += 1;
+        }
+      }
+      const score = Math.round(70 + (priced > 0 ? priceScore / priced : 12) + 5);
+      const sup = supplierMap.get(sid);
+      return sup
+        ? {
+            supplier: sup,
+            score: Math.min(score, 99),
+            matchedCount: new Set(g.matched.map((m) => m.ingredient)).size,
+            items: g.matched.map((m) => ({
+              ingredient: m.ingredient,
+              name: m.supply.name,
+              price: m.supply.price,
+              unit: m.supply.unit,
+              pack_size: m.supply.pack_size
+            }))
+          }
+        : null;
+    })
+    .filter(Boolean)
+    .sort((a, b) => (b!.score - a!.score) || (b!.matchedCount - a!.matchedCount));
+
+  return c.json({ data: { requested: wanted.length, suppliers: results } });
+});
+
+// ---------------------------------------------------------------------------
+// Admin: approve a supplier application (creates auth user + supplier rows)
+// ---------------------------------------------------------------------------
+
+const getAdminUser = async (authorization: string | undefined) => {
+  const token = getBearerToken(authorization);
+  if (!token) return { user: null, error: "Missing Authorization bearer token" };
+  const { data, error } = await supabase.auth.getUser(token);
+  if (error || !data.user) return { user: null, error: error?.message ?? "Invalid token" };
+  const role = (data.user.app_metadata as { role?: string } | null)?.role;
+  if (role !== "admin") return { user: null, error: "Not an admin" };
+  return { user: data.user, error: null };
+};
+
+const approveSchema = z.object({
+  application_id: z.string().uuid()
+});
+
+const genTempPassword = () => {
+  const chars = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789";
+  let out = "";
+  for (let i = 0; i < 12; i++) out += chars[Math.floor(Math.random() * chars.length)];
+  return out;
+};
+
+app.post("/api/admin/approve-supplier", async (c) => {
+  const auth = await getAdminUser(c.req.header("Authorization"));
+  if (!auth.user) return c.json({ message: "Unauthorized", details: auth.error }, 401);
+
+  const body = await c.req.json().catch(() => null);
+  const parsed = approveSchema.safeParse(body);
+  if (!parsed.success) {
+    return c.json({ message: "Invalid request body", details: parsed.error.flatten() }, 400);
+  }
+
+  const { data: appRow, error: ae } = await supabase
+    .from("supplier_applications")
+    .select("*")
+    .eq("id", parsed.data.application_id)
+    .maybeSingle();
+  if (ae || !appRow) return c.json({ message: "Application not found", details: ae?.message }, 404);
+  if (appRow.status === "approved") return c.json({ message: "Application already approved" }, 409);
+
+  // 1) create (or reuse) the auth user with role=supplier
+  const tempPassword = genTempPassword();
+  let userId: string | null = null;
+  const created = await supabase.auth.admin.createUser({
+    email: appRow.contact_email,
+    password: tempPassword,
+    email_confirm: true,
+    app_metadata: { role: "supplier" },
+    user_metadata: { display_name: appRow.contact_name ?? appRow.company_name }
+  });
+  if (created.error) {
+    // user may already exist — look them up and just set the role
+    const { data: list } = await supabase.auth.admin.listUsers({ page: 1, perPage: 200 });
+    const existing = list?.users?.find(
+      (u) => u.email?.toLowerCase() === String(appRow.contact_email).toLowerCase()
+    );
+    if (!existing) {
+      return c.json({ message: "Failed to create supplier user", details: created.error.message }, 500);
+    }
+    userId = existing.id;
+    await supabase.auth.admin.updateUserById(userId, { app_metadata: { role: "supplier" } });
+  } else {
+    userId = created.data.user.id;
+  }
+
+  // 2) create the supplier + link the account
+  const { data: supplier, error: se } = await supabase
+    .from("suppliers")
+    .insert({
+      name: appRow.company_name,
+      description: appRow.description,
+      contact_name: appRow.contact_name,
+      contact_email: appRow.contact_email,
+      phone: appRow.contact_phone,
+      service_areas: appRow.service_areas
+        ? String(appRow.service_areas).split(/[,、\s]+/).filter(Boolean)
+        : [],
+      is_active: true
+    })
+    .select("id, name")
+    .single();
+  if (se) return c.json({ message: "Failed to create supplier", details: se.message }, 500);
+
+  const { error: le } = await supabase
+    .from("supplier_accounts")
+    .insert({ user_id: userId, supplier_id: supplier.id, is_active: true });
+  if (le) return c.json({ message: "Failed to link supplier account", details: le.message }, 500);
+
+  await supabase
+    .from("supplier_applications")
+    .update({ status: "approved", reviewed_at: new Date().toISOString() })
+    .eq("id", appRow.id);
+
+  return c.json({
+    data: {
+      supplier_id: supplier.id,
+      supplier_name: supplier.name,
+      login_email: appRow.contact_email,
+      // returned once so the admin can hand it to the supplier;
+      // if the user already existed their original password still works
+      temp_password: created.error ? null : tempPassword
+    }
+  });
+});
+
 app.notFound((c) => {
   return c.json(
     {

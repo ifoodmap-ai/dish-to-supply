@@ -231,8 +231,28 @@ const translations = {
   },
 };
 
+const getInitialLanguage = (): Language => {
+  try {
+    const saved = localStorage.getItem('ifm_lang');
+    if (saved === 'en' || saved === 'zh') return saved;
+  } catch {
+    // ignore
+  }
+  // 台灣客群:預設繁中(僅明確英文語系的瀏覽器給英文)
+  return navigator.language?.toLowerCase().startsWith('en') ? 'en' : 'zh';
+};
+
 export const LanguageProvider = ({ children }: { children: ReactNode }) => {
-  const [language, setLanguage] = useState<Language>('en');
+  const [language, setLanguageState] = useState<Language>(getInitialLanguage);
+
+  const setLanguage = (lang: Language) => {
+    setLanguageState(lang);
+    try {
+      localStorage.setItem('ifm_lang', lang);
+    } catch {
+      // ignore
+    }
+  };
 
   const t = (key: string): string => {
     return translations[language][key as keyof typeof translations.en] || key;
