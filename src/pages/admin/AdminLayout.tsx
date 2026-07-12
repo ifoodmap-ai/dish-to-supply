@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { NavLink, Outlet, useNavigate } from 'react-router-dom';
-import { LayoutDashboard, ClipboardList, Package, Map, Sparkles, TrendingUp, CreditCard, Bell, LogOut, Menu, X } from 'lucide-react';
+import { LayoutDashboard, ClipboardList, Package, Map, Sparkles, TrendingUp, CreditCard, Bell, UserPlus, LogOut, Menu, X } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 
@@ -8,6 +8,7 @@ const navItems = [
   { label: '儀表板 (Dashboard)', icon: LayoutDashboard, to: '/admin' },
   { label: '分析紀錄 (Analyses)', icon: ClipboardList, to: '/admin/analyses' },
   { label: '供應商訂單 (Orders)', icon: Package, to: '/admin/orders' },
+  { label: '入駐申請 (Applications)', icon: UserPlus, to: '/admin/applications' },
   { label: '智慧媒合 (Matching)', icon: Sparkles, to: '/admin/matching' },
   { label: '需求預測 (Forecast)', icon: TrendingUp, to: '/admin/forecast' },
   { label: '金流／發票 (Billing)', icon: CreditCard, to: '/admin/billing' },

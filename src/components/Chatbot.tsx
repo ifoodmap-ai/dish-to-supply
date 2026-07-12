@@ -6,6 +6,8 @@ import { Send, Bot, User } from "lucide-react";
 import { toast } from "sonner";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { analyzeChat, chatReply, formatIngredient } from "@/lib/api";
+import { track } from "@/lib/analytics";
+import type { AnalysisMeta } from "@/components/MenuUpload";
 
 interface Message {
   id: number;
@@ -15,7 +17,7 @@ interface Message {
 }
 
 interface ChatbotProps {
-  onRequirementsSubmit?: (requirements: string[]) => void;
+  onRequirementsSubmit?: (requirements: string[], meta: AnalysisMeta) => void;
 }
 
 const Chatbot = ({ onRequirementsSubmit }: ChatbotProps) => {
@@ -70,11 +72,16 @@ const Chatbot = ({ onRequirementsSubmit }: ChatbotProps) => {
       // If the customer is ready to match suppliers, extract requirements via AI
       // (this also creates a pending analysis record for admin review).
       if (wantsMatching(userMessage) && onRequirementsSubmit) {
+        track("analysis_started", { source: "chat" });
         const result = await analyzeChat(apiMessages);
         if (result.ingredients.length > 0) {
+          track("analysis_completed", { source: "chat", count: result.ingredients.length });
           const formatted = result.ingredients.map(formatIngredient);
           pushBotMessage(`已為您整理出採購需求:\n${formatted.join("\n")}\n\n正在為您媒合供應商…`);
-          onRequirementsSubmit(formatted);
+          onRequirementsSubmit(formatted, {
+            analysisId: result.analysisId,
+            names: result.ingredients.map((i) => i.name),
+          });
         }
       }
     } catch (error) {

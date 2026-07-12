@@ -28,16 +28,25 @@ interface AnalysisRow {
 const SOURCE_LABEL: Record<string, string> = { menu_upload: '菜單上傳', chatbot: '對話萃取' };
 const PIE_COLORS = ['#10b981', '#f59e0b', '#3b82f6', '#8b5cf6'];
 
+const FUNNEL_STAGES: { event: string; label: string }[] = [
+  { event: 'analysis_started', label: '開始分析' },
+  { event: 'analysis_completed', label: '完成分析' },
+  { event: 'contact_captured', label: '留下聯絡' },
+  { event: 'match_viewed', label: '看媒合' },
+  { event: 'inquiry_sent', label: '送出詢價' },
+];
+
 const AdminDashboard = () => {
   const [rows, setRows] = useState<AnalysisRow[]>([]);
   const [ordersCount, setOrdersCount] = useState(0);
   const [suppliersCount, setSuppliersCount] = useState(0);
   const [suppliesCount, setSuppliesCount] = useState(0);
+  const [eventCounts, setEventCounts] = useState<Record<string, number>>({});
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     (async () => {
-      const [aRes, oRes, spRes, suRes] = await Promise.all([
+      const [aRes, oRes, spRes, suRes, evRes] = await Promise.all([
         (supabase as never)
           .from('analysis_records')
           .select('id, created_at, source_type, status, ingredient_list')
@@ -45,11 +54,18 @@ const AdminDashboard = () => {
         (supabase as never).from('supplier_orders').select('id', { count: 'exact', head: true }),
         (supabase as never).from('suppliers').select('id', { count: 'exact', head: true }),
         (supabase as never).from('supplies').select('id', { count: 'exact', head: true }),
+        (supabase as never).from('app_events').select('event'),
       ]);
       setRows(((aRes as { data: AnalysisRow[] | null }).data) ?? []);
       setOrdersCount((oRes as { count: number | null }).count ?? 0);
       setSuppliersCount((spRes as { count: number | null }).count ?? 0);
       setSuppliesCount((suRes as { count: number | null }).count ?? 0);
+      const events = ((evRes as { data: { event: string }[] | null }).data) ?? [];
+      const counts: Record<string, number> = {};
+      events.forEach((e) => {
+        if (e?.event) counts[e.event] = (counts[e.event] ?? 0) + 1;
+      });
+      setEventCounts(counts);
       setLoading(false);
     })();
   }, []);
@@ -170,6 +186,56 @@ const AdminDashboard = () => {
                 <Bar dataKey="count" fill="#10b981" radius={[0, 4, 4, 0]} name="出現次數" />
               </BarChart>
             </ResponsiveContainer>
+          </CardContent>
+        </Card>
+
+        {/* 轉換漏斗 */}
+        <Card className="border-slate-200 lg:col-span-3">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-base text-slate-700">轉換漏斗 (Funnel)</CardTitle>
+          </CardHeader>
+          <CardContent>
+            {loading ? (
+              <div className="space-y-3">
+                {FUNNEL_STAGES.map((s) => (
+                  <div key={s.event} className="h-8 rounded bg-slate-100 animate-pulse" />
+                ))}
+              </div>
+            ) : FUNNEL_STAGES.every((s) => (eventCounts[s.event] ?? 0) === 0) &&
+              (eventCounts['supplier_applied'] ?? 0) === 0 ? (
+              <div className="py-8 text-center text-slate-400 text-sm">尚無事件資料</div>
+            ) : (
+              <div className="space-y-3">
+                {FUNNEL_STAGES.map((stage) => {
+                  const count = eventCounts[stage.event] ?? 0;
+                  const base = eventCounts[FUNNEL_STAGES[0].event] ?? 0;
+                  const pct = base > 0 ? Math.round((count / base) * 100) : 0;
+                  return (
+                    <div key={stage.event} className="flex items-center gap-3">
+                      <div className="w-24 shrink-0 text-sm text-slate-600 text-right">
+                        {stage.label}
+                      </div>
+                      <div className="flex-1 h-6 rounded bg-slate-100 overflow-hidden">
+                        <div
+                          className="h-full rounded bg-emerald-500 transition-all"
+                          style={{ width: `${Math.min(pct, 100)}%` }}
+                        />
+                      </div>
+                      <div className="w-28 shrink-0 text-sm tabular-nums">
+                        <span className="font-semibold text-slate-800">{count}</span>
+                        <span className="text-slate-400 ml-1.5">{pct}%</span>
+                      </div>
+                    </div>
+                  );
+                })}
+                <div className="pt-3 mt-1 border-t border-slate-100 flex items-center gap-2 text-sm">
+                  <span className="text-slate-500">供應商申請</span>
+                  <span className="font-semibold text-emerald-600 tabular-nums">
+                    {eventCounts['supplier_applied'] ?? 0}
+                  </span>
+                </div>
+              </div>
+            )}
           </CardContent>
         </Card>
       </div>

@@ -10,6 +10,8 @@ import SupplierDetail from "./pages/SupplierDetail";
 import NotFound from "./pages/NotFound";
 import Architecture from "./pages/Architecture";
 import InvestorsPage from "./pages/InvestorsPage";
+import JoinSupplierPage from "./pages/JoinSupplierPage";
+import SuppliersPage from "./pages/SuppliersPage";
 import AdminRoute from "./components/AdminRoute";
 import AdminLayout from "./pages/admin/AdminLayout";
 import AdminDashboard from "./pages/admin/AdminDashboard";
@@ -18,6 +20,7 @@ import AnalysisDetailPage from "./pages/admin/AnalysisDetailPage";
 import AdminOrdersPage from "./pages/admin/AdminOrdersPage";
 import AdminOrderDetailPage from "./pages/admin/AdminOrderDetailPage";
 import AdminRoadmapPage from "./pages/admin/AdminRoadmapPage";
+import AdminApplicationsPage from "./pages/admin/AdminApplicationsPage";
 import AdminMatchingPage from "./pages/admin/AdminMatchingPage";
 import AdminForecastPage from "./pages/admin/AdminForecastPage";
 import AdminBillingPage from "./pages/admin/AdminBillingPage";
@@ -42,6 +45,8 @@ const App = () => (
           <Routes>
             <Route path="/" element={<Index />} />
             <Route path="/auth" element={<Auth />} />
+            <Route path="/suppliers" element={<SuppliersPage />} />
+            <Route path="/join" element={<JoinSupplierPage />} />
             <Route path="/supplier/:id" element={<SupplierDetail />} />
             <Route path="/architecture" element={<Architecture />} />
             <Route path="/investors" element={<InvestorsPage />} />
@@ -51,6 +56,7 @@ const App = () => (
               <Route path="analyses/:id" element={<AnalysisDetailPage />} />
               <Route path="orders" element={<AdminOrdersPage />} />
               <Route path="orders/:id" element={<AdminOrderDetailPage />} />
+              <Route path="applications" element={<AdminApplicationsPage />} />
               <Route path="matching" element={<AdminMatchingPage />} />
               <Route path="forecast" element={<AdminForecastPage />} />
               <Route path="billing" element={<AdminBillingPage />} />

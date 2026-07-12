@@ -1,5 +1,6 @@
 import { useParams, useNavigate } from "react-router-dom";
 import { useState, useMemo, useEffect } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -8,25 +9,133 @@ import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Star, MapPin, Phone, Mail, ArrowLeft, Clock, Package, CheckCircle2, MessageCircle, Search, ShoppingCart, X, Plus } from "lucide-react";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Star, MapPin, Phone, Mail, ArrowLeft, CheckCircle2, Search, ShoppingCart, X, Building2 } from "lucide-react";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { track } from "@/lib/analytics";
+
+interface SupplierRow {
+  id: string;
+  name: string;
+  description: string | null;
+  contact_email: string | null;
+  phone: string | null;
+  service_areas: string[] | null;
+  is_active?: boolean | null;
+}
+
+interface SupplyRow {
+  id: string;
+  supplier_id: string;
+  name: string;
+  category: string | null;
+  unit: string | null;
+  pack_size: string | null;
+  price: number | null;
+  currency: string | null;
+  description: string | null;
+  is_available: boolean | null;
+}
+
+interface CartItem {
+  id: string;
+  name: string;
+  category: string | null;
+  price: number | null;
+  unit: string | null;
+  pack_size: string | null;
+}
+
+const fetchSupplier = async (id: string): Promise<SupplierRow | null> => {
+  const { data, error } = (await (supabase as never)
+    .from("suppliers")
+    .select("*")
+    .eq("id", id)
+    .eq("is_active", true)
+    .maybeSingle()) as { data: SupplierRow | null; error: { message: string } | null };
+  if (error) throw new Error(error.message);
+  return data;
+};
+
+const fetchAllSupplies = async (): Promise<SupplyRow[]> => {
+  const { data, error } = (await (supabase as never)
+    .from("supplies")
+    .select("*")
+    .eq("is_available", true)) as { data: SupplyRow[] | null; error: { message: string } | null };
+  if (error) throw new Error(error.message);
+  return data ?? [];
+};
+
+// Deterministic soft color for category placeholder tiles (no external images).
+const CATEGORY_COLORS = [
+  "bg-emerald-100 text-emerald-700",
+  "bg-amber-100 text-amber-700",
+  "bg-sky-100 text-sky-700",
+  "bg-rose-100 text-rose-700",
+  "bg-violet-100 text-violet-700",
+  "bg-lime-100 text-lime-700",
+];
+
+const categoryColor = (category: string | null): string => {
+  const key = category ?? "其他";
+  let hash = 0;
+  for (let i = 0; i < key.length; i++) hash = (hash * 31 + key.charCodeAt(i)) >>> 0;
+  return CATEGORY_COLORS[hash % CATEGORY_COLORS.length];
+};
+
+const formatPrice = (s: { price: number | null; currency: string | null; unit: string | null }): string => {
+  if (s.price == null) return "價格請洽詢";
+  const cur = !s.currency || s.currency.toUpperCase() === "TWD" ? "NT$" : s.currency;
+  return `${cur} ${s.price}${s.unit ? ` / ${s.unit}` : ""}`;
+};
 
 const SupplierDetail = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const { t } = useLanguage();
   const { toast } = useToast();
-  
+
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState<string>("全部商品");
-  const [cart, setCart] = useState<Array<{ id: number; name: string; desc: string; image: string }>>([]);
+  const [cart, setCart] = useState<CartItem[]>([]);
   const [inquiryMessage, setInquiryMessage] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [dialogOpen, setDialogOpen] = useState(false);
 
-  // Reviews
+  // Supplier + supplies (Railway API; supplies filtered client-side by supplier_id)
+  const {
+    data: supplier,
+    isLoading: supplierLoading,
+    isError: supplierError,
+  } = useQuery({
+    queryKey: ["supplier", id],
+    queryFn: () => fetchSupplier(id!),
+    enabled: !!id,
+  });
+
+  const { data: allSupplies, isLoading: suppliesLoading } = useQuery({
+    queryKey: ["all-supplies"],
+    queryFn: fetchAllSupplies,
+    enabled: !!supplier,
+  });
+
+  const products = useMemo(
+    () =>
+      (allSupplies ?? []).filter(
+        (s) => s.supplier_id === id && s.is_available !== false
+      ),
+    [allSupplies, id]
+  );
+
+  const categories = useMemo(() => {
+    const set = new Set<string>();
+    products.forEach((p) => set.add(p.category || "其他"));
+    return Array.from(set);
+  }, [products]);
+
+  // Reviews (Supabase; uuid supplier_id column)
   interface Review { id: string; rating: number; comment: string | null; reviewer_name: string | null; created_at: string; }
   const [reviews, setReviews] = useState<Review[]>([]);
   const [newRating, setNewRating] = useState(5);
@@ -35,10 +144,11 @@ const SupplierDetail = () => {
   const [submittingReview, setSubmittingReview] = useState(false);
 
   const fetchReviews = async () => {
+    if (!id) return;
     const { data } = (await (supabase as never)
       .from("supplier_reviews")
       .select("id, rating, comment, reviewer_name, created_at")
-      .eq("supplier_ref", Number(id))
+      .eq("supplier_id", id)
       .order("created_at", { ascending: false })) as { data: Review[] | null };
     setReviews(data ?? []);
   };
@@ -60,7 +170,8 @@ const SupplierDetail = () => {
     if (!user) { toast({ title: "請先登入", description: "登入後即可撰寫評價", variant: "destructive" }); navigate("/auth"); return; }
     setSubmittingReview(true);
     const { error } = await (supabase as never).from("supplier_reviews").insert({
-      supplier_ref: Number(id),
+      supplier_id: id,
+      supplier_ref: 0, // legacy NOT NULL column, uuid supplier_id is authoritative
       rating: newRating,
       comment: newComment.trim() || null,
       reviewer_name: newName.trim() || user.email?.split("@")[0] || "匿名買家",
@@ -73,118 +184,48 @@ const SupplierDetail = () => {
     await fetchReviews();
   };
 
-  // Mock supplier data - in production this would come from an API/database
-  const mockSuppliers = [
-    {
-      id: 1,
-      name: "Fresh Harvest Supplies",
-      rating: 4.8,
-      location: "Downtown District",
-      address: "200 Market Street, Downtown District",
-      phone: "02-1234-5678",
-      email: "contact@freshproduce.com",
-      lineId: "freshproduce123",
-      taxId: "12345678",
-      logo: "https://images.unsplash.com/photo-1488459716781-31db52582fe9?w=400",
-      verified: true,
-      features: ["產地直送", "物美價廉", "品質保證"],
-      specialties: ["Organic Vegetables", "Fresh Meat", "Imported Ingredients"],
-      categories: ["葉菜類", "瓜果類", "根莖類", "菇類", "豆類"],
-      deliveryTime: "24 hours",
-      description: "Leading supplier of fresh organic produce with over 15 years of experience. We pride ourselves on quality and timely delivery.",
-      certifications: ["ISO 9001", "HACCP", "Organic Certified"],
-      minOrder: "$500",
-      paymentTerms: "Net 30",
-      products: [
-        { id: 1, name: "水耕小白菜", image: "https://images.unsplash.com/photo-1566385101042-1a0aa0c1268c?w=300", desc: "水耕" },
-        { id: 2, name: "茼蒿", image: "https://images.unsplash.com/photo-1590165482129-1b8b27698780?w=300", desc: "一般茼蒿" },
-        { id: 3, name: "地瓜葉", image: "https://images.unsplash.com/photo-1576045057995-568f588f82fb?w=300", desc: "溫室地瓜葉" },
-        { id: 4, name: "A菜", image: "https://images.unsplash.com/photo-1622206151226-18ca2c9ab4a1?w=300", desc: "尖/圓" }
-      ]
-    },
-    {
-      id: 2,
-      name: "Premium Meat Trading",
-      rating: 4.9,
-      location: "Industrial Zone",
-      address: "150 Industrial Road, Industrial Zone",
-      phone: "02-8765-4321",
-      email: "info@qualitymeat.com",
-      lineId: "premiummeat456",
-      taxId: "87654321",
-      logo: "https://images.unsplash.com/photo-1607623814075-e51df1bdc82f?w=400",
-      verified: true,
-      features: ["優質肉品", "冷凍配送", "產地認證"],
-      specialties: ["Quality Meat", "Frozen Seafood", "Seasonings"],
-      categories: ["肉品類", "海鮮類", "調味料"],
-      deliveryTime: "48 hours",
-      description: "Specialized in premium quality meats and seafood. Direct partnerships with top farms ensure the best quality products.",
-      certifications: ["ISO 22000", "HACCP", "Halal Certified"],
-      minOrder: "$800",
-      paymentTerms: "Net 45",
-      products: [
-        { id: 1, name: "台灣豬肉", image: "https://images.unsplash.com/photo-1602470520998-f4a52199a3d6?w=300", desc: "產地認證" },
-        { id: 2, name: "澳洲牛肉", image: "https://images.unsplash.com/photo-1588347818036-8fc540e4a0d0?w=300", desc: "進口牛肉" }
-      ]
-    },
-    {
-      id: 3,
-      name: "Green Farm Direct",
-      rating: 4.7,
-      location: "Agricultural District",
-      address: "88 Farm Road, Agricultural District",
-      phone: "03-9876-5432",
-      email: "service@greenfarm.com",
-      lineId: "greenfarm789",
-      taxId: "11223344",
-      logo: "https://images.unsplash.com/photo-1464226184884-fa280b87c399?w=400",
-      verified: true,
-      features: ["有機認證", "農場直送", "無毒栽種"],
-      specialties: ["Organic Vegetables", "Fruits", "Grains"],
-      categories: ["有機蔬菜", "水果類", "五穀雜糧"],
-      deliveryTime: "24 hours",
-      description: "Farm-to-table supplier delivering the freshest organic produce. Supporting local farmers and sustainable agriculture.",
-      certifications: ["Organic Certified", "Fair Trade", "Non-GMO"],
-      minOrder: "$400",
-      paymentTerms: "Net 30",
-      products: [
-        { id: 1, name: "有機高麗菜", image: "https://images.unsplash.com/photo-1594282801901-6e6c22c6c7e7?w=300", desc: "有機認證" },
-        { id: 2, name: "有機番茄", image: "https://images.unsplash.com/photo-1592924357228-91a4daadcfea?w=300", desc: "溫室栽培" }
-      ]
-    }
-  ];
-
-  const supplier = mockSuppliers.find(s => s.id === Number(id));
-
   // Filter products based on search and category
   const filteredProducts = useMemo(() => {
-    if (!supplier) return [];
-    
-    return supplier.products.filter(product => {
-      const matchesSearch = product.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                          product.desc.toLowerCase().includes(searchQuery.toLowerCase());
-      const matchesCategory = selectedCategory === "全部商品" || supplier.categories.includes(selectedCategory);
+    return products.filter((product) => {
+      const q = searchQuery.toLowerCase();
+      const matchesSearch =
+        product.name.toLowerCase().includes(q) ||
+        (product.description ?? "").toLowerCase().includes(q) ||
+        (product.category ?? "").toLowerCase().includes(q);
+      const matchesCategory =
+        selectedCategory === "全部商品" ||
+        (product.category || "其他") === selectedCategory;
       return matchesSearch && matchesCategory;
     });
-  }, [supplier, searchQuery, selectedCategory]);
+  }, [products, searchQuery, selectedCategory]);
 
-  const addToCart = (product: typeof supplier.products[0]) => {
-    if (cart.find(item => item.id === product.id)) {
+  const addToCart = (product: SupplyRow) => {
+    if (cart.find((item) => item.id === product.id)) {
       toast({
         title: "已在詢價清單中",
         description: "此商品已經在您的詢價清單中",
       });
       return;
     }
-    setCart([...cart, product]);
+    setCart([
+      ...cart,
+      {
+        id: product.id,
+        name: product.name,
+        category: product.category,
+        price: product.price,
+        unit: product.unit,
+        pack_size: product.pack_size,
+      },
+    ]);
     toast({
       title: "已加入詢價清單",
       description: `${product.name} 已加入詢價清單`,
     });
   };
 
-  const removeFromCart = (productId: number) => {
-    setCart(cart.filter(item => item.id !== productId));
+  const removeFromCart = (productId: string) => {
+    setCart(cart.filter((item) => item.id !== productId));
   };
 
   const handleSubmitInquiry = async () => {
@@ -198,7 +239,7 @@ const SupplierDetail = () => {
     }
 
     const { data: { user } } = await supabase.auth.getUser();
-    
+
     if (!user) {
       toast({
         title: "請先登入",
@@ -216,14 +257,16 @@ const SupplierDetail = () => {
         .from('inquiries')
         .insert({
           user_id: user.id,
-          supplier_id: Number(id),
+          supplier_id: 0, // legacy integer column; supplier identified by name + products
           supplier_name: supplier!.name,
-          products: cart,
+          products: JSON.parse(JSON.stringify(cart)),
           message: inquiryMessage,
           status: 'pending'
         });
 
       if (error) throw error;
+
+      track('inquiry_sent', { supplier: supplier!.name, items: cart.length });
 
       toast({
         title: "詢價已送出",
@@ -245,7 +288,39 @@ const SupplierDetail = () => {
     }
   };
 
-  if (!supplier) {
+  if (supplierLoading) {
+    return (
+      <div className="min-h-screen bg-muted/30">
+        <div className="container px-4 py-8 mx-auto max-w-6xl space-y-6">
+          <Skeleton className="h-10 w-24" />
+          <Card className="p-8">
+            <div className="flex flex-col md:flex-row gap-6">
+              <Skeleton className="w-32 h-32 md:w-40 md:h-40 rounded-full flex-shrink-0" />
+              <div className="flex-1 space-y-4">
+                <Skeleton className="h-10 w-64" />
+                <Skeleton className="h-4 w-full" />
+                <Skeleton className="h-4 w-3/4" />
+                <div className="flex gap-2">
+                  <Skeleton className="h-6 w-16 rounded-full" />
+                  <Skeleton className="h-6 w-16 rounded-full" />
+                </div>
+              </div>
+            </div>
+          </Card>
+          <Card className="p-8">
+            <Skeleton className="h-10 w-full max-w-lg mb-6" />
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              {Array.from({ length: 4 }).map((_, i) => (
+                <Skeleton key={i} className="aspect-square" />
+              ))}
+            </div>
+          </Card>
+        </div>
+      </div>
+    );
+  }
+
+  if (!supplier || supplierError) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <Card className="p-8 text-center">
@@ -261,7 +336,7 @@ const SupplierDetail = () => {
       <div className="container px-4 py-8 mx-auto max-w-6xl">
         <Button
           variant="ghost"
-          onClick={() => navigate("/")}
+          onClick={() => navigate(-1)}
           className="mb-6"
         >
           <ArrowLeft className="w-4 h-4 mr-2" />
@@ -269,17 +344,13 @@ const SupplierDetail = () => {
         </Button>
 
         <div className="space-y-6">
-          {/* Header Section with Logo */}
+          {/* Header Section */}
           <Card className="p-8">
             <div className="flex flex-col md:flex-row gap-6">
-              {/* Logo */}
+              {/* Logo placeholder */}
               <div className="flex-shrink-0">
-                <div className="w-32 h-32 md:w-40 md:h-40 rounded-full overflow-hidden bg-muted">
-                  <img 
-                    src={supplier.logo} 
-                    alt={supplier.name}
-                    className="w-full h-full object-cover"
-                  />
+                <div className="w-32 h-32 md:w-40 md:h-40 rounded-full bg-primary/10 flex items-center justify-center">
+                  <Building2 className="w-16 h-16 text-primary" />
                 </div>
               </div>
 
@@ -289,65 +360,82 @@ const SupplierDetail = () => {
                   <div className="space-y-2">
                     <div className="flex items-center gap-3 flex-wrap">
                       <h1 className="text-3xl md:text-4xl font-bold">{supplier.name}</h1>
-                      {supplier.verified && (
-                        <Badge variant="secondary" className="bg-primary/10 text-primary hover:bg-primary/20">
-                          <CheckCircle2 className="w-4 h-4 mr-1" />
-                          已驗證
-                        </Badge>
-                      )}
+                      <Badge variant="secondary" className="bg-primary/10 text-primary hover:bg-primary/20">
+                        <CheckCircle2 className="w-4 h-4 mr-1" />
+                        合作供應商
+                      </Badge>
                     </div>
-                    {/* Feature Tags */}
+                    {supplier.description && (
+                      <p className="text-muted-foreground leading-relaxed max-w-2xl">
+                        {supplier.description}
+                      </p>
+                    )}
+                  </div>
+                  {(supplier.contact_email || supplier.phone) && (
+                    <Button size="lg" variant="hero" className="w-full md:w-auto" asChild>
+                      <a
+                        href={
+                          supplier.contact_email
+                            ? `mailto:${supplier.contact_email}`
+                            : `tel:${supplier.phone}`
+                        }
+                      >
+                        <Phone className="w-4 h-4 mr-2" />
+                        立即連繫
+                      </a>
+                    </Button>
+                  )}
+                </div>
+
+                {/* Real contact fields only */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-3 pt-4 border-t">
+                  {supplier.contact_email && (
+                    <div className="flex items-start gap-2">
+                      <span className="font-medium min-w-[80px] flex items-center gap-1">
+                        <Mail className="w-4 h-4" />
+                        Email：
+                      </span>
+                      <span className="text-muted-foreground break-all">{supplier.contact_email}</span>
+                    </div>
+                  )}
+                  {supplier.phone && (
+                    <div className="flex items-start gap-2">
+                      <span className="font-medium min-w-[80px] flex items-center gap-1">
+                        <Phone className="w-4 h-4" />
+                        電話：
+                      </span>
+                      <span className="text-muted-foreground">{supplier.phone}</span>
+                    </div>
+                  )}
+                  {(supplier.service_areas?.length ?? 0) > 0 && (
+                    <div className="flex items-start gap-2 md:col-span-2">
+                      <span className="font-medium min-w-[80px] flex items-center gap-1">
+                        <MapPin className="w-4 h-4" />
+                        服務區域：
+                      </span>
+                      <span className="flex flex-wrap gap-2">
+                        {supplier.service_areas!.map((area, index) => (
+                          <Badge key={index} variant="outline" className="border-primary/30">
+                            {area}
+                          </Badge>
+                        ))}
+                      </span>
+                    </div>
+                  )}
+                </div>
+
+                {/* Supply categories */}
+                {categories.length > 0 && (
+                  <div className="pt-4 border-t">
                     <div className="flex flex-wrap gap-2">
-                      {supplier.features.map((feature, index) => (
-                        <Badge key={index} variant="outline" className="border-primary/30">
-                          {feature}
+                      {categories.map((category, index) => (
+                        <Badge key={index} variant="secondary" className="text-sm">
+                          {category}
                         </Badge>
                       ))}
                     </div>
                   </div>
-                  <Button size="lg" variant="hero" className="w-full md:w-auto">
-                    <Phone className="w-4 h-4 mr-2" />
-                    立即連繫
-                  </Button>
-                </div>
-
-                {/* Basic Info */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-3 pt-4 border-t">
-                  <div className="flex items-start gap-2">
-                    <span className="font-medium min-w-[80px]">公司名稱：</span>
-                    <span className="text-muted-foreground">{supplier.name}</span>
-                  </div>
-                  <div className="flex items-start gap-2">
-                    <span className="font-medium min-w-[80px]">統一編號：</span>
-                    <span className="text-muted-foreground">{supplier.taxId}</span>
-                  </div>
-                  <div className="flex items-start gap-2">
-                    <span className="font-medium min-w-[80px]">公司地址：</span>
-                    <span className="text-muted-foreground">{supplier.address}</span>
-                  </div>
-                  <div className="flex items-start gap-2">
-                    <span className="font-medium min-w-[80px]">聯繫電話：</span>
-                    <span className="text-muted-foreground">{supplier.phone}</span>
-                  </div>
-                  <div className="flex items-start gap-2">
-                    <span className="font-medium min-w-[80px]">Line ID：</span>
-                    <span className="text-muted-foreground flex items-center gap-1">
-                      <MessageCircle className="w-4 h-4" />
-                      {supplier.lineId}
-                    </span>
-                  </div>
-                </div>
-
-                {/* Categories */}
-                <div className="pt-4 border-t">
-                  <div className="flex flex-wrap gap-2">
-                    {supplier.categories.map((category, index) => (
-                      <Badge key={index} variant="secondary" className="text-sm">
-                        {category}
-                      </Badge>
-                    ))}
-                  </div>
-                </div>
+                )}
               </div>
             </div>
           </Card>
@@ -357,12 +445,12 @@ const SupplierDetail = () => {
             <Tabs defaultValue="products" className="w-full">
               <TabsList className="grid w-full max-w-lg grid-cols-3">
                 <TabsTrigger value="products">食材目錄</TabsTrigger>
-                <TabsTrigger value="certifications">相關證明</TabsTrigger>
+                <TabsTrigger value="about">供應商介紹</TabsTrigger>
                 <TabsTrigger value="reviews">
                   買家評價{reviews.length > 0 ? ` (${reviews.length})` : ""}
                 </TabsTrigger>
               </TabsList>
-              
+
               <TabsContent value="products" className="mt-6">
                 <div className="flex flex-col lg:flex-row gap-6">
                   {/* Category Sidebar */}
@@ -376,7 +464,7 @@ const SupplierDetail = () => {
                       >
                         全部商品
                       </Button>
-                      {supplier.categories.map((category, index) => (
+                      {categories.map((category, index) => (
                         <Button
                           key={index}
                           variant={selectedCategory === category ? "default" : "ghost"}
@@ -406,91 +494,116 @@ const SupplierDetail = () => {
                       <h2 className="text-2xl font-bold">產品列表</h2>
                       <Badge variant="outline">{filteredProducts.length} 項產品</Badge>
                     </div>
-                    
-                    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-                      {filteredProducts.map((product) => (
-                        <Card key={product.id} className="overflow-hidden hover:shadow-lg transition-shadow">
-                          <div className="aspect-square overflow-hidden bg-muted">
-                            <img 
-                              src={product.image} 
-                              alt={product.name}
-                              className="w-full h-full object-cover hover:scale-110 transition-transform duration-300"
-                            />
-                          </div>
-                          <div className="p-3 space-y-2">
-                            <h3 className="font-semibold">{product.name}</h3>
-                            <p className="text-sm text-muted-foreground">{product.desc}</p>
-                            <Button 
-                              variant="outline" 
-                              size="sm" 
-                              className="w-full"
-                              onClick={() => addToCart(product)}
-                            >
-                              詢價
-                            </Button>
-                          </div>
-                        </Card>
-                      ))}
-                    </div>
 
-                    {filteredProducts.length === 0 && (
+                    {suppliesLoading && (
+                      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                        {Array.from({ length: 8 }).map((_, i) => (
+                          <Card key={i} className="overflow-hidden">
+                            <Skeleton className="aspect-square" />
+                            <div className="p-3 space-y-2">
+                              <Skeleton className="h-5 w-3/4" />
+                              <Skeleton className="h-4 w-1/2" />
+                              <Skeleton className="h-8 w-full" />
+                            </div>
+                          </Card>
+                        ))}
+                      </div>
+                    )}
+
+                    {!suppliesLoading && (
+                      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                        {filteredProducts.map((product) => (
+                          <Card key={product.id} className="overflow-hidden hover:shadow-lg transition-shadow">
+                            <div
+                              className={`aspect-square flex items-center justify-center ${categoryColor(product.category)}`}
+                            >
+                              <span className="text-lg font-bold px-3 text-center">
+                                {product.category || "食材"}
+                              </span>
+                            </div>
+                            <div className="p-3 space-y-2">
+                              <h3 className="font-semibold">{product.name}</h3>
+                              <p className="text-sm text-muted-foreground">
+                                {product.pack_size || product.description || product.category || ""}
+                              </p>
+                              <p className="text-sm font-semibold text-primary">
+                                {formatPrice(product)}
+                              </p>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                className="w-full"
+                                onClick={() => addToCart(product)}
+                              >
+                                詢價
+                              </Button>
+                            </div>
+                          </Card>
+                        ))}
+                      </div>
+                    )}
+
+                    {!suppliesLoading && filteredProducts.length === 0 && (
                       <div className="text-center py-12 text-muted-foreground">
-                        沒有找到符合的產品
+                        {products.length === 0 ? "此供應商尚未上架產品" : "沒有找到符合的產品"}
                       </div>
                     )}
                   </div>
                 </div>
               </TabsContent>
 
-              <TabsContent value="certifications" className="mt-6">
+              <TabsContent value="about" className="mt-6">
                 <div className="space-y-6">
                   <h2 className="text-2xl font-bold">
                     <CheckCircle2 className="w-6 h-6 inline-block mr-2" />
-                    認證與證明
+                    供應商介紹
                   </h2>
-                  
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    {/* Certifications */}
-                    <Card className="p-6">
-                      <h3 className="text-xl font-semibold mb-4">公司認證</h3>
-                      <div className="space-y-3">
-                        {supplier.certifications.map((cert, index) => (
-                          <div key={index} className="flex items-start space-x-3 p-3 rounded-lg bg-muted/50">
-                            <CheckCircle2 className="w-5 h-5 text-primary mt-0.5 flex-shrink-0" />
-                            <span className="font-medium">{cert}</span>
-                          </div>
-                        ))}
-                      </div>
-                    </Card>
 
-                    {/* Business Terms */}
-                    <Card className="p-6">
-                      <h3 className="text-xl font-semibold mb-4">交易條件</h3>
-                      <div className="space-y-4">
-                        <div className="p-3 rounded-lg bg-muted/50">
-                          <p className="font-medium mb-1">最低訂購金額</p>
-                          <p className="text-lg text-primary font-semibold">{supplier.minOrder}</p>
-                        </div>
-                        <div className="p-3 rounded-lg bg-muted/50">
-                          <p className="font-medium mb-1">付款條件</p>
-                          <p className="text-lg text-primary font-semibold">{supplier.paymentTerms}</p>
-                        </div>
-                        <div className="p-3 rounded-lg bg-muted/50">
-                          <p className="font-medium mb-1">配送時間</p>
-                          <p className="text-lg text-primary font-semibold">
-                            <Clock className="w-4 h-4 inline mr-1" />
-                            {supplier.deliveryTime}
-                          </p>
-                        </div>
-                      </div>
-                    </Card>
-                  </div>
-
-                  {/* Description */}
                   <Card className="p-6">
                     <h3 className="text-xl font-semibold mb-4">公司簡介</h3>
-                    <p className="text-muted-foreground leading-relaxed">{supplier.description}</p>
+                    <p className="text-muted-foreground leading-relaxed">
+                      {supplier.description || "此供應商尚未提供公司簡介。"}
+                    </p>
                   </Card>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <Card className="p-6">
+                      <h3 className="text-xl font-semibold mb-4">聯絡方式</h3>
+                      <div className="space-y-3">
+                        {supplier.contact_email && (
+                          <div className="flex items-start space-x-3 p-3 rounded-lg bg-muted/50">
+                            <Mail className="w-5 h-5 text-primary mt-0.5 flex-shrink-0" />
+                            <span className="font-medium break-all">{supplier.contact_email}</span>
+                          </div>
+                        )}
+                        {supplier.phone && (
+                          <div className="flex items-start space-x-3 p-3 rounded-lg bg-muted/50">
+                            <Phone className="w-5 h-5 text-primary mt-0.5 flex-shrink-0" />
+                            <span className="font-medium">{supplier.phone}</span>
+                          </div>
+                        )}
+                        {!supplier.contact_email && !supplier.phone && (
+                          <p className="text-muted-foreground">請透過詢價功能與供應商聯繫。</p>
+                        )}
+                      </div>
+                    </Card>
+
+                    <Card className="p-6">
+                      <h3 className="text-xl font-semibold mb-4">服務區域</h3>
+                      {(supplier.service_areas?.length ?? 0) > 0 ? (
+                        <div className="flex flex-wrap gap-2">
+                          {supplier.service_areas!.map((area, index) => (
+                            <Badge key={index} variant="secondary" className="text-sm">
+                              <MapPin className="w-3 h-3 mr-1" />
+                              {area}
+                            </Badge>
+                          ))}
+                        </div>
+                      ) : (
+                        <p className="text-muted-foreground">服務區域請洽供應商。</p>
+                      )}
+                    </Card>
+                  </div>
                 </div>
               </TabsContent>
 
@@ -587,7 +700,7 @@ const SupplierDetail = () => {
           <DialogHeader>
             <DialogTitle>詢價清單</DialogTitle>
           </DialogHeader>
-          
+
           <ScrollArea className="max-h-[50vh]">
             {cart.length === 0 ? (
               <div className="text-center py-8 text-muted-foreground">
@@ -598,14 +711,20 @@ const SupplierDetail = () => {
                 {cart.map((item) => (
                   <Card key={item.id} className="p-3">
                     <div className="flex items-center gap-3">
-                      <img
-                        src={item.image}
-                        alt={item.name}
-                        className="w-16 h-16 object-cover rounded"
-                      />
+                      <div
+                        className={`w-16 h-16 rounded flex items-center justify-center flex-shrink-0 ${categoryColor(item.category)}`}
+                      >
+                        <span className="text-xs font-bold px-1 text-center">
+                          {item.category || "食材"}
+                        </span>
+                      </div>
                       <div className="flex-1">
                         <h4 className="font-semibold">{item.name}</h4>
-                        <p className="text-sm text-muted-foreground">{item.desc}</p>
+                        <p className="text-sm text-muted-foreground">
+                          {[item.pack_size, formatPrice({ price: item.price, currency: null, unit: item.unit })]
+                            .filter(Boolean)
+                            .join(" · ")}
+                        </p>
                       </div>
                       <Button
                         variant="ghost"

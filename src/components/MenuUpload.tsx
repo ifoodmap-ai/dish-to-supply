@@ -5,9 +5,15 @@ import { Upload, FileImage, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { analyzeMenu, formatIngredient } from "@/lib/api";
+import { track } from "@/lib/analytics";
+
+export interface AnalysisMeta {
+  analysisId: string | null;
+  names: string[];
+}
 
 interface MenuUploadProps {
-  onAnalysisComplete: (ingredients: string[]) => void;
+  onAnalysisComplete: (ingredients: string[], meta: AnalysisMeta) => void;
 }
 
 const MenuUpload = ({ onAnalysisComplete }: MenuUploadProps) => {
@@ -43,6 +49,7 @@ const MenuUpload = ({ onAnalysisComplete }: MenuUploadProps) => {
     }
 
     setIsUploading(true);
+    track("analysis_started", { source: "menu_upload" });
 
     try {
       const result = await analyzeMenu(selectedFile);
@@ -52,7 +59,11 @@ const MenuUpload = ({ onAnalysisComplete }: MenuUploadProps) => {
         return;
       }
 
-      onAnalysisComplete(result.ingredients.map(formatIngredient));
+      track("analysis_completed", { source: "menu_upload", count: result.ingredients.length });
+      onAnalysisComplete(result.ingredients.map(formatIngredient), {
+        analysisId: result.analysisId,
+        names: result.ingredients.map((i) => i.name),
+      });
       toast.success("AI 分析完成!");
     } catch (error) {
       const message = error instanceof Error ? error.message : "AI 分析失敗";
