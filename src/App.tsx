@@ -12,6 +12,8 @@ import Architecture from "./pages/Architecture";
 import InvestorsPage from "./pages/InvestorsPage";
 import JoinSupplierPage from "./pages/JoinSupplierPage";
 import SuppliersPage from "./pages/SuppliersPage";
+import BuyerPortalPage from "./pages/BuyerPortalPage";
+import PriceIndexPage from "./pages/PriceIndexPage";
 import AdminRoute from "./components/AdminRoute";
 import AdminLayout from "./pages/admin/AdminLayout";
 import AdminDashboard from "./pages/admin/AdminDashboard";
@@ -47,6 +49,8 @@ const App = () => (
             <Route path="/auth" element={<Auth />} />
             <Route path="/suppliers" element={<SuppliersPage />} />
             <Route path="/join" element={<JoinSupplierPage />} />
+            <Route path="/my" element={<BuyerPortalPage />} />
+            <Route path="/price-index" element={<PriceIndexPage />} />
             <Route path="/supplier/:id" element={<SupplierDetail />} />
             <Route path="/architecture" element={<Architecture />} />
             <Route path="/investors" element={<InvestorsPage />} />
