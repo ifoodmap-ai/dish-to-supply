@@ -3,6 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<script>window.IFM_PRODUCT_BASE_URL = 'https://dish-to-supply.vercel.app';</script>
 <script src="/routing.js"></script>
 <script src="./support.js"></script>
 </head>
@@ -167,7 +168,7 @@
       </div>
     </section>
 
-    <section aria-label="平台服務數據" style="border-bottom:1px solid #e5ece6;background:#fff;">
+    <section aria-label="平台服務數據" data-approved-metrics="3,000+｜2,500+｜28 類｜24hr" style="border-bottom:1px solid #e5ece6;background:#fff;">
       <div style="max-width:1240px;margin:0 auto;display:grid;grid-template-columns:repeat(4,1fr);">
         <sc-for list="{{ stats }}" as="s" hint-placeholder-count="4">
           <div data-reveal style="padding:34px 32px;border-right:1px solid #e5ece6;text-align:center;">
@@ -185,13 +186,26 @@
         <p style="font-size:16px;line-height:1.75;color:#65756a;margin:0;">需求、媒合、報價與交易履歷自然銜接，雙方都能掌握進度。</p>
       </div>
       <ol class="platform-flow-grid" style="list-style:none;padding:0;margin:0;">
-        <sc-for list="{{ platformSteps }}" as="st" hint-placeholder-count="4">
-          <li data-reveal style="position:relative;padding:28px 24px;border:1px solid #dfe8e1;border-radius:20px;background:#f8faf8;">
-            <div style="font-family:'Space Grotesk',sans-serif;font-size:13px;font-weight:700;color:#1f9e4e;margin-bottom:18px;">0{{ st.n }}</div>
-            <h3 style="font-size:19px;line-height:1.45;color:#17261c;margin:0 0 8px;">{{ st.title }}</h3>
-            <p style="font-size:15px;line-height:1.7;color:#65756a;margin:0;">{{ st.desc }}</p>
-          </li>
-        </sc-for>
+        <li data-reveal style="position:relative;padding:28px 24px;border:1px solid #dfe8e1;border-radius:20px;background:#f8faf8;">
+          <div style="font-family:'Space Grotesk',sans-serif;font-size:13px;font-weight:700;color:#1f9e4e;margin-bottom:18px;">01</div>
+          <h3 style="font-size:19px;line-height:1.45;color:#17261c;margin:0 0 8px;">餐廳提出需求</h3>
+          <p style="font-size:15px;line-height:1.7;color:#65756a;margin:0;">整理品項、數量、配送區域與預計到貨時間。</p>
+        </li>
+        <li data-reveal style="position:relative;padding:28px 24px;border:1px solid #dfe8e1;border-radius:20px;background:#f8faf8;">
+          <div style="font-family:'Space Grotesk',sans-serif;font-size:13px;font-weight:700;color:#1f9e4e;margin-bottom:18px;">02</div>
+          <h3 style="font-size:19px;line-height:1.45;color:#17261c;margin:0 0 8px;">AI 標準化與媒合</h3>
+          <p style="font-size:15px;line-height:1.7;color:#65756a;margin:0;">將需求轉為一致規格，找到適合供應的合作對象。</p>
+        </li>
+        <li data-reveal style="position:relative;padding:28px 24px;border:1px solid #dfe8e1;border-radius:20px;background:#f8faf8;">
+          <div style="font-family:'Space Grotesk',sans-serif;font-size:13px;font-weight:700;color:#1f9e4e;margin-bottom:18px;">03</div>
+          <h3 style="font-size:19px;line-height:1.45;color:#17261c;margin:0 0 8px;">供應商線上報價</h3>
+          <p style="font-size:15px;line-height:1.7;color:#65756a;margin:0;">在同一處回覆價格、供貨條件與配送安排。</p>
+        </li>
+        <li data-reveal style="position:relative;padding:28px 24px;border:1px solid #dfe8e1;border-radius:20px;background:#f8faf8;">
+          <div style="font-family:'Space Grotesk',sans-serif;font-size:13px;font-weight:700;color:#1f9e4e;margin-bottom:18px;">04</div>
+          <h3 style="font-size:19px;line-height:1.45;color:#17261c;margin:0 0 8px;">完成採購與履歷</h3>
+          <p style="font-size:15px;line-height:1.7;color:#65756a;margin:0;">確認訂單、完成收貨，保留可追蹤的交易紀錄。</p>
+        </li>
       </ol>
     </section>
 
@@ -268,16 +282,39 @@
     </section>
 
     <section class="platform-section" style="max-width:1240px;margin:0 auto;padding:92px 40px;">
-      <h2 data-reveal style="font-size:36px;color:#102016;margin:0 0 42px;text-align:center;">最真實的客戶使用心得</h2>
+      <div data-reveal style="text-align:center;max-width:680px;margin:0 auto 42px;">
+        <div style="font-size:13px;font-weight:700;color:#1f9e4e;letter-spacing:.14em;margin-bottom:12px;">成功案例</div>
+        <h2 style="font-size:36px;color:#102016;margin:0 0 12px;">實際使用成果</h2>
+        <p style="font-size:16px;line-height:1.75;color:#65756a;margin:0;">比較不同餐飲型態透過平台改善採購的具體成果。</p>
+      </div>
       <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:24px;">
-        <sc-for list="{{ testimonials }}" as="t" hint-placeholder-count="3">
-          <article data-reveal style="border:1px solid #dfe8e1;border-radius:22px;padding:30px;background:#fff;">
-            <div style="color:#1f9e4e;font-size:13px;font-weight:700;margin-bottom:16px;">{{ t.cat }}</div>
-            <p style="font-size:16px;line-height:1.8;color:#35483b;margin:0 0 22px;">「{{ t.quote }}」</p>
-            <div style="font-size:15px;font-weight:700;color:#17261c;">{{ t.name }}</div>
-            <div style="font-size:13px;color:#748278;margin-top:3px;">{{ t.role }}</div>
-          </article>
-        </sc-for>
+        <article data-reveal style="display:flex;flex-direction:column;border:1px solid #dfe8e1;border-radius:22px;padding:30px;background:#fff;">
+          <div style="color:#1f9e4e;font-size:13px;font-weight:700;margin-bottom:12px;">餐廳業者</div>
+          <h3 style="font-size:21px;line-height:1.45;color:#17261c;margin:0 0 12px;">單店餐廳，告別到處問價的日子</h3>
+          <p style="font-size:15px;line-height:1.75;color:#65756a;margin:0 0 24px;">透過一次需求媒合，快速對接三家蔬果供應商，穩定取得當季食材。</p>
+          <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:16px;margin-top:auto;padding-top:20px;border-top:1px solid #e5ece6;">
+            <div><strong style="display:block;font-size:25px;color:#1f9e4e;">3 天</strong><span style="font-size:12px;color:#748278;">完成供應商比較</span></div>
+            <div><strong style="display:block;font-size:25px;color:#1f9e4e;">−15%</strong><span style="font-size:12px;color:#748278;">食材採購成本</span></div>
+          </div>
+        </article>
+        <article data-reveal style="display:flex;flex-direction:column;border:1px solid #dfe8e1;border-radius:22px;padding:30px;background:#fff;">
+          <div style="color:#1f9e4e;font-size:13px;font-weight:700;margin-bottom:12px;">團膳業者</div>
+          <h3 style="font-size:21px;line-height:1.45;color:#17261c;margin:0 0 12px;">大量供餐，採購來源更穩定</h3>
+          <p style="font-size:15px;line-height:1.75;color:#65756a;margin:0 0 24px;">同時對接多家供應商，降低單一來源斷貨風險，供餐更有保障。</p>
+          <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:16px;margin-top:auto;padding-top:20px;border-top:1px solid #e5ece6;">
+            <div><strong style="display:block;font-size:25px;color:#1f9e4e;">5+</strong><span style="font-size:12px;color:#748278;">穩定合作供應商</span></div>
+            <div><strong style="display:block;font-size:25px;color:#1f9e4e;">0</strong><span style="font-size:12px;color:#748278;">斷貨次數</span></div>
+          </div>
+        </article>
+        <article data-reveal style="display:flex;flex-direction:column;border:1px solid #dfe8e1;border-radius:22px;padding:30px;background:#fff;">
+          <div style="color:#1f9e4e;font-size:13px;font-weight:700;margin-bottom:12px;">團購業者</div>
+          <h3 style="font-size:21px;line-height:1.45;color:#17261c;margin:0 0 12px;">產地直送，建立消費者信任</h3>
+          <p style="font-size:15px;line-height:1.75;color:#65756a;margin:0 0 24px;">對接具產銷履歷的產地供應商，商品故事與品質都更有說服力。</p>
+          <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:16px;margin-top:auto;padding-top:20px;border-top:1px solid #e5ece6;">
+            <div><strong style="display:block;font-size:25px;color:#1f9e4e;">+28%</strong><span style="font-size:12px;color:#748278;">回購率提升</span></div>
+            <div><strong style="display:block;font-size:25px;color:#1f9e4e;">4.9★</strong><span style="font-size:12px;color:#748278;">顧客評價</span></div>
+          </div>
+        </article>
       </div>
     </section>
 
@@ -696,7 +733,7 @@ class Component extends DCLogic {
 
   renderVals() {
     const page = this.state.page;
-    const productBaseUrl = 'https://dish-to-supply.vercel.app';
+    const productBaseUrl = window.IFM_PRODUCT_BASE_URL;
     return {
       rootRef: (el) => { this.rootEl = el; },
       isHome: page === 'home',
@@ -732,12 +769,6 @@ class Component extends DCLogic {
         { num: '2,500+', label: '在地供應商' },
         { num: '28 類', label: '食材品項分類' },
         { num: '24hr', label: '平均媒合回應' },
-      ],
-      platformSteps: [
-        { n: '1', title: '餐廳提出需求', desc: '整理品項、數量、配送區域與預計到貨時間。' },
-        { n: '2', title: 'AI 標準化與媒合', desc: '將需求轉為一致規格，找到適合供應的合作對象。' },
-        { n: '3', title: '供應商線上報價', desc: '在同一處回覆價格、供貨條件與配送安排。' },
-        { n: '4', title: '完成採購與履歷', desc: '確認訂單、完成收貨，保留可追蹤的交易紀錄。' },
       ],
       testimonials: [
         { cat: '餐廳業者', quote: '填一次需求隔天就有供應商主動聯繫，不用再到處問同行。', name: '林先生', role: '中式餐廳負責人' },
@@ -1220,12 +1251,11 @@ class Component extends DCLogic {
 
   // ---- 漢堡選單（注入 #dc-root 之外，避免被框架重繪清掉）----
   var MOBILE_LINKS = [
-    { label: '首頁', page: 'home' },
+    { label: '平台介紹', page: 'home' },
     { label: '餐廳方案', page: 'restaurants' },
     { label: '供應商方案', page: 'suppliers' },
-    { label: '客戶案例', page: 'cases' },
-    { label: '關於我們', page: 'about' },
-    { label: '聯絡我們', page: 'contact' }
+    { label: '成功案例', page: 'cases' },
+    { label: '關於我們', page: 'about' }
   ];
 
   var btn = document.createElement('button');
@@ -1300,12 +1330,16 @@ class Component extends DCLogic {
     item.addEventListener('click', function (event) { navTo(link.page, event); });
     menu.appendChild(item);
   });
-  var cta = document.createElement('a');
-  cta.className = 'm-menu-cta';
-  cta.href = '/contact';
-  cta.textContent = '免費媒合需求 →';
-  cta.addEventListener('click', function (event) { navTo('contact', event); });
-  menu.appendChild(cta);
+  var login = document.createElement('a');
+  login.className = 'm-menu-cta';
+  login.href = window.IFM_PRODUCT_BASE_URL + '/';
+  login.textContent = '登入平台';
+  login.addEventListener('click', function (event) {
+    if (isModifiedClick(event)) return;
+    hideMenu();
+    focusManager.close({ restoreFocus: false });
+  });
+  menu.appendChild(login);
 
   var focusManager = window.IfmRouting.createDrawerFocusManager({
     document: document,
