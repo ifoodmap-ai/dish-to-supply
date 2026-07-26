@@ -10,6 +10,9 @@ const home = source.slice(homeStart, homeEnd);
 const restaurantsStart = source.indexOf('<!-- ============ PAGE: RESTAURANTS ============ -->');
 const restaurantsEnd = source.indexOf('<!-- ============ PAGE: SUPPLIERS ============ -->');
 const restaurants = source.slice(restaurantsStart, restaurantsEnd);
+const suppliersStart = source.indexOf('<!-- ============ PAGE: SUPPLIERS ============ -->');
+const suppliersEnd = source.indexOf('<!-- ============ PAGE: CASES ============ -->');
+const suppliers = source.slice(suppliersStart, suppliersEnd);
 const headerStart = source.indexOf('<!-- ============ HEADER ============ -->');
 const headerEnd = source.indexOf('<!-- ============ PAGE: HOME ============ -->');
 const header = source.slice(headerStart, headerEnd);
@@ -82,6 +85,46 @@ function assertRestaurantOverflowRegions(fragment) {
     assert.match(
       fragment,
       new RegExp(`<div class="restaurant-mock-scroll"[^>]*aria-label="${label}"[^>]*>`),
+    );
+  }
+}
+
+function assertSupplierCapabilities(fragment) {
+  for (const capability of ['商機雷達', '報價與接單', '定價與預測', '客戶經營']) {
+    assert.match(fragment, new RegExp(`<h2[^>]*>${capability}<\\/h2>`));
+  }
+}
+
+function assertSupplierCapabilityOrder(fragment) {
+  const capabilityStart = fragment.indexOf('<section id="supplier-capabilities"');
+  const capabilityEnd = fragment.indexOf('<section aria-labelledby="supplier-outcomes-title"', capabilityStart);
+  const capabilityFragment = fragment.slice(capabilityStart, capabilityEnd);
+  const headings = [...capabilityFragment.matchAll(/<h2[^>]*>([^<]+)<\/h2>/g)]
+    .map((match) => match[1]);
+  assert.deepEqual(headings, ['商機雷達', '報價與接單', '定價與預測', '客戶經營']);
+}
+
+function assertSupplierApplicationCtas(fragment) {
+  const ctas = fragment.match(
+    /<a[^>]+href="\{\{\s*supplierApplicationUrl\s*\}\}"[^>]*>免費申請供應商上架<\/a>/g,
+  ) || [];
+  assert.equal(ctas.length, 2);
+}
+
+function assertSupplierOverflowRegions(fragment) {
+  const labels = [
+    '商機與品項缺口示意表，可左右捲動',
+    '報價與訂單狀態示意表，可左右捲動',
+    '定價與需求預測示意表，可左右捲動',
+    '客戶與評價示意表，可左右捲動',
+  ];
+  assert.equal((fragment.match(/class="supplier-mock-scroll"/g) || []).length, labels.length);
+  assert.equal((fragment.match(/class="supplier-mock-scroll"[^>]*tabindex="0"/g) || []).length, labels.length);
+  assert.equal((fragment.match(/class="supplier-mock-scroll"[^>]*role="region"/g) || []).length, labels.length);
+  for (const label of labels) {
+    assert.match(
+      fragment,
+      new RegExp(`<div class="supplier-mock-scroll"[^>]*aria-label="${label}"[^>]*>`),
     );
   }
 }
@@ -396,6 +439,122 @@ test('only horizontally overflowing restaurant mockups are labelled keyboard reg
     '$1',
   );
   assert.throws(() => assertRestaurantOverflowRegions(withoutFirstTabStop));
+});
+
+test('supplier solution page follows the approved story and uses two canonical join actions', () => {
+  assert.ok(suppliersStart >= 0 && suppliersEnd > suppliersStart);
+  assert.equal((suppliers.match(/<h1\b/g) || []).length, 1);
+  assert.match(suppliers, />iFoodmap for Suppliers</);
+  assert.match(suppliers, /<h1[^>]*>從商品上架到商機、報價與出貨<\/h1>/);
+  assertSupplierApplicationCtas(suppliers);
+  assert.match(suppliers, /href="#supplier-capabilities"/);
+
+  const hero = suppliers.indexOf('從商品上架到商機、報價與出貨');
+  const pains = suppliers.indexOf('好商品，不該埋沒在零散詢價裡');
+  const workflow = suppliers.indexOf('從被看見，到報價、接單與持續經營');
+  const capabilities = suppliers.indexOf('id="supplier-capabilities"');
+  const outcomes = suppliers.indexOf('供應商經營的成果參考');
+  const finalCta = suppliers.lastIndexOf('免費申請供應商上架');
+  assert.ok(hero >= 0 && pains > hero);
+  assert.ok(workflow > pains && capabilities > workflow);
+  assert.ok(outcomes > capabilities && finalCta > outcomes);
+});
+
+test('supplier page names four pains and an accurate lead-to-relationship workflow', () => {
+  for (const pain of [
+    '需求分散，難以及時發現',
+    '報價與交期反覆確認',
+    '定價缺少市場依據',
+    '客戶回購狀況難掌握',
+  ]) {
+    assert.match(suppliers, new RegExp(pain));
+  }
+  for (const step of ['建立商品目錄', '接收匹配商機', '回覆報價並確認訂單', '出貨並累積客戶關係']) {
+    assert.match(suppliers, new RegExp(step));
+  }
+});
+
+test('supplier page presents four product-grounded capabilities with semantic example mockups', () => {
+  assertSupplierCapabilities(suppliers);
+  assertSupplierCapabilityOrder(suppliers);
+  for (const detail of [
+    '需求單自動媒合',
+    '品項缺口分析',
+    '近 90 天',
+    '回覆報價',
+    '交期、付款條件與替代品項',
+    '待確認',
+    '確認出貨',
+    '同區同品項行情',
+    '下週備貨建議',
+    '近 13 週需求量趨勢',
+    '下單頻率',
+    '回購狀況',
+    '可能流失',
+    '交易評價',
+    '商店評價',
+  ]) {
+    assert.match(suppliers, new RegExp(detail));
+  }
+  assert.equal((suppliers.match(/產品功能示意畫面 · 示例資料/g) || []).length, 4);
+  for (const id of [
+    'supplier-leads-title',
+    'supplier-quotes-title',
+    'supplier-pricing-title',
+    'supplier-customers-title',
+  ]) {
+    assert.match(suppliers, new RegExp(`<article[^>]+aria-labelledby="${id}"`));
+  }
+});
+
+test('supplier capability order guard fails when adjacent capabilities are swapped', () => {
+  const leadsStart = suppliers.indexOf('<article class="supplier-capability"');
+  const quotesStart = suppliers.indexOf('<article class="supplier-capability supplier-capability--reverse"', leadsStart);
+  const pricingStart = suppliers.indexOf('<article class="supplier-capability"', quotesStart + 1);
+  const leads = suppliers.slice(leadsStart, quotesStart);
+  const quotes = suppliers.slice(quotesStart, pricingStart);
+  const swapped = suppliers.slice(0, leadsStart) + quotes + leads + suppliers.slice(pricingStart);
+  assert.throws(() => assertSupplierCapabilityOrder(swapped));
+});
+
+test('supplier outcomes distinguish public metrics from examples and include a qualifier', () => {
+  for (const metric of ['2,500+', '28 類', '24hr']) {
+    assert.match(suppliers, new RegExp(metric.replace('+', '\\+')));
+  }
+  assert.match(suppliers, /平台現有公開數據/);
+  assert.match(suppliers, /示例資料，非特定客戶實績/);
+  assert.match(suppliers, /成果依品項、服務區域、供應能力與執行期間而異。/);
+});
+
+test('supplier fragment excludes placeholders and unsupported automation claims', () => {
+  assert.doesNotMatch(suppliers, /頁面準備中|repeating-linear-gradient/);
+  assert.doesNotMatch(suppliers, /\[[^\]]*(?:介面|示意|實拍)[^\]]*\]/);
+  assert.doesNotMatch(suppliers, /ERP|LINE@|自動接單|自動報價|自動出貨|保證成交|即時預測/);
+});
+
+test('supplier content guards fail if capabilities or either join action are removed', () => {
+  const withoutCapabilities = suppliers.replace(
+    /<section[^>]+id="supplier-capabilities"[\s\S]*?<\/section>/,
+    '',
+  );
+  const withoutFirstCta = suppliers.replace(
+    /<a[^>]+href="\{\{\s*supplierApplicationUrl\s*\}\}"[^>]*>免費申請供應商上架<\/a>/,
+    '',
+  );
+  assert.throws(() => assertSupplierCapabilities(withoutCapabilities));
+  assert.throws(() => assertSupplierApplicationCtas(withoutFirstCta));
+});
+
+test('supplier in-page capability target and keyboard-scrollable mockups are accessible', () => {
+  assert.match(source, /#supplier-capabilities\s*\{[^}]*scroll-margin-top:\s*96px/s);
+  assertSupplierOverflowRegions(suppliers);
+  assert.match(source, /\.supplier-mock-scroll:focus-visible\s*\{/);
+
+  const withoutFirstTabStop = suppliers.replace(
+    /(<div class="supplier-mock-scroll"[^>]*?) tabindex="0"/,
+    '$1',
+  );
+  assert.throws(() => assertSupplierOverflowRegions(withoutFirstTabStop));
 });
 
 test('site shell exposes one header, labelled desktop and mobile navigation, and one footer', () => {

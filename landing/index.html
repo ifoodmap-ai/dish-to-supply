@@ -80,6 +80,7 @@
     outline-offset:-3px;
   }
   #restaurant-capabilities { scroll-margin-top:96px; }
+  #supplier-capabilities { scroll-margin-top:96px; }
   .platform-action {
     min-height:44px;
     display:inline-flex;
@@ -195,6 +196,83 @@
   .restaurant-mock-table td { color:#17261c; }
   .restaurant-case-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:24px; }
   .restaurant-kpis { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:12px; }
+  .supplier-wrap { max-width:1240px; margin:0 auto; padding-left:40px; padding-right:40px; }
+  .supplier-hero-grid { display:grid; grid-template-columns:minmax(0,1.02fr) minmax(420px,.98fr); gap:54px; align-items:center; }
+  .supplier-pain-grid { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:18px; }
+  .supplier-flow { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:14px; counter-reset:supplier-step; }
+  .supplier-flow article { position:relative; min-width:0; }
+  .supplier-flow article::before {
+    counter-increment:supplier-step;
+    content:"0" counter(supplier-step);
+    display:block;
+    margin-bottom:16px;
+    color:#166534;
+    font-family:'Space Grotesk','Noto Sans TC',sans-serif;
+    font-size:13px;
+    font-weight:700;
+    letter-spacing:.08em;
+  }
+  .supplier-capability {
+    display:grid;
+    grid-template-columns:minmax(0,.9fr) minmax(420px,1.1fr);
+    gap:64px;
+    align-items:center;
+    padding:76px 0;
+    border-bottom:1px solid #e1e9e3;
+  }
+  .supplier-capability--reverse .supplier-copy { order:2; }
+  .supplier-capability--reverse .supplier-product-mock { order:1; }
+  .supplier-copy,
+  .supplier-product-mock { min-width:0; }
+  .supplier-detail-list { margin:24px 0 0; padding:0; list-style:none; display:grid; gap:12px; }
+  .supplier-detail-list li { display:flex; gap:12px; align-items:flex-start; color:#34473b; line-height:1.65; }
+  .supplier-detail-list li::before {
+    content:"✓";
+    flex:0 0 22px;
+    width:22px;
+    height:22px;
+    display:grid;
+    place-items:center;
+    margin-top:2px;
+    border-radius:50%;
+    background:#e5f5e5;
+    color:#166534;
+    font-size:12px;
+    font-weight:900;
+  }
+  .supplier-product-mock {
+    overflow:hidden;
+    border:1px solid #d7e3da;
+    border-radius:22px;
+    background:#fff;
+    box-shadow:0 22px 58px rgba(15,43,26,.11);
+  }
+  .supplier-mock-bar {
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:16px;
+    padding:13px 18px;
+    border-bottom:1px solid #e5ece6;
+    background:#f7faf7;
+    color:#5b6b62;
+    font-size:13px;
+    font-weight:600;
+  }
+  .supplier-mock-body { padding:20px; min-width:0; }
+  .supplier-mock-scroll { max-width:100%; overflow-x:auto; overscroll-behavior-inline:contain; }
+  .supplier-mock-scroll:focus-visible {
+    outline:3px solid #166534;
+    outline-offset:3px;
+    border-radius:8px;
+  }
+  .supplier-mock-table { width:100%; min-width:500px; border-collapse:collapse; }
+  .supplier-mock-table th,
+  .supplier-mock-table td { padding:11px 12px; border-bottom:1px solid #e5ece6; text-align:left; font-size:13px; white-space:nowrap; }
+  .supplier-mock-table th { color:#5b6b62; font-weight:600; }
+  .supplier-mock-table td { color:#17261c; }
+  .supplier-case-grid { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:18px; }
+  .supplier-kpis { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:12px; }
   @media (max-width:768px) {
     .platform-hero-inner { padding:64px 20px 72px; }
     .platform-role-grid,
@@ -222,12 +300,32 @@
     .restaurant-product-mock { max-width:100%; }
     .restaurant-mock-table { min-width:430px; }
     .restaurant-mobile-copy { font-size:16px !important; }
+    .supplier-wrap { padding-left:20px; padding-right:20px; }
+    .supplier-hero-grid,
+    .supplier-pain-grid,
+    .supplier-flow,
+    .supplier-capability,
+    .supplier-case-grid { grid-template-columns:1fr; }
+    .supplier-hero-grid,
+    .supplier-capability { gap:32px; }
+    .supplier-capability { padding:56px 0; }
+    .supplier-capability--reverse .supplier-copy,
+    .supplier-capability--reverse .supplier-product-mock { order:initial; }
+    .supplier-hero-title { font-size:38px !important; }
+    .supplier-pain-grid,
+    .supplier-flow { gap:12px; }
+    .supplier-product-mock { max-width:100%; }
+    .supplier-mock-table { min-width:450px; }
+    .supplier-mobile-copy { font-size:16px !important; }
   }
   @media (max-width:400px) {
     body { font-size:16px; }
     .restaurant-hero-title { font-size:34px !important; }
     .restaurant-kpis { grid-template-columns:1fr; }
     .restaurant-mock-body { padding:15px; }
+    .supplier-hero-title { font-size:34px !important; }
+    .supplier-kpis { grid-template-columns:1fr; }
+    .supplier-mock-body { padding:15px; }
   }
   @media (prefers-reduced-motion:reduce) {
     .platform-action,
@@ -707,12 +805,231 @@
 
   <!-- ============ PAGE: SUPPLIERS ============ -->
   <sc-if value="{{ isSuppliers }}">
-  <div data-screen-label="供應商方案" style="min-height:60vh; background:#0a1510; color:#fff;">
-    <div style="max-width:1240px; margin:0 auto; padding:96px 40px;">
-      <div style="font-family:'Space Grotesk','Noto Sans TC',sans-serif; font-size:13px; font-weight:600; color:#7cf06b; letter-spacing:.16em; text-transform:uppercase; margin-bottom:16px;">For suppliers</div>
-      <h1 style="font-family:'Space Grotesk','Noto Sans TC',sans-serif; font-size:48px; line-height:1.2; margin:0 0 20px;">供應商方案</h1>
-      <p style="max-width:640px; color:#9fb6a3; font-size:18px; line-height:1.8; margin:0;">讓合適的餐廳需求主動找到你，集中管理商機、報價與訂單。</p>
-    </div>
+  <div data-screen-label="供應商方案">
+    <section style="position:relative;overflow:hidden;background:radial-gradient(720px 430px at 88% 8%,rgba(84,206,80,.22),transparent 65%),#0a1510;color:#fff;">
+      <div class="supplier-wrap supplier-hero-grid" style="position:relative;padding-top:84px;padding-bottom:88px;">
+        <div data-reveal>
+          <div style="font-family:'Space Grotesk','Noto Sans TC',sans-serif;font-size:13px;font-weight:700;color:#8fe681;letter-spacing:.14em;text-transform:uppercase;margin-bottom:16px;">iFoodmap for Suppliers</div>
+          <h1 class="supplier-hero-title" style="font-family:'Space Grotesk','Noto Sans TC',sans-serif;font-size:52px;line-height:1.18;letter-spacing:-.02em;margin:0 0 22px;">從商品上架到商機、報價與出貨</h1>
+          <p class="supplier-mobile-copy" style="max-width:650px;font-size:18px;line-height:1.8;color:#b4c6b8;margin:0 0 30px;">把商品目錄、餐廳需求、報價、訂單與客戶經營放進同一套工作流程。你保留每一次判斷，平台協助整理資訊與追蹤進度。</p>
+          <div style="display:flex;flex-wrap:wrap;gap:12px;">
+            <a class="platform-action" href="{{ supplierApplicationUrl }}" style="background:#54ce50;color:#07130a;box-shadow:0 12px 30px rgba(74,209,90,.24);">免費申請供應商上架</a>
+            <a class="platform-action" href="#supplier-capabilities" style="border:1px solid #6e8976;color:#fff;background:transparent;">查看供應商功能</a>
+          </div>
+        </div>
+
+        <article data-reveal aria-labelledby="supplier-hero-demo-title" style="min-width:0;border:1px solid rgba(255,255,255,.14);border-radius:24px;background:#fff;color:#17261c;overflow:hidden;box-shadow:0 24px 70px rgba(0,0,0,.28);">
+          <div style="display:flex;align-items:center;justify-content:space-between;gap:14px;padding:16px 18px;background:#f7faf7;border-bottom:1px solid #e5ece6;">
+            <div><h2 id="supplier-hero-demo-title" style="font-size:16px;margin:0;">今日營運摘要</h2><div style="font-size:12px;color:#5b6b62;margin-top:3px;">示例資料</div></div>
+            <span style="font-size:12px;font-weight:700;color:#166534;padding:6px 9px;border-radius:999px;background:#e8f6e7;">供應商工作台</span>
+          </div>
+          <div class="supplier-mock-body">
+            <div class="supplier-kpis">
+              <div style="padding:15px;border-radius:14px;background:#f1f8f1;"><span style="display:block;color:#5b6b62;font-size:13px;">新商機</span><strong style="display:block;margin-top:6px;font-size:23px;">8 筆</strong></div>
+              <div style="padding:15px;border-radius:14px;background:#fff7e6;"><span style="display:block;color:#675a3d;font-size:13px;">待報價</span><strong style="display:block;margin-top:6px;font-size:23px;">3 筆</strong></div>
+              <div style="padding:15px;border-radius:14px;background:#eef5ff;"><span style="display:block;color:#495d72;font-size:13px;">待確認訂單</span><strong style="display:block;margin-top:6px;font-size:23px;">2 筆</strong></div>
+            </div>
+            <div style="margin-top:16px;padding:16px;border:1px solid #e2eae4;border-radius:14px;">
+              <div style="display:flex;justify-content:space-between;gap:12px;align-items:center;"><strong style="font-size:14px;">最新匹配需求</strong><span style="font-size:12px;color:#166534;">新商機</span></div>
+              <p style="font-size:14px;color:#34473b;margin:10px 0 4px;">葉菜類 120 kg · 台北市</p>
+              <p style="font-size:13px;color:#5b6b62;margin:0;">每週配送 3 次 · 希望 08:00 前送達</p>
+            </div>
+          </div>
+        </article>
+      </div>
+    </section>
+
+    <section style="background:#f6faf6;border-bottom:1px solid #e5ece6;">
+      <div class="supplier-wrap" style="padding-top:72px;padding-bottom:72px;">
+        <div data-reveal style="max-width:720px;margin-bottom:34px;">
+          <div style="font-size:13px;font-weight:700;color:#166534;letter-spacing:.1em;margin-bottom:10px;">供應商常見挑戰</div>
+          <h2 style="font-size:38px;line-height:1.3;color:#17261c;margin:0 0 14px;">好商品，不該埋沒在零散詢價裡</h2>
+          <p class="supplier-mobile-copy" style="font-size:17px;line-height:1.75;color:#5b6b62;margin:0;">當需求、報價與合作紀錄散落在不同對話裡，回覆速度和後續經營都更難掌握。</p>
+        </div>
+        <div class="supplier-pain-grid">
+          <article data-reveal style="padding:24px;border-radius:18px;background:#fff;border:1px solid #e0e9e2;"><h3 style="font-size:17px;margin:0 0 8px;">需求分散，難以及時發現</h3><p style="font-size:14px;line-height:1.65;color:#5b6b62;margin:0;">商機可能來自多個管道，品項與服務區域也得逐一確認。</p></article>
+          <article data-reveal style="padding:24px;border-radius:18px;background:#fff;border:1px solid #e0e9e2;"><h3 style="font-size:17px;margin:0 0 8px;">報價與交期反覆確認</h3><p style="font-size:14px;line-height:1.65;color:#5b6b62;margin:0;">價格、付款條件和替代品項容易在訊息往返中遺漏。</p></article>
+          <article data-reveal style="padding:24px;border-radius:18px;background:#fff;border:1px solid #e0e9e2;"><h3 style="font-size:17px;margin:0 0 8px;">定價缺少市場依據</h3><p style="font-size:14px;line-height:1.65;color:#5b6b62;margin:0;">不容易看見同區同品項行情與近期需求變化。</p></article>
+          <article data-reveal style="padding:24px;border-radius:18px;background:#fff;border:1px solid #e0e9e2;"><h3 style="font-size:17px;margin:0 0 8px;">客戶回購狀況難掌握</h3><p style="font-size:14px;line-height:1.65;color:#5b6b62;margin:0;">完成交易後，還需要持續整理下單頻率與合作狀況。</p></article>
+        </div>
+      </div>
+    </section>
+
+    <section class="supplier-wrap" style="padding-top:76px;padding-bottom:76px;">
+      <div data-reveal style="max-width:740px;margin-bottom:34px;">
+        <div style="font-size:13px;font-weight:700;color:#166534;letter-spacing:.1em;margin-bottom:10px;">一條清楚的接單流程</div>
+        <h2 style="font-size:38px;line-height:1.3;color:#17261c;margin:0 0 14px;">從被看見，到報價、接單與持續經營</h2>
+        <p class="supplier-mobile-copy" style="font-size:17px;line-height:1.75;color:#5b6b62;margin:0;">先建立可媒合的商品資料，再逐步處理商機、訂單與客戶關係。</p>
+      </div>
+      <div class="supplier-flow">
+        <article data-reveal style="padding:24px;border-radius:18px;background:#f3f7f3;"><h3 style="font-size:18px;margin:0 0 8px;">建立商品目錄</h3><p style="font-size:15px;line-height:1.65;color:#5b6b62;margin:0;">整理供應品項、價格與服務範圍。</p></article>
+        <article data-reveal style="padding:24px;border-radius:18px;background:#f3f7f3;"><h3 style="font-size:18px;margin:0 0 8px;">接收匹配商機</h3><p style="font-size:15px;line-height:1.65;color:#5b6b62;margin:0;">查看與商品目錄相符的餐廳需求。</p></article>
+        <article data-reveal style="padding:24px;border-radius:18px;background:#f3f7f3;"><h3 style="font-size:18px;margin:0 0 8px;">回覆報價並確認訂單</h3><p style="font-size:15px;line-height:1.65;color:#5b6b62;margin:0;">填寫報價條件，追蹤已接受與待確認項目。</p></article>
+        <article data-reveal style="padding:24px;border-radius:18px;background:#f3f7f3;"><h3 style="font-size:18px;margin:0 0 8px;">出貨並累積客戶關係</h3><p style="font-size:15px;line-height:1.65;color:#5b6b62;margin:0;">確認出貨，回看訂單、客戶與評價紀錄。</p></article>
+      </div>
+    </section>
+
+    <section id="supplier-capabilities" style="background:#fbfcfb;border-top:1px solid #e8eee9;border-bottom:1px solid #e8eee9;">
+      <div class="supplier-wrap">
+        <article class="supplier-capability" data-reveal aria-labelledby="supplier-leads-title">
+          <div class="supplier-copy">
+            <div style="font-size:13px;font-weight:700;color:#166534;letter-spacing:.1em;margin-bottom:10px;">01 · 找到合適需求</div>
+            <h2 id="supplier-leads-title" style="font-size:38px;line-height:1.3;color:#17261c;margin:0 0 14px;">商機雷達</h2>
+            <p class="supplier-mobile-copy" style="font-size:17px;line-height:1.75;color:#5b6b62;margin:0;">平台依餐廳需求、商品目錄與服務區域整理潛在商機，你可以查看狀態並自行決定下一步。</p>
+            <ul class="supplier-detail-list">
+              <li>依商品目錄進行需求單自動媒合</li>
+              <li>查看新商機與不同處理狀態</li>
+              <li>用近 90 天需求做品項缺口分析</li>
+            </ul>
+          </div>
+          <div class="supplier-product-mock">
+            <div class="supplier-mock-bar"><span>產品功能示意畫面 · 示例資料</span><span>商機雷達</span></div>
+            <div class="supplier-mock-body">
+              <div class="supplier-mock-scroll" tabindex="0" role="region" aria-label="商機與品項缺口示意表，可左右捲動">
+                <table class="supplier-mock-table" aria-label="商機與品項缺口示例">
+                  <thead><tr><th>需求品項</th><th>配送區域</th><th>頻率</th><th>狀態</th></tr></thead>
+                  <tbody>
+                    <tr><td>青江菜 120 kg</td><td>台北市</td><td>每週 3 次</td><td><span style="color:#166534;font-weight:700;">新商機</span></td></tr>
+                    <tr><td>去骨雞腿 80 kg</td><td>新北市</td><td>每週 2 次</td><td>已查看</td></tr>
+                    <tr><td>品項缺口：甜椒</td><td>服務區域內</td><td>近 90 天 16 次需求</td><td>尚未上架</td></tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </article>
+
+        <article class="supplier-capability supplier-capability--reverse" data-reveal aria-labelledby="supplier-quotes-title">
+          <div class="supplier-copy">
+            <div style="font-size:13px;font-weight:700;color:#166534;letter-spacing:.1em;margin-bottom:10px;">02 · 報價到出貨</div>
+            <h2 id="supplier-quotes-title" style="font-size:38px;line-height:1.3;color:#17261c;margin:0 0 14px;">報價與接單</h2>
+            <p class="supplier-mobile-copy" style="font-size:17px;line-height:1.75;color:#5b6b62;margin:0;">集中檢視需求、回覆報價並追蹤採購訂單；每個確認動作仍由供應商操作。</p>
+            <ul class="supplier-detail-list">
+              <li>回覆報價金額、交期、付款條件與替代品項</li>
+              <li>查看待報價、已報價與已接受狀態</li>
+              <li>追蹤待確認訂單，完成後確認出貨</li>
+            </ul>
+          </div>
+          <div class="supplier-product-mock">
+            <div class="supplier-mock-bar"><span>產品功能示意畫面 · 示例資料</span><span>報價與訂單</span></div>
+            <div class="supplier-mock-body">
+              <div class="supplier-mock-scroll" tabindex="0" role="region" aria-label="報價與訂單狀態示意表，可左右捲動">
+                <table class="supplier-mock-table" aria-label="報價與訂單狀態示例">
+                  <thead><tr><th>需求摘要</th><th>總報價</th><th>交期</th><th>狀態</th></tr></thead>
+                  <tbody>
+                    <tr><td>葉菜類 3 品項</td><td>NT$ 12,600</td><td>2 個工作天</td><td><span style="color:#166534;font-weight:700;">已接受</span></td></tr>
+                    <tr><td>冷凍肉品 2 品項</td><td>待回覆</td><td>—</td><td>待報價</td></tr>
+                    <tr><td>訂單 #8F21A0</td><td>NT$ 8,450</td><td>07/29</td><td>待確認</td></tr>
+                  </tbody>
+                </table>
+              </div>
+              <div style="margin-top:14px;padding:12px 14px;border-radius:12px;background:#edf7ed;font-size:13px;line-height:1.6;color:#294331;">訂單確認備妥後，可由供應商按下「確認出貨」，並保留出貨紀錄。</div>
+            </div>
+          </div>
+        </article>
+
+        <article class="supplier-capability" data-reveal aria-labelledby="supplier-pricing-title">
+          <div class="supplier-copy">
+            <div style="font-size:13px;font-weight:700;color:#166534;letter-spacing:.1em;margin-bottom:10px;">03 · 看懂行情與需求</div>
+            <h2 id="supplier-pricing-title" style="font-size:38px;line-height:1.3;color:#17261c;margin:0 0 14px;">定價與預測</h2>
+            <p class="supplier-mobile-copy" style="font-size:17px;line-height:1.75;color:#5b6b62;margin:0;">用平台既有報價與需求資料作為參考，檢視價格競爭力和近期備貨方向。</p>
+            <ul class="supplier-detail-list">
+              <li>比對同區同品項行情與價格名次</li>
+              <li>查看近 13 週需求量趨勢</li>
+              <li>依近 90 天資料取得下週備貨建議與產季提示</li>
+            </ul>
+          </div>
+          <div class="supplier-product-mock">
+            <div class="supplier-mock-bar"><span>產品功能示意畫面 · 示例資料</span><span>定價助手 · 需求預測</span></div>
+            <div class="supplier-mock-body">
+              <div class="supplier-mock-scroll" tabindex="0" role="region" aria-label="定價與需求預測示意表，可左右捲動">
+                <table class="supplier-mock-table" aria-label="定價與需求預測示例">
+                  <thead><tr><th>品項</th><th>我的價格</th><th>同區行情</th><th>下週備貨建議</th></tr></thead>
+                  <tbody>
+                    <tr><td>青江菜</td><td>NT$ 52 / kg</td><td>NT$ 48–56</td><td>136 kg</td></tr>
+                    <tr><td>小白菜</td><td>NT$ 63 / kg</td><td>NT$ 50–58</td><td>94 kg</td></tr>
+                    <tr><td>甜椒</td><td>尚未上架</td><td>NT$ 82–96</td><td>需求成長 +12%</td></tr>
+                  </tbody>
+                </table>
+              </div>
+              <p style="font-size:12px;line-height:1.6;color:#5b6b62;margin:13px 2px 0;">預測依平台需求紀錄推估，實際備貨仍需依供應能力與市場狀況判斷。</p>
+            </div>
+          </div>
+        </article>
+
+        <article class="supplier-capability supplier-capability--reverse" data-reveal aria-labelledby="supplier-customers-title">
+          <div class="supplier-copy">
+            <div style="font-size:13px;font-weight:700;color:#166534;letter-spacing:.1em;margin-bottom:10px;">04 · 延續合作關係</div>
+            <h2 id="supplier-customers-title" style="font-size:38px;line-height:1.3;color:#17261c;margin:0 0 14px;">客戶經營</h2>
+            <p class="supplier-mobile-copy" style="font-size:17px;line-height:1.75;color:#5b6b62;margin:0;">完成訂單後，系統依合作紀錄整理客戶輪廓，並集中呈現評價與服務指標。</p>
+            <ul class="supplier-detail-list">
+              <li>查看餐廳下單頻率、累計金額與回購狀況</li>
+              <li>辨識可能流失客戶，作為主動聯繫參考</li>
+              <li>整理交易評價、商店評價與星等分布</li>
+            </ul>
+          </div>
+          <div class="supplier-product-mock">
+            <div class="supplier-mock-bar"><span>產品功能示意畫面 · 示例資料</span><span>客戶與評價</span></div>
+            <div class="supplier-mock-body">
+              <div class="supplier-mock-scroll" tabindex="0" role="region" aria-label="客戶與評價示意表，可左右捲動">
+                <table class="supplier-mock-table" aria-label="客戶與評價示例">
+                  <thead><tr><th>客戶</th><th>下單頻率</th><th>最近訂單</th><th>合作狀況</th></tr></thead>
+                  <tbody>
+                    <tr><td>禾日餐飲</td><td>每週</td><td>3 天前</td><td><span style="color:#166534;font-weight:700;">穩定回購</span></td></tr>
+                    <tr><td>好食團膳</td><td>每兩週</td><td>26 天前</td><td>可能流失</td></tr>
+                    <tr><td>山海小館</td><td>首次合作</td><td>7 天前</td><td>新客戶</td></tr>
+                  </tbody>
+                </table>
+              </div>
+              <div style="display:flex;flex-wrap:wrap;gap:10px;margin-top:14px;">
+                <span style="padding:8px 10px;border-radius:999px;background:#edf7ed;color:#294331;font-size:13px;">交易評價 4.8 / 5</span>
+                <span style="padding:8px 10px;border-radius:999px;background:#f1f4f2;color:#34473b;font-size:13px;">商店評價 12 則</span>
+              </div>
+            </div>
+          </div>
+        </article>
+      </div>
+    </section>
+
+    <section aria-labelledby="supplier-outcomes-title" style="background:#fff;">
+      <div class="supplier-wrap" style="padding-top:80px;padding-bottom:80px;">
+        <div data-reveal style="max-width:760px;margin-bottom:34px;">
+          <div style="font-size:13px;font-weight:700;color:#166534;letter-spacing:.1em;margin-bottom:10px;">平台規模與使用情境</div>
+          <h2 id="supplier-outcomes-title" style="font-size:38px;line-height:1.3;color:#17261c;margin:0 0 14px;">供應商經營的成果參考</h2>
+          <p class="supplier-mobile-copy" style="font-size:17px;line-height:1.75;color:#5b6b62;margin:0;">以下分開呈現平台現有公開數據與產品示例，避免把操作畫面誤認為特定客戶實績。</p>
+        </div>
+        <div class="supplier-case-grid">
+          <article data-reveal style="padding:28px;border-radius:20px;background:#0f2418;color:#fff;">
+            <div style="font-size:13px;color:#8fe681;font-weight:700;margin-bottom:14px;">平台現有公開數據</div>
+            <strong style="display:block;font-size:34px;margin-bottom:6px;">2,500+</strong>
+            <p style="font-size:14px;line-height:1.65;color:#b4c6b8;margin:0;">在地供應商</p>
+          </article>
+          <article data-reveal style="padding:28px;border-radius:20px;background:#f3f7f3;">
+            <div style="font-size:13px;color:#166534;font-weight:700;margin-bottom:14px;">平台現有公開數據</div>
+            <strong style="display:block;font-size:34px;color:#17261c;margin-bottom:6px;">28 類</strong>
+            <p style="font-size:14px;line-height:1.65;color:#5b6b62;margin:0;">食材品項分類</p>
+          </article>
+          <article data-reveal style="padding:28px;border-radius:20px;background:#edf7ed;">
+            <div style="font-size:13px;color:#166534;font-weight:700;margin-bottom:14px;">平台現有公開數據</div>
+            <strong style="display:block;font-size:34px;color:#17261c;margin-bottom:6px;">24hr</strong>
+            <p style="font-size:14px;line-height:1.65;color:#5b6b62;margin:0;">平均媒合回應</p>
+          </article>
+        </div>
+        <div data-reveal style="margin-top:24px;padding:24px;border:1px solid #dfe8e1;border-radius:18px;background:#fbfcfb;">
+          <div style="font-size:13px;font-weight:700;color:#166534;margin-bottom:8px;">示例資料，非特定客戶實績</div>
+          <p style="font-size:15px;line-height:1.75;color:#34473b;margin:0;">一個完整工作日可依序查看新商機、回覆待報價需求、確認訂單與出貨，再用客戶與評價紀錄安排後續聯繫。</p>
+        </div>
+        <p style="font-size:13px;line-height:1.65;color:#5b6b62;margin:18px 0 0;">成果依品項、服務區域、供應能力與執行期間而異。</p>
+      </div>
+    </section>
+
+    <section class="supplier-wrap" style="padding-top:8px;padding-bottom:92px;">
+      <div data-reveal style="padding:58px 48px;border-radius:28px;background:radial-gradient(560px 260px at 82% -25%,rgba(124,240,107,.22),transparent 65%),#102419;text-align:center;color:#fff;">
+        <h2 style="font-size:36px;line-height:1.35;margin:0 0 12px;">讓下一個合適商機，更容易看見你</h2>
+        <p class="supplier-mobile-copy" style="font-size:17px;line-height:1.7;color:#b4c6b8;margin:0 auto 28px;max-width:650px;">申請供應商上架，開始建立商品目錄與服務範圍。</p>
+        <a class="platform-action" href="{{ supplierApplicationUrl }}" style="background:#54ce50;color:#07130a;box-shadow:0 12px 30px rgba(74,209,90,.24);">免費申請供應商上架</a>
+      </div>
+    </section>
   </div>
   </sc-if>
 
