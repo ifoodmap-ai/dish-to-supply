@@ -960,6 +960,11 @@ class Component extends DCLogic {
     flex-direction: column;
   }
   .m-menu.open { transform: translateX(0); }
+  .m-menu-close {
+    position: absolute; top: 18px; right: 18px; width: 44px; height: 44px;
+    border: 0; border-radius: 12px; background: #eef5ec; color: #16301f;
+    font-size: 26px; line-height: 1; cursor: pointer;
+  }
   .m-menu-item {
     font-size: 18px; font-weight: 700; color: #16301f;
     padding: 16px 6px; border-bottom: 1px solid #f0f3ef; cursor: pointer; text-decoration: none;
@@ -1232,23 +1237,30 @@ class Component extends DCLogic {
   menu.setAttribute('aria-hidden', 'true');
   menu.inert = true;
 
-  function closeMenu() {
+  var closeBtn = document.createElement('button');
+  closeBtn.type = 'button';
+  closeBtn.className = 'm-menu-close';
+  closeBtn.setAttribute('aria-label', '關閉選單');
+  closeBtn.textContent = '×';
+  menu.appendChild(closeBtn);
+
+  function hideMenu() {
     menu.classList.remove('open'); scrim.classList.remove('open'); btn.classList.remove('open');
-    menu.setAttribute('aria-hidden', 'true');
-    menu.inert = true;
     btn.setAttribute('aria-expanded', 'false');
     btn.setAttribute('aria-label', '開啟選單');
     document.body.style.overflow = '';
   }
+
+  function closeMenu() {
+    hideMenu();
+    focusManager.close();
+  }
+
   function openMenu() {
     menu.classList.add('open'); scrim.classList.add('open'); btn.classList.add('open');
-    menu.setAttribute('aria-hidden', 'false');
-    menu.inert = false;
-    btn.setAttribute('aria-expanded', 'true');
     btn.setAttribute('aria-label', '關閉選單');
     document.body.style.overflow = 'hidden';
-    var firstLink = menu.querySelector('a');
-    if (firstLink) firstLink.focus();
+    focusManager.open();
   }
   function isModifiedClick(event) {
     return event.metaKey || event.ctrlKey || event.shiftKey || event.altKey ||
@@ -1262,7 +1274,12 @@ class Component extends DCLogic {
     var target = header.querySelector('a[href="' + path + '"]');
     if (target) target.click();
     else window.location.href = path;
-    closeMenu();
+    hideMenu();
+    focusManager.close({ restoreFocus: false });
+    requestAnimationFrame(function () {
+      var heading = root.querySelector('h1');
+      focusManager.close({ focusTarget: heading });
+    });
     window.scrollTo(0, 0);
   }
 
@@ -1281,15 +1298,26 @@ class Component extends DCLogic {
   cta.addEventListener('click', function (event) { navTo('contact', event); });
   menu.appendChild(cta);
 
+  var focusManager = window.IfmRouting.createDrawerFocusManager({
+    document: document,
+    background: root,
+    drawer: menu,
+    toggle: btn,
+    getFocusables: function () {
+      return Array.prototype.slice.call(menu.querySelectorAll('button:not([disabled]), a[href]'));
+    }
+  });
+
   btn.addEventListener('click', function () {
     menu.classList.contains('open') ? closeMenu() : openMenu();
   });
   scrim.addEventListener('click', closeMenu);
+  closeBtn.addEventListener('click', closeMenu);
   document.addEventListener('keydown', function (e) {
     if (e.key === 'Escape' && menu.classList.contains('open')) {
-      closeMenu();
-      btn.focus();
+      hideMenu();
     }
+    focusManager.handleKeyDown(e);
   });
 
   document.body.appendChild(scrim);

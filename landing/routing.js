@@ -81,7 +81,85 @@
     };
   }
 
+  function createDrawerFocusManager(options) {
+    var doc = options.document;
+    var background = options.background;
+    var drawer = options.drawer;
+    var toggle = options.toggle;
+    var getFocusables = options.getFocusables;
+    var isOpen = false;
+
+    function setOpen(open) {
+      isOpen = open;
+      background.inert = open;
+      drawer.inert = !open;
+      drawer.setAttribute('aria-hidden', open ? 'false' : 'true');
+      toggle.setAttribute('aria-expanded', open ? 'true' : 'false');
+    }
+
+    function focusPageTarget(target) {
+      if (!target) {
+        toggle.focus();
+        return;
+      }
+      target.setAttribute('tabindex', '-1');
+      target.focus();
+      if (typeof target.addEventListener === 'function') {
+        target.addEventListener('blur', function () {
+          target.removeAttribute('tabindex');
+        }, { once: true });
+      }
+    }
+
+    return {
+      open: function () {
+        setOpen(true);
+        var focusables = getFocusables();
+        if (focusables.length) focusables[0].focus();
+      },
+      close: function (closeOptions) {
+        setOpen(false);
+        if (closeOptions && closeOptions.restoreFocus === false) return;
+        focusPageTarget(closeOptions && closeOptions.focusTarget);
+      },
+      handleKeyDown: function (event) {
+        if (!isOpen) return false;
+        if (event.key === 'Escape') {
+          event.preventDefault();
+          this.close();
+          return true;
+        }
+        if (event.key !== 'Tab') return false;
+
+        var focusables = getFocusables();
+        if (!focusables.length) {
+          event.preventDefault();
+          toggle.focus();
+          return true;
+        }
+        var first = focusables[0];
+        var last = focusables[focusables.length - 1];
+        var current = doc.activeElement;
+        if (event.shiftKey && (current === first || focusables.indexOf(current) === -1)) {
+          event.preventDefault();
+          last.focus();
+          return true;
+        }
+        if (!event.shiftKey && (current === last || focusables.indexOf(current) === -1)) {
+          event.preventDefault();
+          first.focus();
+          return true;
+        }
+        return false;
+      },
+      isOpen: function () {
+        return isOpen;
+      },
+    };
+  }
+
   return {
+    createDrawerFocusManager: createDrawerFocusManager,
     createHistoryController: createHistoryController,
     pathToPage: pathToPage,
     pageToPath: pageToPath,

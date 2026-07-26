@@ -3,7 +3,7 @@ const fs = require('node:fs');
 const path = require('node:path');
 const test = require('node:test');
 
-const { createHistoryController, pageToPath, pathToPage } = require('../routing.js');
+const { createDrawerFocusManager, createHistoryController, pageToPath, pathToPage } = require('../routing.js');
 const projectRoot = path.resolve(__dirname, '..');
 
 function createFakeWindow(pathname = '/') {
@@ -30,6 +30,27 @@ function createFakeWindow(pathname = '/') {
     },
     listeners,
     pushes,
+  };
+}
+
+function createFakeElement(document, name) {
+  const attributes = new Map();
+  return {
+    name,
+    inert: false,
+    setAttribute(key, value) {
+      attributes.set(key, String(value));
+    },
+    getAttribute(key) {
+      return attributes.get(key) ?? null;
+    },
+    removeAttribute(key) {
+      attributes.delete(key);
+    },
+    focus() {
+      document.activeElement = this;
+    },
+    addEventListener() {},
   };
 }
 
@@ -114,6 +135,90 @@ test('history controller leaves modified clicks to the browser', () => {
   assert.deepEqual(pages, []);
 });
 
+test('drawer focus manager isolates background and traps Tab at both edges', () => {
+  const document = { activeElement: null };
+  const background = createFakeElement(document, 'background');
+  const drawer = createFakeElement(document, 'drawer');
+  const toggle = createFakeElement(document, 'toggle');
+  const close = createFakeElement(document, 'close');
+  const link = createFakeElement(document, 'link');
+  const manager = createDrawerFocusManager({
+    document,
+    background,
+    drawer,
+    toggle,
+    getFocusables: () => [close, link],
+  });
+
+  manager.open();
+  assert.equal(background.inert, true);
+  assert.equal(drawer.inert, false);
+  assert.equal(drawer.getAttribute('aria-hidden'), 'false');
+  assert.equal(toggle.getAttribute('aria-expanded'), 'true');
+  assert.equal(document.activeElement, close);
+
+  document.activeElement = link;
+  let prevented = false;
+  manager.handleKeyDown({ key: 'Tab', shiftKey: false, preventDefault() { prevented = true; } });
+  assert.equal(prevented, true);
+  assert.equal(document.activeElement, close);
+
+  document.activeElement = close;
+  prevented = false;
+  manager.handleKeyDown({ key: 'Tab', shiftKey: true, preventDefault() { prevented = true; } });
+  assert.equal(prevented, true);
+  assert.equal(document.activeElement, link);
+});
+
+test('drawer focus manager restores the toggle on Escape', () => {
+  const document = { activeElement: null };
+  const background = createFakeElement(document, 'background');
+  const drawer = createFakeElement(document, 'drawer');
+  const toggle = createFakeElement(document, 'toggle');
+  const close = createFakeElement(document, 'close');
+  const manager = createDrawerFocusManager({
+    document,
+    background,
+    drawer,
+    toggle,
+    getFocusables: () => [close],
+  });
+  let prevented = false;
+
+  manager.open();
+  manager.handleKeyDown({ key: 'Escape', preventDefault() { prevented = true; } });
+
+  assert.equal(prevented, true);
+  assert.equal(background.inert, false);
+  assert.equal(drawer.inert, true);
+  assert.equal(drawer.getAttribute('aria-hidden'), 'true');
+  assert.equal(toggle.getAttribute('aria-expanded'), 'false');
+  assert.equal(document.activeElement, toggle);
+});
+
+test('drawer focus manager moves route focus to the new page heading', () => {
+  const document = { activeElement: null };
+  const background = createFakeElement(document, 'background');
+  const drawer = createFakeElement(document, 'drawer');
+  const toggle = createFakeElement(document, 'toggle');
+  const heading = createFakeElement(document, 'heading');
+  const manager = createDrawerFocusManager({
+    document,
+    background,
+    drawer,
+    toggle,
+    getFocusables: () => [],
+  });
+
+  manager.open();
+  manager.close({ focusTarget: heading });
+
+  assert.equal(background.inert, false);
+  assert.equal(drawer.inert, true);
+  assert.equal(heading.getAttribute('tabindex'), '-1');
+  assert.equal(document.activeElement, heading);
+});
+
 test('index loads routing before support and wires History API navigation', () => {
   const source = fs.readFileSync(path.join(projectRoot, 'index.html'), 'utf8');
   const routingScriptIndex = source.indexOf('src="/routing.js"');
@@ -149,9 +254,13 @@ test('public route controls use anchors and navigation exposes accessibility hoo
   assert.match(source, /document\.createElement\('button'\)/);
   assert.match(source, /btn\.type = 'button'/);
   assert.match(source, /document\.createElement\('a'\)/);
-  assert.match(source, /e\.key === 'Escape'/);
-  assert.match(source, /menu\.inert = true/);
-  assert.match(source, /menu\.inert = false/);
+  assert.match(source, /closeBtn\.setAttribute\('aria-label', '關閉選單'\)/);
+  assert.match(source, /window\.IfmRouting\.createDrawerFocusManager/);
+  assert.match(source, /focusManager\.handleKeyDown\(e\)/);
+  assert.match(source, /focusManager\.close\(\{ focusTarget: heading \}\)/);
+  const mobileNavSource = source.slice(source.indexOf('function navTo(page, event)'));
+  assert.ok(mobileNavSource.indexOf('if (isModifiedClick(event)) return;') < mobileNavSource.indexOf('event.preventDefault();'));
+  assert.ok(mobileNavSource.indexOf('event.preventDefault();') < mobileNavSource.indexOf('hideMenu();'));
 });
 
 test('Vercel rewrites each public route to index without catching API paths', () => {
