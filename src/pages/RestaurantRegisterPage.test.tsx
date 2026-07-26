@@ -146,6 +146,10 @@ describe("RestaurantRegisterPage", () => {
       "autocomplete",
       "email",
     );
+    expect(screen.getByLabelText("Email")).toHaveAttribute(
+      "spellcheck",
+      "false",
+    );
     expect(screen.getByLabelText("密碼")).toHaveAttribute(
       "autocomplete",
       "new-password",
@@ -154,9 +158,15 @@ describe("RestaurantRegisterPage", () => {
       "autocomplete",
       "new-password",
     );
-    expect(
-      screen.getByRole("checkbox", { name: "同意服務條款" }),
-    ).toBeInTheDocument();
+    const terms = screen.getByRole("checkbox", { name: "同意服務條款" });
+    expect(terms).toBeInTheDocument();
+    expect(terms.closest("label")).toHaveTextContent("同意服務條款");
+    expect(screen.getByRole("img", { name: "iFoodmap" })).toHaveAttribute(
+      "width",
+    );
+    expect(screen.getByRole("img", { name: "iFoodmap" })).toHaveAttribute(
+      "height",
+    );
     expect(
       screen.getByRole("link", { name: "登入平台" }),
     ).toHaveAttribute("href", "/");
@@ -164,13 +174,22 @@ describe("RestaurantRegisterPage", () => {
 
   it("shows adjacent validation errors and focuses the first invalid field", async () => {
     renderPage();
+    const restaurantName = screen.getByLabelText("餐廳名稱");
+    const focus = vi
+      .spyOn(restaurantName, "focus")
+      .mockImplementation(() => {
+        const descriptionId = restaurantName.getAttribute("aria-describedby");
+        expect(descriptionId).toBe("restaurantName-error");
+        expect(document.getElementById(descriptionId!)).toHaveTextContent(
+          "餐廳名稱需為 2 至 100 個字元",
+        );
+      });
 
     await userEvent.click(
       screen.getByRole("button", { name: "建立餐廳帳號" }),
     );
 
-    const restaurantName = screen.getByLabelText("餐廳名稱");
-    expect(restaurantName).toHaveFocus();
+    expect(focus).toHaveBeenCalledOnce();
     expect(restaurantName).toHaveAttribute("aria-invalid", "true");
     expect(restaurantName).toHaveAccessibleDescription(
       "餐廳名稱需為 2 至 100 個字元",
@@ -198,7 +217,7 @@ describe("RestaurantRegisterPage", () => {
 
     expect(registerRestaurant).toHaveBeenCalledTimes(1);
     expect(
-      screen.getByRole("button", { name: "正在建立帳號" }),
+      screen.getByRole("button", { name: "正在建立帳號…" }),
     ).toBeDisabled();
 
     resolveRegistration({ restaurantId: crypto.randomUUID() });
@@ -226,9 +245,43 @@ describe("RestaurantRegisterPage", () => {
     );
   });
 
-  it("shows an existing-email alert with a login action and clears passwords", async () => {
+  it.each(["EMAIL_EXISTS", "EMAIL_CONFIRMATION_REQUIRED"] as const)(
+    "uses the same neutral email state for %s",
+    async (code) => {
+      registerRestaurant.mockRejectedValue(
+        new RestaurantRegistrationError(code, "raw auth detail"),
+      );
+      renderPage();
+      const user = await fillValidForm();
+
+      await user.click(screen.getByRole("button", { name: "建立餐廳帳號" }));
+
+      const alert = await screen.findByRole("alert", {
+        name: "請確認你的 Email",
+      });
+      expect(alert).toHaveTextContent(
+        "如果此 Email 可用，我們會寄送確認資訊；若已有帳號，請直接登入平台。",
+      );
+      expect(
+        within(alert).getByRole("link", { name: "登入平台" }),
+      ).toHaveAttribute("href", "/");
+      expect(alert).not.toHaveTextContent("此 Email 已經註冊");
+      expect(alert).not.toHaveTextContent("raw auth detail");
+      expect(navigate).not.toHaveBeenCalled();
+      expect(screen.getByLabelText("餐廳名稱")).toHaveValue(
+        VALID_INPUT.restaurantName,
+      );
+      expect(screen.getByLabelText("密碼")).toHaveValue("");
+      expect(screen.getByLabelText("確認密碼")).toHaveValue("");
+    },
+  );
+
+  it("gives an actionable safe path when the signed-in email differs", async () => {
     registerRestaurant.mockRejectedValue(
-      new RestaurantRegistrationError("EMAIL_EXISTS"),
+      new RestaurantRegistrationError(
+        "SESSION_EMAIL_MISMATCH",
+        "owner@example.com differs from private@example.com",
+      ),
     );
     renderPage();
     const user = await fillValidForm();
@@ -236,35 +289,16 @@ describe("RestaurantRegisterPage", () => {
     await user.click(screen.getByRole("button", { name: "建立餐廳帳號" }));
 
     const alert = await screen.findByRole("alert", {
-      name: "此 Email 已經註冊",
+      name: "目前登入的帳號不同",
     });
-    expect(alert).toBeInTheDocument();
+    expect(alert).toHaveTextContent(
+      "請改用目前帳號的 Email，或前往平台登出後再重新註冊。",
+    );
     expect(
-      within(alert).getByRole("link", { name: "登入平台" }),
+      within(alert).getByRole("link", { name: "前往平台" }),
     ).toHaveAttribute("href", "/");
-    expect(screen.getByLabelText("餐廳名稱")).toHaveValue(
-      VALID_INPUT.restaurantName,
-    );
-    expect(screen.getByLabelText("密碼")).toHaveValue("");
-    expect(screen.getByLabelText("確認密碼")).toHaveValue("");
-  });
-
-  it("explains when email confirmation is required without navigating", async () => {
-    registerRestaurant.mockRejectedValue(
-      new RestaurantRegistrationError("EMAIL_CONFIRMATION_REQUIRED"),
-    );
-    renderPage();
-    const user = await fillValidForm();
-
-    await user.click(screen.getByRole("button", { name: "建立餐廳帳號" }));
-
-    expect(
-      await screen.findByText(
-        "目前需要先完成 Email 驗證；驗證信與啟用時間依系統設定而定。",
-      ),
-    ).toBeInTheDocument();
-    expect(navigate).not.toHaveBeenCalled();
-    expect(screen.getByLabelText("密碼")).toHaveValue("");
+    expect(alert).not.toHaveTextContent("owner@example.com");
+    expect(alert).not.toHaveTextContent("private@example.com");
   });
 
   it.each(["ONBOARDING_FAILED", "UNKNOWN"] as const)(

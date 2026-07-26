@@ -15,6 +15,7 @@ export type RegistrationErrors = Partial<
 export const REGISTRATION_ERROR_CODES = {
   EMAIL_EXISTS: "EMAIL_EXISTS",
   EMAIL_CONFIRMATION_REQUIRED: "EMAIL_CONFIRMATION_REQUIRED",
+  SESSION_EMAIL_MISMATCH: "SESSION_EMAIL_MISMATCH",
   ONBOARDING_FAILED: "ONBOARDING_FAILED",
   UNKNOWN: "UNKNOWN",
 } as const;
@@ -82,14 +83,12 @@ export interface RestaurantRegistrationClient {
 }
 
 const ERROR_MESSAGES: Record<RestaurantRegistrationErrorCode, string> = {
-  EMAIL_EXISTS: "此 Email 已註冊，請直接登入",
-  EMAIL_CONFIRMATION_REQUIRED: "請先完成 Email 驗證後再繼續",
+  EMAIL_EXISTS: "請確認你的 Email",
+  EMAIL_CONFIRMATION_REQUIRED: "請確認你的 Email",
+  SESSION_EMAIL_MISMATCH: "目前登入帳號與註冊 Email 不一致",
   ONBOARDING_FAILED: "餐廳帳號建立失敗，請稍後再試",
   UNKNOWN: "註冊失敗，請稍後再試",
 };
-
-const SESSION_ACCOUNT_MISMATCH_MESSAGE =
-  "目前登入帳號與註冊 Email 不一致，請重新登入後再試";
 
 export class RestaurantRegistrationError extends Error {
   readonly code: RestaurantRegistrationErrorCode;
@@ -235,10 +234,7 @@ export const registerRestaurant = async (
       .toLowerCase();
     const submittedEmail = input.email.trim().toLowerCase();
     if (!sessionEmail || sessionEmail !== submittedEmail) {
-      throw new RestaurantRegistrationError(
-        "UNKNOWN",
-        SESSION_ACCOUNT_MISMATCH_MESSAGE,
-      );
+      throw new RestaurantRegistrationError("SESSION_EMAIL_MISMATCH");
     }
 
     return runOnboarding(client, input);

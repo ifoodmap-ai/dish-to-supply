@@ -1,4 +1,5 @@
 import {
+  useLayoutEffect,
   useRef,
   useState,
   type ChangeEvent,
@@ -52,8 +53,8 @@ const FIELD_ORDER: (keyof RestaurantRegistrationInput)[] = [
 
 type TextFieldName = Exclude<keyof RestaurantRegistrationInput, "terms">;
 type SubmissionError =
-  | "EMAIL_EXISTS"
-  | "EMAIL_CONFIRMATION_REQUIRED"
+  | "EMAIL_NOTICE"
+  | "SESSION_EMAIL_MISMATCH"
   | "GENERIC"
   | null;
 
@@ -64,6 +65,7 @@ interface FormFieldProps {
   label: string;
   name: TextFieldName;
   onChange: (event: ChangeEvent<HTMLInputElement>) => void;
+  spellCheck?: boolean;
   type?: "email" | "password" | "tel" | "text";
   value: string;
 }
@@ -75,6 +77,7 @@ const FormField = ({
   label,
   name,
   onChange,
+  spellCheck,
   type = "text",
   value,
 }: FormFieldProps) => {
@@ -93,6 +96,7 @@ const FormField = ({
         autoComplete={autoComplete}
         value={value}
         onChange={onChange}
+        spellCheck={spellCheck}
         aria-invalid={error ? "true" : "false"}
         aria-describedby={error ? errorId : undefined}
         className="h-11 border-slate-300 bg-white text-base focus-visible:ring-emerald-600 md:text-base"
@@ -132,6 +136,9 @@ const RestaurantRegisterPage = () => {
   const [submissionError, setSubmissionError] =
     useState<SubmissionError>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [pendingFocus, setPendingFocus] = useState<
+    keyof RestaurantRegistrationInput | null
+  >(null);
   const submittingRef = useRef(false);
   const restaurantNameRef = useRef<HTMLInputElement>(null);
   const contactNameRef = useRef<HTMLInputElement>(null);
@@ -140,10 +147,12 @@ const RestaurantRegisterPage = () => {
   const passwordRef = useRef<HTMLInputElement>(null);
   const confirmPasswordRef = useRef<HTMLInputElement>(null);
   const termsRef = useRef<HTMLInputElement>(null);
-  const fieldRefs: Record<
-    keyof RestaurantRegistrationInput,
-    RefObject<HTMLInputElement>
-  > = {
+  const fieldRefs = useRef<
+    Record<
+      keyof RestaurantRegistrationInput,
+      RefObject<HTMLInputElement>
+    >
+  >({
     restaurantName: restaurantNameRef,
     contactName: contactNameRef,
     phone: phoneRef,
@@ -151,14 +160,18 @@ const RestaurantRegisterPage = () => {
     password: passwordRef,
     confirmPassword: confirmPasswordRef,
     terms: termsRef,
+  });
+
+  const queueFirstError = (errors: RegistrationErrors) => {
+    const firstInvalid = FIELD_ORDER.find((field) => errors[field]);
+    setPendingFocus(firstInvalid ?? null);
   };
 
-  const focusFirstError = (errors: RegistrationErrors) => {
-    const firstInvalid = FIELD_ORDER.find((field) => errors[field]);
-    if (firstInvalid) {
-      fieldRefs[firstInvalid].current?.focus();
-    }
-  };
+  useLayoutEffect(() => {
+    if (!pendingFocus || !fieldErrors[pendingFocus]) return;
+    fieldRefs.current[pendingFocus].current?.focus();
+    setPendingFocus(null);
+  }, [fieldErrors, pendingFocus]);
 
   const updateTextField = (event: ChangeEvent<HTMLInputElement>) => {
     const name = event.target.name as TextFieldName;
@@ -185,7 +198,7 @@ const RestaurantRegisterPage = () => {
     setSubmissionError(null);
     setFieldErrors(errors);
     if (Object.keys(errors).length > 0) {
-      focusFirstError(errors);
+      queueFirstError(errors);
       return;
     }
 
@@ -207,17 +220,18 @@ const RestaurantRegisterPage = () => {
 
       if (error instanceof RestaurantRegistrationValidationError) {
         setFieldErrors(error.fieldErrors);
-        focusFirstError(error.fieldErrors);
+        queueFirstError(error.fieldErrors);
       } else if (
         error instanceof RestaurantRegistrationError &&
-        error.code === "EMAIL_EXISTS"
+        (error.code === "EMAIL_EXISTS" ||
+          error.code === "EMAIL_CONFIRMATION_REQUIRED")
       ) {
-        setSubmissionError("EMAIL_EXISTS");
+        setSubmissionError("EMAIL_NOTICE");
       } else if (
         error instanceof RestaurantRegistrationError &&
-        error.code === "EMAIL_CONFIRMATION_REQUIRED"
+        error.code === "SESSION_EMAIL_MISMATCH"
       ) {
-        setSubmissionError("EMAIL_CONFIRMATION_REQUIRED");
+        setSubmissionError("SESSION_EMAIL_MISMATCH");
       } else {
         setSubmissionError("GENERIC");
       }
@@ -239,6 +253,8 @@ const RestaurantRegisterPage = () => {
             <img
               src="/logo.png"
               alt="iFoodmap"
+              width="192"
+              height="56"
               className="h-10 w-auto max-w-full object-contain"
             />
           </Link>
@@ -312,6 +328,7 @@ const RestaurantRegisterPage = () => {
                 label="Email"
                 type="email"
                 autoComplete="email"
+                spellCheck={false}
                 value={form.email}
                 error={fieldErrors.email}
                 onChange={updateTextField}
@@ -339,7 +356,11 @@ const RestaurantRegisterPage = () => {
             </div>
 
             <div>
-              <div className="flex min-h-11 items-center gap-3">
+              {/* 保持純文字，待正式服務條款文件與網址核准後再加連結。 */}
+              <label
+                htmlFor="terms"
+                className="flex min-h-11 cursor-pointer items-center gap-3 rounded-md text-sm leading-6 text-slate-700 focus-within:ring-2 focus-within:ring-emerald-600 focus-within:ring-offset-2"
+              >
                 <span className="relative flex h-11 w-11 shrink-0 items-center justify-center">
                   <input
                     ref={termsRef}
@@ -352,7 +373,7 @@ const RestaurantRegisterPage = () => {
                     aria-describedby={
                       fieldErrors.terms ? "terms-error" : undefined
                     }
-                    className="peer absolute inset-0 cursor-pointer opacity-0"
+                    className="peer sr-only"
                   />
                   <span
                     aria-hidden="true"
@@ -361,13 +382,8 @@ const RestaurantRegisterPage = () => {
                     {form.terms ? <Check className="h-4 w-4" /> : null}
                   </span>
                 </span>
-                <Label
-                  htmlFor="terms"
-                  className="cursor-pointer text-sm font-normal leading-6 text-slate-700"
-                >
-                  同意服務條款
-                </Label>
-              </div>
+                <span>同意服務條款</span>
+              </label>
               {fieldErrors.terms ? (
                 <p
                   id="terms-error"
@@ -378,21 +394,18 @@ const RestaurantRegisterPage = () => {
               ) : null}
             </div>
 
-            {submissionError === "EMAIL_EXISTS" ? (
+            {submissionError === "EMAIL_NOTICE" ? (
               <Alert
-                variant="destructive"
-                aria-labelledby="email-exists-title"
-                className="border-red-200 bg-red-50"
+                aria-labelledby="email-notice-title"
+                className="border-amber-300 bg-amber-50 text-amber-950"
               >
                 <AlertCircle className="h-4 w-4" />
-                <AlertTitle id="email-exists-title">
-                  此 Email 已經註冊
-                </AlertTitle>
+                <AlertTitle id="email-notice-title">請確認你的 Email</AlertTitle>
                 <AlertDescription>
-                  請使用現有帳號
+                  如果此 Email 可用，我們會寄送確認資訊；若已有帳號，請直接
                   <Link
                     to="/"
-                    className="ml-1 inline-flex min-h-11 items-center font-semibold underline underline-offset-4 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-700"
+                    className="inline-flex min-h-11 items-center font-semibold underline underline-offset-4 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-800"
                   >
                     登入平台
                   </Link>
@@ -401,15 +414,24 @@ const RestaurantRegisterPage = () => {
               </Alert>
             ) : null}
 
-            {submissionError === "EMAIL_CONFIRMATION_REQUIRED" ? (
+            {submissionError === "SESSION_EMAIL_MISMATCH" ? (
               <Alert
-                aria-live="polite"
+                aria-labelledby="session-mismatch-title"
                 className="border-amber-300 bg-amber-50 text-amber-950"
               >
                 <AlertCircle className="h-4 w-4" />
-                <AlertTitle>請確認你的 Email</AlertTitle>
+                <AlertTitle id="session-mismatch-title">
+                  目前登入的帳號不同
+                </AlertTitle>
                 <AlertDescription>
-                  目前需要先完成 Email 驗證；驗證信與啟用時間依系統設定而定。
+                  請改用目前帳號的 Email，或
+                  <Link
+                    to="/"
+                    className="inline-flex min-h-11 items-center font-semibold underline underline-offset-4 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-800"
+                  >
+                    前往平台
+                  </Link>
+                  登出後再重新註冊。
                 </AlertDescription>
               </Alert>
             ) : null}
@@ -439,7 +461,7 @@ const RestaurantRegisterPage = () => {
                     className="mr-2 h-5 w-5 animate-spin motion-reduce:animate-none"
                     aria-hidden="true"
                   />
-                  正在建立帳號
+                  正在建立帳號…
                 </>
               ) : (
                 "建立餐廳帳號"

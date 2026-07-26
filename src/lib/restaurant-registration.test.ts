@@ -195,6 +195,16 @@ describe("validateRestaurantRegistration", () => {
 });
 
 describe("registerRestaurant", () => {
+  it("keeps email availability errors neutral at the service boundary", () => {
+    const existingEmail = new RestaurantRegistrationError("EMAIL_EXISTS");
+    const confirmation = new RestaurantRegistrationError(
+      "EMAIL_CONFIRMATION_REQUIRED",
+    );
+
+    expect(existingEmail.message).toBe(confirmation.message);
+    expect(existingEmail.message).not.toContain("已註冊");
+  });
+
   it("validates before making an auth or RPC call", async () => {
     const { client, getSession, signUp, rpc } = createClient();
 
@@ -439,8 +449,7 @@ describe("registerRestaurant", () => {
 
     await expect(registerRestaurant(client, VALID_INPUT)).rejects.toMatchObject({
       name: "RestaurantRegistrationError",
-      code: "UNKNOWN",
-      message: expect.stringContaining("登入帳號"),
+      code: "SESSION_EMAIL_MISMATCH",
     });
     expect(signUp).not.toHaveBeenCalled();
     expect(rpc).not.toHaveBeenCalled();
@@ -459,8 +468,7 @@ describe("registerRestaurant", () => {
 
     await expect(registerRestaurant(client, VALID_INPUT)).rejects.toMatchObject({
       name: "RestaurantRegistrationError",
-      code: "UNKNOWN",
-      message: expect.stringContaining("登入帳號"),
+      code: "SESSION_EMAIL_MISMATCH",
     });
     expect(signUp).not.toHaveBeenCalled();
     expect(rpc).not.toHaveBeenCalled();
