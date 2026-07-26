@@ -89,6 +89,78 @@
   .platform-mock-table td { padding:10px 12px; border-bottom:1px solid #e7eee8; text-align:left; font-size:13px; }
   .platform-mock-table th { color:#526358; font-weight:600; }
   .platform-mock-table td { color:#17261c; }
+  .restaurant-wrap { max-width:1240px; margin:0 auto; padding-left:40px; padding-right:40px; }
+  .restaurant-hero-grid { display:grid; grid-template-columns:minmax(0,1.02fr) minmax(420px,.98fr); gap:54px; align-items:center; }
+  .restaurant-pain-grid { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:18px; }
+  .restaurant-flow { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:14px; counter-reset:restaurant-step; }
+  .restaurant-flow article { position:relative; min-width:0; }
+  .restaurant-flow article::before {
+    counter-increment:restaurant-step;
+    content:"0" counter(restaurant-step);
+    display:block;
+    margin-bottom:16px;
+    color:#166534;
+    font-family:'Space Grotesk','Noto Sans TC',sans-serif;
+    font-size:13px;
+    font-weight:700;
+    letter-spacing:.08em;
+  }
+  .restaurant-capability {
+    display:grid;
+    grid-template-columns:minmax(0,.9fr) minmax(420px,1.1fr);
+    gap:64px;
+    align-items:center;
+    padding:76px 0;
+    border-bottom:1px solid #e1e9e3;
+  }
+  .restaurant-capability--reverse .restaurant-copy { order:2; }
+  .restaurant-capability--reverse .restaurant-product-mock { order:1; }
+  .restaurant-copy,
+  .restaurant-product-mock { min-width:0; }
+  .restaurant-detail-list { margin:24px 0 0; padding:0; list-style:none; display:grid; gap:12px; }
+  .restaurant-detail-list li { display:flex; gap:12px; align-items:flex-start; color:#34473b; line-height:1.65; }
+  .restaurant-detail-list li::before {
+    content:"✓";
+    flex:0 0 22px;
+    width:22px;
+    height:22px;
+    display:grid;
+    place-items:center;
+    margin-top:2px;
+    border-radius:50%;
+    background:#e5f5e5;
+    color:#166534;
+    font-size:12px;
+    font-weight:900;
+  }
+  .restaurant-product-mock {
+    overflow:hidden;
+    border:1px solid #d7e3da;
+    border-radius:22px;
+    background:#fff;
+    box-shadow:0 22px 58px rgba(15,43,26,.11);
+  }
+  .restaurant-mock-bar {
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:16px;
+    padding:13px 18px;
+    border-bottom:1px solid #e5ece6;
+    background:#f7faf7;
+    color:#5b6b62;
+    font-size:13px;
+    font-weight:600;
+  }
+  .restaurant-mock-body { padding:20px; min-width:0; }
+  .restaurant-mock-scroll { max-width:100%; overflow-x:auto; overscroll-behavior-inline:contain; }
+  .restaurant-mock-table { width:100%; min-width:470px; border-collapse:collapse; }
+  .restaurant-mock-table th,
+  .restaurant-mock-table td { padding:11px 12px; border-bottom:1px solid #e5ece6; text-align:left; font-size:13px; white-space:nowrap; }
+  .restaurant-mock-table th { color:#5b6b62; font-weight:600; }
+  .restaurant-mock-table td { color:#17261c; }
+  .restaurant-case-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:24px; }
+  .restaurant-kpis { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:12px; }
   @media (max-width:768px) {
     .platform-hero-inner { padding:64px 20px 72px; }
     .platform-role-grid,
@@ -99,6 +171,29 @@
     .platform-home-copy { font-size:16px !important; }
     .platform-home-title { font-size:38px !important; }
     .platform-section { padding-left:20px !important; padding-right:20px !important; }
+    .restaurant-wrap { padding-left:20px; padding-right:20px; }
+    .restaurant-hero-grid,
+    .restaurant-pain-grid,
+    .restaurant-flow,
+    .restaurant-capability,
+    .restaurant-case-grid { grid-template-columns:1fr; }
+    .restaurant-hero-grid,
+    .restaurant-capability { gap:32px; }
+    .restaurant-capability { padding:56px 0; }
+    .restaurant-capability--reverse .restaurant-copy,
+    .restaurant-capability--reverse .restaurant-product-mock { order:initial; }
+    .restaurant-hero-title { font-size:38px !important; }
+    .restaurant-pain-grid,
+    .restaurant-flow { gap:12px; }
+    .restaurant-product-mock { max-width:100%; }
+    .restaurant-mock-table { min-width:430px; }
+    .restaurant-mobile-copy { font-size:16px !important; }
+  }
+  @media (max-width:400px) {
+    body { font-size:16px; }
+    .restaurant-hero-title { font-size:34px !important; }
+    .restaurant-kpis { grid-template-columns:1fr; }
+    .restaurant-mock-body { padding:15px; }
   }
   @media (prefers-reduced-motion:reduce) {
     .platform-action,
@@ -342,47 +437,234 @@
 
   <!-- ============ PAGE: RESTAURANTS ============ -->
   <sc-if value="{{ isRestaurants }}">
-  <div data-screen-label="餐廳方案">
-    <div style="position:relative; overflow:hidden; background:radial-gradient(820px 460px at 88% -10%, rgba(74,209,90,.26), transparent 60%), #0a1510;">
-      <div style="position:absolute; inset:0; background-image:linear-gradient(rgba(255,255,255,.04) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,.04) 1px, transparent 1px); background-size:54px 54px; -webkit-mask-image:radial-gradient(700px 400px at 50% 20%, #000, transparent 75%); mask-image:radial-gradient(700px 400px at 50% 20%, #000, transparent 75%);"></div>
-      <div style="position:relative; max-width:1240px; margin:0 auto; padding:84px 40px;">
-        <div data-reveal style="font-family:'Space Grotesk','Noto Sans TC',sans-serif; font-size:13px;font-weight:600;color:#7cf06b;letter-spacing:.16em;text-transform:uppercase;margin-bottom:16px;">Our services</div>
-        <h1 data-reveal style="font-family:'Space Grotesk','Noto Sans TC',sans-serif; font-size:48px;font-weight:900;color:#fff;margin:0 0 20px; line-height:1.18; letter-spacing:-.01em;">從智慧媒合到系統建置，<br>完整的食材採購解決方案</h1>
-        <p data-reveal style="font-size:18px;line-height:1.7;color:#9fb6a3;margin:0;max-width:600px;">無論你是要快速找到食材的餐飲業者，還是想要數位化採購流程的連鎖品牌，我們都能支援。</p>
-      </div>
-    </div>
-
-    <div style="max-width:1240px; margin:0 auto; padding:24px 40px 88px;">
-      <sc-for list="{{ servicesFull }}" as="sv" hint-placeholder-count="5">
-        <div data-reveal style="display:grid; grid-template-columns:{{ sv.cols }}; gap:60px; align-items:center; padding:60px 0; border-bottom:1px solid #eef1ee;">
-          <div style="order:{{ sv.textOrder }};">
-            <div style="display:inline-block; font-family:'Space Grotesk','Noto Sans TC',sans-serif; background:#eaf7e4; color:#1f9e4e; font-weight:700; font-size:12.5px; letter-spacing:.08em; text-transform:uppercase; padding:7px 15px; border-radius:100px; margin-bottom:20px;">{{ sv.label }}</div>
-            <h2 style="font-family:'Space Grotesk','Noto Sans TC',sans-serif; font-size:31px;font-weight:900;color:#0e1a12;margin:0 0 16px; line-height:1.3; letter-spacing:-.01em;">{{ sv.title }}</h2>
-            <p style="font-size:17px;line-height:1.8;color:#5b6b62;margin:0 0 24px;">{{ sv.desc }}</p>
-            <div style="display:flex; flex-direction:column; gap:12px;">
-              <sc-for list="{{ sv.points }}" as="pt" hint-placeholder-count="3">
-                <div style="display:flex; gap:12px; align-items:flex-start;">
-                  <span style="flex-shrink:0; width:22px;height:22px;border-radius:50%;background:#eaf7e4;color:#1f9e4e;font-weight:900;font-size:12px;display:flex;align-items:center;justify-content:center;margin-top:2px;">✓</span>
-                  <span style="font-size:15px;line-height:1.6;color:#3c4d42;">{{ pt }}</span>
-                </div>
-              </sc-for>
-            </div>
-          </div>
-          <div style="order:{{ sv.imgOrder }}; aspect-ratio:4/3.1; border-radius:24px; background:repeating-linear-gradient(135deg,#f1f5f0,#f1f5f0 12px,#e8efe6 12px,#e8efe6 24px); border:1px solid #e4ebe2; display:flex; align-items:center; justify-content:center;">
-            <span style="font-family:ui-monospace,monospace; font-size:13px; color:#9bab9f;">{{ sv.imgNote }}</span>
+  <main data-screen-label="餐廳方案">
+    <section style="position:relative;overflow:hidden;background:radial-gradient(760px 460px at 88% 5%,rgba(74,209,90,.25),transparent 62%),radial-gradient(620px 400px at 2% 100%,rgba(31,158,78,.16),transparent 64%),#0a1510;">
+      <div style="position:absolute;inset:0;background-image:linear-gradient(rgba(255,255,255,.04) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.04) 1px,transparent 1px);background-size:54px 54px;"></div>
+      <div class="restaurant-wrap restaurant-hero-grid" style="position:relative;padding-top:84px;padding-bottom:88px;">
+        <div data-reveal>
+          <div style="font-family:'Space Grotesk','Noto Sans TC',sans-serif;font-size:13px;font-weight:700;color:#8fe681;letter-spacing:.13em;text-transform:uppercase;margin-bottom:18px;">iFoodmap for Restaurants</div>
+          <h1 class="restaurant-hero-title" style="font-family:'Space Grotesk','Noto Sans TC',sans-serif;font-size:52px;font-weight:900;color:#fff;margin:0 0 22px;line-height:1.18;letter-spacing:-.02em;">從菜單分析到完成收貨，都在同一個平台</h1>
+          <p class="restaurant-mobile-copy" style="font-size:18px;line-height:1.75;color:#b4c6b8;margin:0 0 30px;max-width:650px;">把菜單、食材成本、供應商比較、採購訂單與團隊權限放在清楚的工作流程中，讓每天的採購更容易掌握。</p>
+          <div style="display:flex;flex-wrap:wrap;gap:14px;">
+            <a class="platform-action" href="{{ restaurantRegistrationUrl }}" style="background:#54ce50;color:#07130a;box-shadow:0 12px 30px rgba(74,209,90,.24);">免費建立餐廳帳號</a>
+            <a class="platform-action" href="#restaurant-capabilities" style="border:1px solid rgba(255,255,255,.34);color:#fff;background:rgba(255,255,255,.06);">查看餐廳功能</a>
           </div>
         </div>
-      </sc-for>
-    </div>
 
-    <div style="max-width:1240px; margin:0 auto 92px; padding:0 40px;">
-      <div data-reveal style="position:relative; overflow:hidden; background:radial-gradient(600px 300px at 80% -40%, rgba(255,255,255,.25), transparent 60%), linear-gradient(135deg,#3DAE2B,#178a3d); border-radius:30px; padding:64px 56px; text-align:center;">
-        <h2 style="font-family:'Space Grotesk','Noto Sans TC',sans-serif; font-size:34px;font-weight:900;color:#fff;margin:0 0 14px; letter-spacing:-.01em;">想為你的品牌建置專屬採購系統？</h2>
-        <p style="font-size:17px;color:rgba(255,255,255,.92);margin:0 0 30px;">與我們聊聊你的需求，量身打造數位採購流程。</p>
-        <a href="/contact" onClick="{{ goContact }}" style="display:inline-block;background:#fff;color:#1f9e4e;font-weight:800;font-size:16px;padding:16px 38px;border-radius:100px;cursor:pointer; box-shadow:0 16px 40px rgba(0,0,0,.18); transition:transform .2s ease; text-decoration:none;" style-hover="transform:translateY(-3px);">預約系統諮詢 →</a>
+        <div class="restaurant-product-mock" data-reveal aria-label="餐廳營運總覽產品示意畫面">
+          <div class="restaurant-mock-bar"><span>餐廳營運總覽</span><span>示例資料</span></div>
+          <div class="restaurant-mock-body">
+            <div class="restaurant-kpis">
+              <div style="padding:16px;border-radius:14px;background:#f1f8f1;"><span style="display:block;color:#5b6b62;font-size:13px;">本月採購</span><strong style="display:block;margin-top:6px;font-size:22px;color:#17261c;">$128,640</strong></div>
+              <div style="padding:16px;border-radius:14px;background:#f1f8f1;"><span style="display:block;color:#5b6b62;font-size:13px;">待收貨</span><strong style="display:block;margin-top:6px;font-size:22px;color:#17261c;">6 筆</strong></div>
+              <div style="padding:16px;border-radius:14px;background:#f1f8f1;"><span style="display:block;color:#5b6b62;font-size:13px;">合作供應商</span><strong style="display:block;margin-top:6px;font-size:22px;color:#17261c;">12 家</strong></div>
+            </div>
+            <div style="margin-top:18px;padding:18px;border:1px solid #e1e9e3;border-radius:15px;">
+              <div style="display:flex;justify-content:space-between;gap:12px;margin-bottom:14px;"><strong style="font-size:15px;">今日採購進度</strong><span style="font-size:13px;color:#166534;font-weight:700;">4 / 6 已完成</span></div>
+              <div style="height:9px;border-radius:99px;background:#e5ece6;overflow:hidden;"><div style="width:67%;height:100%;border-radius:99px;background:#1f9e4e;"></div></div>
+              <ul style="list-style:none;padding:0;margin:16px 0 0;display:grid;gap:10px;color:#34473b;font-size:14px;">
+                <li style="display:flex;justify-content:space-between;gap:12px;"><span>確認明日蔬菜需求</span><strong style="color:#166534;">已完成</strong></li>
+                <li style="display:flex;justify-content:space-between;gap:12px;"><span>海鮮訂單收貨</span><strong style="color:#7c4a03;">待處理</strong></li>
+              </ul>
+            </div>
+          </div>
+        </div>
       </div>
-    </div>
-  </div>
+    </section>
+
+    <section aria-labelledby="restaurant-pain-title" style="background:#f7faf7;">
+      <div class="restaurant-wrap" style="padding-top:88px;padding-bottom:88px;">
+        <div data-reveal style="max-width:720px;margin-bottom:40px;">
+          <div style="font-size:13px;font-weight:700;color:#166534;letter-spacing:.08em;margin-bottom:12px;">採購現場</div>
+          <h2 id="restaurant-pain-title" style="font-size:38px;line-height:1.3;color:#17261c;margin:0 0 14px;">餐廳採購，不該靠人脈與零散訊息</h2>
+          <p class="restaurant-mobile-copy" style="font-size:17px;line-height:1.75;color:#5b6b62;margin:0;">當資訊分散在電話、訊息與試算表裡，團隊很難快速做出一致的採購決定。</p>
+        </div>
+        <div class="restaurant-pain-grid">
+          <article data-reveal style="padding:25px;border:1px solid #dce6de;border-radius:20px;background:#fff;">
+            <h3 style="font-size:19px;line-height:1.45;margin:0 0 9px;color:#17261c;">仰賴人工與同行詢問</h3>
+            <p style="font-size:15px;line-height:1.7;color:#5b6b62;margin:0;">找新食材或供應商時，常得逐一打電話、問同行。</p>
+          </article>
+          <article data-reveal style="padding:25px;border:1px solid #dce6de;border-radius:20px;background:#fff;">
+            <h3 style="font-size:19px;line-height:1.45;margin:0 0 9px;color:#17261c;">規格與價格資訊不完整</h3>
+            <p style="font-size:15px;line-height:1.7;color:#5b6b62;margin:0;">品項、單位與報價格式不同，難以直接判斷差異。</p>
+          </article>
+          <article data-reveal style="padding:25px;border:1px solid #dce6de;border-radius:20px;background:#fff;">
+            <h3 style="font-size:19px;line-height:1.45;margin:0 0 9px;color:#17261c;">比價耗費大量時間</h3>
+            <p style="font-size:15px;line-height:1.7;color:#5b6b62;margin:0;">詢價結果散落各處，整理與確認往往占去採購時間。</p>
+          </article>
+          <article data-reveal style="padding:25px;border:1px solid #dce6de;border-radius:20px;background:#fff;">
+            <h3 style="font-size:19px;line-height:1.45;margin:0 0 9px;color:#17261c;">訂單與收貨難追蹤</h3>
+            <p style="font-size:15px;line-height:1.7;color:#5b6b62;margin:0;">下單、到貨與異動缺少共同紀錄，交接容易遺漏。</p>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <section aria-labelledby="restaurant-workflow-title">
+      <div class="restaurant-wrap" style="padding-top:88px;padding-bottom:40px;">
+        <div data-reveal style="max-width:720px;margin-bottom:42px;">
+          <div style="font-size:13px;font-weight:700;color:#166534;letter-spacing:.08em;margin-bottom:12px;">日常工作流程</div>
+          <h2 id="restaurant-workflow-title" style="font-size:38px;line-height:1.3;color:#17261c;margin:0 0 14px;">從菜單與需求，一路走到收貨</h2>
+          <p class="restaurant-mobile-copy" style="font-size:17px;line-height:1.75;color:#5b6b62;margin:0;">每一步都由團隊確認，保留清楚的採購依據與進度。</p>
+        </div>
+        <div class="restaurant-flow">
+          <article data-reveal style="padding:24px;border-radius:18px;background:#f3f7f3;"><h3 style="font-size:18px;margin:0 0 8px;">整理菜單與需求</h3><p style="font-size:15px;line-height:1.65;color:#5b6b62;margin:0;">上傳菜單，或直接整理要採購的食材。</p></article>
+          <article data-reveal style="padding:24px;border-radius:18px;background:#f3f7f3;"><h3 style="font-size:18px;margin:0 0 8px;">確認食材與規格</h3><p style="font-size:15px;line-height:1.65;color:#5b6b62;margin:0;">檢查品項、用量與單位，再交由團隊使用。</p></article>
+          <article data-reveal style="padding:24px;border-radius:18px;background:#f3f7f3;"><h3 style="font-size:18px;margin:0 0 8px;">比較供應商與價格</h3><p style="font-size:15px;line-height:1.65;color:#5b6b62;margin:0;">集中查看合作供應商與品項報價。</p></article>
+          <article data-reveal style="padding:24px;border-radius:18px;background:#f3f7f3;"><h3 style="font-size:18px;margin:0 0 8px;">建立訂單並確認收貨</h3><p style="font-size:15px;line-height:1.65;color:#5b6b62;margin:0;">追蹤進度，到貨後由團隊完成確認。</p></article>
+        </div>
+      </div>
+    </section>
+
+    <section id="restaurant-capabilities" aria-label="餐廳產品功能">
+      <div class="restaurant-wrap">
+        <article class="restaurant-capability" aria-labelledby="restaurant-analyze-title">
+          <div class="restaurant-copy" data-reveal>
+            <div style="font-size:13px;font-weight:700;color:#166534;letter-spacing:.08em;margin-bottom:12px;">01 · MENU ANALYSIS</div>
+            <h2 id="restaurant-analyze-title" style="font-size:34px;line-height:1.3;margin:0 0 16px;color:#17261c;">AI 菜單分析</h2>
+            <p class="restaurant-mobile-copy" style="font-size:17px;line-height:1.75;color:#5b6b62;margin:0;">上傳菜單後整理菜色與食材，先由系統協助辨識，再由使用者確認內容。</p>
+            <ul class="restaurant-detail-list">
+              <li>辨識菜色與食材，建立可編輯的菜單結構</li>
+              <li>確認或編輯分析結果，補上用量與單位</li>
+              <li>從菜色回到實際採購需求</li>
+            </ul>
+          </div>
+          <div class="restaurant-product-mock" data-reveal>
+            <div class="restaurant-mock-bar"><span>產品功能示意畫面 · 示例資料</span><span>菜單分析</span></div>
+            <div class="restaurant-mock-body">
+              <div style="display:flex;align-items:center;justify-content:space-between;gap:16px;padding:14px 16px;border:1px dashed #9ab6a0;border-radius:14px;background:#f7faf7;">
+                <div><strong style="display:block;font-size:15px;">夏季午餐菜單.pdf</strong><span style="display:block;margin-top:4px;color:#5b6b62;font-size:13px;">已完成辨識 · 等待確認</span></div>
+                <span style="padding:7px 10px;border-radius:999px;background:#e4f4e3;color:#166534;font-size:13px;font-weight:700;">檢視結果</span>
+              </div>
+              <div class="restaurant-mock-scroll" style="margin-top:14px;">
+                <table class="restaurant-mock-table" aria-label="菜單分析示例">
+                  <thead><tr><th>菜色</th><th>辨識食材</th><th>用量</th><th>狀態</th></tr></thead>
+                  <tbody><tr><td>季節時蔬</td><td>青花菜、紅蘿蔔</td><td>180 g</td><td style="color:#166534;font-weight:700;">已確認</td></tr><tr><td>香煎雞腿</td><td>去骨雞腿</td><td>220 g</td><td style="color:#7c4a03;font-weight:700;">待編輯</td></tr></tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </article>
+
+        <article class="restaurant-capability restaurant-capability--reverse" aria-labelledby="restaurant-cost-title">
+          <div class="restaurant-copy" data-reveal>
+            <div style="font-size:13px;font-weight:700;color:#166534;letter-spacing:.08em;margin-bottom:12px;">02 · COST &amp; PURCHASE</div>
+            <h2 id="restaurant-cost-title" style="font-size:34px;line-height:1.3;margin:0 0 16px;color:#17261c;">成本與採購</h2>
+            <p class="restaurant-mobile-copy" style="font-size:17px;line-height:1.75;color:#5b6b62;margin:0;">把菜色食材成本與供應商報價放在相同脈絡中，讓採購決策有清楚依據。</p>
+            <ul class="restaurant-detail-list">
+              <li>查看菜色食材成本與成本占比</li>
+              <li>進行供應商價格比較，掌握報價差異</li>
+              <li>需要調整時，查看替代食材與當季參考</li>
+            </ul>
+          </div>
+          <div class="restaurant-product-mock" data-reveal>
+            <div class="restaurant-mock-bar"><span>產品功能示意畫面 · 示例資料</span><span>成本比較</span></div>
+            <div class="restaurant-mock-body">
+              <div style="display:flex;justify-content:space-between;gap:18px;align-items:flex-end;margin-bottom:18px;">
+                <div><span style="display:block;font-size:13px;color:#5b6b62;">香煎雞腿食材成本</span><strong style="display:block;margin-top:5px;font-size:25px;color:#17261c;">$76.40</strong></div>
+                <span style="color:#166534;font-size:13px;font-weight:700;">成本占比 31.8%</span>
+              </div>
+              <div class="restaurant-mock-scroll">
+                <table class="restaurant-mock-table" aria-label="供應商價格比較示例">
+                  <thead><tr><th>供應商</th><th>品項規格</th><th>單價</th><th>更新日</th></tr></thead>
+                  <tbody><tr><td>安心食材</td><td>去骨雞腿 2 kg</td><td>$185 / kg</td><td>07/25</td></tr><tr><td>產地鮮配</td><td>去骨雞腿 2 kg</td><td>$192 / kg</td><td>07/24</td></tr></tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </article>
+
+        <article class="restaurant-capability" aria-labelledby="restaurant-orders-title">
+          <div class="restaurant-copy" data-reveal>
+            <div style="font-size:13px;font-weight:700;color:#166534;letter-spacing:.08em;margin-bottom:12px;">03 · ORDER &amp; RECEIVING</div>
+            <h2 id="restaurant-orders-title" style="font-size:34px;line-height:1.3;margin:0 0 16px;color:#17261c;">訂單與收貨</h2>
+            <p class="restaurant-mobile-copy" style="font-size:17px;line-height:1.75;color:#5b6b62;margin:0;">從採購到到貨保留一致狀態，讓負責下單與現場收貨的人都看得到最新進度。</p>
+            <ul class="restaurant-detail-list">
+              <li>集中查看採購與訂單狀態</li>
+              <li>到貨後由團隊確認收貨</li>
+              <li>保留不可覆寫的事件履歷，釐清每次狀態異動</li>
+            </ul>
+          </div>
+          <div class="restaurant-product-mock" data-reveal>
+            <div class="restaurant-mock-bar"><span>產品功能示意畫面 · 示例資料</span><span>訂單詳情</span></div>
+            <div class="restaurant-mock-body">
+              <div style="display:flex;justify-content:space-between;gap:16px;align-items:center;padding-bottom:17px;border-bottom:1px solid #e5ece6;"><div><strong style="display:block;font-size:16px;">訂單 #R-0726-018</strong><span style="display:block;margin-top:4px;font-size:13px;color:#5b6b62;">預計 07/27 上午送達</span></div><span style="padding:7px 10px;border-radius:999px;background:#fff4d9;color:#7c4a03;font-size:13px;font-weight:700;">配送中</span></div>
+              <ol style="list-style:none;padding:0;margin:18px 0 0;display:grid;gap:13px;">
+                <li style="display:grid;grid-template-columns:12px 1fr auto;gap:11px;align-items:start;"><span style="width:10px;height:10px;border-radius:50%;background:#1f9e4e;margin-top:5px;"></span><div><strong style="display:block;font-size:14px;">供應商已出貨</strong><span style="font-size:13px;color:#5b6b62;">準備送往總店收貨區</span></div><time style="font-size:13px;color:#5b6b62;">16:20</time></li>
+                <li style="display:grid;grid-template-columns:12px 1fr auto;gap:11px;align-items:start;"><span style="width:10px;height:10px;border-radius:50%;background:#9ab6a0;margin-top:5px;"></span><div><strong style="display:block;font-size:14px;">餐廳已確認訂單</strong><span style="font-size:13px;color:#5b6b62;">共 8 個品項</span></div><time style="font-size:13px;color:#5b6b62;">10:05</time></li>
+              </ol>
+            </div>
+          </div>
+        </article>
+
+        <article class="restaurant-capability restaurant-capability--reverse" aria-labelledby="restaurant-team-title">
+          <div class="restaurant-copy" data-reveal>
+            <div style="font-size:13px;font-weight:700;color:#166534;letter-spacing:.08em;margin-bottom:12px;">04 · TEAM</div>
+            <h2 id="restaurant-team-title" style="font-size:34px;line-height:1.3;margin:0 0 16px;color:#17261c;">團隊管理</h2>
+            <p class="restaurant-mobile-copy" style="font-size:17px;line-height:1.75;color:#5b6b62;margin:0;">依分店與職責安排帳號角色，讓採購、管理與收貨的人取得適合的操作範圍。</p>
+            <ul class="restaurant-detail-list">
+              <li>管理分店與團隊成員</li>
+              <li>設定 owner、manager、purchaser 角色</li>
+              <li>維護各分店收貨地點與時段</li>
+            </ul>
+          </div>
+          <div class="restaurant-product-mock" data-reveal>
+            <div class="restaurant-mock-bar"><span>產品功能示意畫面 · 示例資料</span><span>團隊與分店</span></div>
+            <div class="restaurant-mock-body">
+              <div class="restaurant-mock-scroll">
+                <table class="restaurant-mock-table" aria-label="團隊權限示例">
+                  <thead><tr><th>成員</th><th>分店</th><th>角色</th><th>狀態</th></tr></thead>
+                  <tbody><tr><td>王店長</td><td>總店</td><td>manager</td><td style="color:#166534;font-weight:700;">啟用</td></tr><tr><td>陳採購</td><td>總店、東區店</td><td>purchaser</td><td style="color:#166534;font-weight:700;">啟用</td></tr></tbody>
+                </table>
+              </div>
+              <div style="margin-top:15px;padding:15px;border-radius:14px;background:#f3f7f3;">
+                <strong style="display:block;font-size:14px;">總店收貨設定</strong>
+                <span style="display:block;margin-top:6px;font-size:13px;line-height:1.6;color:#5b6b62;">台北市中山區 · 週一至週六 08:00–11:00</span>
+              </div>
+            </div>
+          </div>
+        </article>
+      </div>
+    </section>
+
+    <section aria-labelledby="restaurant-cases-title" style="background:#f7faf7;">
+      <div class="restaurant-wrap" style="padding-top:88px;padding-bottom:88px;">
+        <div data-reveal style="max-width:720px;margin-bottom:38px;">
+          <div style="font-size:13px;font-weight:700;color:#166534;letter-spacing:.08em;margin-bottom:12px;">成果案例</div>
+          <h2 id="restaurant-cases-title" style="font-size:38px;line-height:1.3;color:#17261c;margin:0 0 14px;">餐廳採購的實際成果</h2>
+          <p style="font-size:14px;line-height:1.65;color:#5b6b62;margin:0;">成果依業態、採購規模與執行期間而異。</p>
+        </div>
+        <div class="restaurant-case-grid">
+          <article data-reveal style="display:flex;flex-direction:column;padding:30px;border:1px solid #dce6de;border-radius:22px;background:#fff;">
+            <div style="font-size:13px;font-weight:700;color:#166534;margin-bottom:12px;">餐廳業者</div>
+            <h3 style="font-size:22px;line-height:1.45;color:#17261c;margin:0 0 12px;">單店餐廳，告別到處問價的日子</h3>
+            <p style="font-size:15px;line-height:1.75;color:#5b6b62;margin:0 0 24px;">透過一次需求媒合，快速對接三家蔬果供應商，穩定取得當季食材。</p>
+            <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:16px;margin-top:auto;padding-top:20px;border-top:1px solid #e5ece6;">
+              <div><strong style="display:block;font-size:25px;color:#1f9e4e;">3 天</strong><span style="font-size:12px;color:#5b6b62;">完成供應商比較</span></div>
+              <div><strong style="display:block;font-size:25px;color:#1f9e4e;">−15%</strong><span style="font-size:12px;color:#5b6b62;">食材採購成本</span></div>
+            </div>
+          </article>
+          <article data-reveal style="display:flex;flex-direction:column;padding:30px;border:1px solid #dce6de;border-radius:22px;background:#fff;">
+            <div style="font-size:13px;font-weight:700;color:#166534;margin-bottom:12px;">團膳業者</div>
+            <h3 style="font-size:22px;line-height:1.45;color:#17261c;margin:0 0 12px;">大量供餐，採購來源更穩定</h3>
+            <p style="font-size:15px;line-height:1.75;color:#5b6b62;margin:0 0 24px;">同時對接多家供應商，降低單一來源斷貨風險，供餐更有保障。</p>
+            <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:16px;margin-top:auto;padding-top:20px;border-top:1px solid #e5ece6;">
+              <div><strong style="display:block;font-size:25px;color:#1f9e4e;">5+</strong><span style="font-size:12px;color:#5b6b62;">穩定合作供應商</span></div>
+              <div><strong style="display:block;font-size:25px;color:#1f9e4e;">0</strong><span style="font-size:12px;color:#5b6b62;">斷貨次數</span></div>
+            </div>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <section class="restaurant-wrap" style="padding-top:88px;padding-bottom:92px;">
+      <div data-reveal style="padding:58px 48px;border-radius:28px;background:radial-gradient(560px 260px at 82% -25%,rgba(124,240,107,.22),transparent 65%),#102419;text-align:center;color:#fff;">
+        <h2 style="font-size:36px;line-height:1.35;margin:0 0 12px;">讓下一次採購，從清楚的流程開始</h2>
+        <p class="restaurant-mobile-copy" style="font-size:17px;line-height:1.7;color:#b4c6b8;margin:0 auto 28px;max-width:620px;">建立餐廳帳號，開始整理菜單、供應商與採購訂單。</p>
+        <a class="platform-action" href="{{ restaurantRegistrationUrl }}" style="background:#54ce50;color:#07130a;box-shadow:0 12px 30px rgba(74,209,90,.24);">免費建立餐廳帳號</a>
+      </div>
+    </section>
+  </main>
   </sc-if>
 
   <!-- ============ PAGE: SUPPLIERS ============ -->

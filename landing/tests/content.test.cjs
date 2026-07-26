@@ -7,6 +7,9 @@ const source = fs.readFileSync(path.resolve(__dirname, '..', 'index.html'), 'utf
 const homeStart = source.indexOf('<!-- ============ PAGE: HOME ============ -->');
 const homeEnd = source.indexOf('<!-- ============ PAGE: RESTAURANTS ============ -->');
 const home = source.slice(homeStart, homeEnd);
+const restaurantsStart = source.indexOf('<!-- ============ PAGE: RESTAURANTS ============ -->');
+const restaurantsEnd = source.indexOf('<!-- ============ PAGE: SUPPLIERS ============ -->');
+const restaurants = source.slice(restaurantsStart, restaurantsEnd);
 const headerStart = source.indexOf('<!-- ============ HEADER ============ -->');
 const headerEnd = source.indexOf('<!-- ============ PAGE: HOME ============ -->');
 const header = source.slice(headerStart, headerEnd);
@@ -38,6 +41,19 @@ function assertApprovedCases(fragment) {
   for (const approvedCase of approvedCases) {
     for (const text of approvedCase) assert.match(fragment, new RegExp(text.replace('+', '\\+')));
   }
+}
+
+function assertRestaurantCapabilities(fragment) {
+  for (const capability of ['AI 菜單分析', '成本與採購', '訂單與收貨', '團隊管理']) {
+    assert.match(fragment, new RegExp(`<h2[^>]*>${capability}<\\/h2>`));
+  }
+}
+
+function assertRestaurantRegistrationCta(fragment) {
+  assert.match(
+    fragment,
+    /<a[^>]+href="\{\{\s*restaurantRegistrationUrl\s*\}\}"[^>]*>免費建立餐廳帳號<\/a>/,
+  );
 }
 
 function assertMobileLogin(fragment) {
@@ -196,4 +212,92 @@ test('homepage CTAs expose stable focus, touch, responsive and reduced-motion ru
   assert.match(source, /min-height:\s*44px/);
   assert.match(source, /@media\s*\(max-width:\s*768px\)/);
   assert.match(source, /@media\s*\(prefers-reduced-motion:\s*reduce\)/);
+});
+
+test('restaurant solution page follows the approved story and section order', () => {
+  assert.ok(restaurantsStart >= 0 && restaurantsEnd > restaurantsStart);
+  assert.match(restaurants, />iFoodmap for Restaurants</);
+  assert.match(restaurants, /<h1[^>]*>[^<]*從菜單分析到完成收貨[^<]*<\/h1>/);
+  assertRestaurantRegistrationCta(restaurants);
+
+  const hero = restaurants.indexOf('從菜單分析到完成收貨');
+  const pains = restaurants.indexOf('餐廳採購，不該靠人脈與零散訊息');
+  const workflow = restaurants.indexOf('從菜單與需求，一路走到收貨');
+  const capabilities = restaurants.indexOf('id="restaurant-capabilities"');
+  const cases = restaurants.indexOf('餐廳採購的實際成果');
+  const finalCta = restaurants.lastIndexOf('免費建立餐廳帳號');
+  assert.ok(hero >= 0 && pains > hero);
+  assert.ok(workflow > pains && capabilities > workflow);
+  assert.ok(cases > capabilities && finalCta > cases);
+});
+
+test('restaurant page names four accurate pains and a menu-to-receiving workflow', () => {
+  for (const pain of [
+    '仰賴人工與同行詢問',
+    '規格與價格資訊不完整',
+    '比價耗費大量時間',
+    '訂單與收貨難追蹤',
+  ]) {
+    assert.match(restaurants, new RegExp(pain));
+  }
+  for (const step of ['整理菜單與需求', '確認食材與規格', '比較供應商與價格', '建立訂單並確認收貨']) {
+    assert.match(restaurants, new RegExp(step));
+  }
+});
+
+test('restaurant page presents four product-grounded capabilities with labelled example mockups', () => {
+  assertRestaurantCapabilities(restaurants);
+  for (const detail of [
+    '辨識菜色與食材',
+    '確認或編輯分析結果',
+    '菜色食材成本',
+    '供應商價格比較',
+    '替代食材與當季參考',
+    '採購與訂單狀態',
+    '確認收貨',
+    '事件履歷',
+    '分店',
+    'owner',
+    'manager',
+    'purchaser',
+    '收貨地點與時段',
+  ]) {
+    assert.match(restaurants, new RegExp(detail, 'i'));
+  }
+  assert.equal(
+    (restaurants.match(/產品功能示意畫面 · 示例資料/g) || []).length,
+    4,
+  );
+  assert.match(restaurants, /<article[^>]+aria-labelledby="restaurant-analyze-title"/);
+  assert.match(restaurants, /<article[^>]+aria-labelledby="restaurant-cost-title"/);
+  assert.match(restaurants, /<article[^>]+aria-labelledby="restaurant-orders-title"/);
+  assert.match(restaurants, /<article[^>]+aria-labelledby="restaurant-team-title"/);
+});
+
+test('restaurant page retains the approved restaurant outcomes and qualifier', () => {
+  for (const approvedCase of approvedCases.slice(0, 2)) {
+    for (const text of approvedCase) assert.match(restaurants, new RegExp(text.replace('+', '\\+')));
+  }
+  assert.doesNotMatch(restaurants, new RegExp(approvedCases[2][0]));
+  assert.match(restaurants, /成果依業態、採購規模與執行期間而異。/);
+});
+
+test('restaurant fragment excludes legacy placeholders and unsupported marketing', () => {
+  assert.doesNotMatch(restaurants, /\{\{\s*servicesFull\s*\}\}/);
+  assert.doesNotMatch(restaurants, /repeating-linear-gradient/);
+  assert.doesNotMatch(restaurants, /\[[^\]]*(?:介面|示意|實拍)[^\]]*\]/);
+  assert.doesNotMatch(restaurants, /Our services|ERP|LINE@|LINE 即時|自動補貨|量身打造/);
+});
+
+test('restaurant content guards fail if capabilities or registration CTA are removed', () => {
+  const withoutCapabilities = restaurants.replace(
+    /<section[^>]+id="restaurant-capabilities"[\s\S]*?<\/section>/,
+    '',
+  );
+  const withoutRegistrationCta = restaurants.replace(
+    /<a[^>]+href="\{\{\s*restaurantRegistrationUrl\s*\}\}"[^>]*>免費建立餐廳帳號<\/a>/g,
+    '',
+  );
+  assert.throws(() => assertRestaurantCapabilities(withoutCapabilities));
+  assert.throws(() => assertRestaurantRegistrationCta(withoutRegistrationCta));
 });
