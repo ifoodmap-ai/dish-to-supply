@@ -40,8 +40,10 @@ const RestaurantRoute = ({ children }: Props) => {
   useEffect(() => {
     let cancelled = false;
 
-    const load = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
+    // 注意:絕對不要在 onAuthStateChange 的 callback 裡呼叫 supabase.auth.getSession()
+    // —— supabase-js v2 在 callback 期間持有 auth lock,會直接鎖死(頁面永遠停在 loading)。
+    // 一律用 callback 帶進來的 session。
+    const load = async (session: { user: { id: string } } | null) => {
       if (!session) {
         if (!cancelled) { setAccount(null); setLoading(false); }
         return;
@@ -83,8 +85,13 @@ const RestaurantRoute = ({ children }: Props) => {
       }
     };
 
-    load();
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(() => load());
+    supabase.auth.getSession().then(({ data: { session } }) => load(session));
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      // 跳出 callback 的 lock 之後才查 DB
+      setTimeout(() => { if (!cancelled) load(session); }, 0);
+    });
+
     return () => { cancelled = true; subscription.unsubscribe(); };
   }, []);
 
