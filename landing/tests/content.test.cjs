@@ -49,6 +49,15 @@ function assertRestaurantCapabilities(fragment) {
   }
 }
 
+function assertRestaurantCapabilityOrder(fragment) {
+  const capabilityStart = fragment.indexOf('<section id="restaurant-capabilities"');
+  const capabilityEnd = fragment.indexOf('<section aria-labelledby="restaurant-cases-title"', capabilityStart);
+  const capabilityFragment = fragment.slice(capabilityStart, capabilityEnd);
+  const headings = [...capabilityFragment.matchAll(/<h2[^>]*>([^<]+)<\/h2>/g)]
+    .map((match) => match[1]);
+  assert.deepEqual(headings, ['AI 菜單分析', '成本與採購', '訂單與收貨', '團隊管理']);
+}
+
 function assertRestaurantRegistrationCta(fragment) {
   assert.match(
     fragment,
@@ -247,6 +256,7 @@ test('restaurant page names four accurate pains and a menu-to-receiving workflow
 
 test('restaurant page presents four product-grounded capabilities with labelled example mockups', () => {
   assertRestaurantCapabilities(restaurants);
+  assertRestaurantCapabilityOrder(restaurants);
   for (const detail of [
     '辨識菜色與食材',
     '確認或編輯分析結果',
@@ -272,6 +282,16 @@ test('restaurant page presents four product-grounded capabilities with labelled 
   assert.match(restaurants, /<article[^>]+aria-labelledby="restaurant-cost-title"/);
   assert.match(restaurants, /<article[^>]+aria-labelledby="restaurant-orders-title"/);
   assert.match(restaurants, /<article[^>]+aria-labelledby="restaurant-team-title"/);
+});
+
+test('restaurant capability order guard fails when adjacent capabilities are swapped', () => {
+  const costStart = restaurants.indexOf('<article class="restaurant-capability restaurant-capability--reverse"');
+  const ordersStart = restaurants.indexOf('<article class="restaurant-capability"', costStart + 1);
+  const teamStart = restaurants.indexOf('<article class="restaurant-capability restaurant-capability--reverse"', ordersStart + 1);
+  const cost = restaurants.slice(costStart, ordersStart);
+  const orders = restaurants.slice(ordersStart, teamStart);
+  const swapped = restaurants.slice(0, costStart) + orders + cost + restaurants.slice(teamStart);
+  assert.throws(() => assertRestaurantCapabilityOrder(swapped));
 });
 
 test('restaurant page retains the approved restaurant outcomes and qualifier', () => {
@@ -300,4 +320,35 @@ test('restaurant content guards fail if capabilities or registration CTA are rem
   );
   assert.throws(() => assertRestaurantCapabilities(withoutCapabilities));
   assert.throws(() => assertRestaurantRegistrationCta(withoutRegistrationCta));
+});
+
+test('restaurant in-page capability target clears the sticky header', () => {
+  assert.match(restaurants, /href="#restaurant-capabilities"/);
+  assert.match(source, /#restaurant-capabilities\s*\{[^}]*scroll-margin-top:\s*(?:8[8-9]|9[0-6])px/s);
+});
+
+test('every route shares one keyboard skip target and one main landmark', () => {
+  assert.equal((source.match(/<main\b/g) || []).length, 1);
+  assert.equal((source.match(/<\/main>/g) || []).length, 1);
+  assert.match(
+    source,
+    /<a class="skip-link" href="#main-content">跳到主要內容<\/a>[\s\S]*?<!-- ============ HEADER ============ -->/,
+  );
+  assert.match(source, /<main id="main-content" tabindex="-1">/);
+  assert.match(source, /#main-content\s*\{[^}]*scroll-margin-top:\s*(?:8[8-9]|9[0-6])px/s);
+  assert.match(source, /\.skip-link:focus-visible\s*\{/);
+
+  const mainStart = source.indexOf('<main id="main-content" tabindex="-1">');
+  const mainEnd = source.indexOf('</main>', mainStart);
+  for (const marker of [
+    'PAGE: HOME',
+    'PAGE: RESTAURANTS',
+    'PAGE: SUPPLIERS',
+    'PAGE: CASES',
+    'PAGE: ABOUT',
+    'PAGE: CONTACT',
+  ]) {
+    const markerPosition = source.indexOf(marker);
+    assert.ok(markerPosition > mainStart && markerPosition < mainEnd);
+  }
 });

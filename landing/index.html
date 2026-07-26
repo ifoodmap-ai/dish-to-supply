@@ -51,6 +51,35 @@
   }
   /* JS fallback path (older browsers): class toggle still reveals */
   [data-reveal].ifm-in{ opacity:1; transform:none; }
+  .skip-link {
+    position:fixed;
+    top:12px;
+    left:16px;
+    z-index:100;
+    min-height:44px;
+    display:inline-flex;
+    align-items:center;
+    padding:10px 18px;
+    border-radius:10px;
+    background:#fff;
+    color:#166534;
+    font-weight:800;
+    text-decoration:none;
+    box-shadow:0 8px 28px rgba(10,21,16,.24);
+    transform:translateY(-160%);
+    transition:transform .16s ease;
+  }
+  .skip-link:focus-visible {
+    transform:translateY(0);
+    outline:3px solid #166534;
+    outline-offset:3px;
+  }
+  #main-content { scroll-margin-top:96px; }
+  #main-content:focus-visible {
+    outline:3px solid #166534;
+    outline-offset:-3px;
+  }
+  #restaurant-capabilities { scroll-margin-top:96px; }
   .platform-action {
     min-height:44px;
     display:inline-flex;
@@ -205,6 +234,8 @@
 
 <div ref="{{ rootRef }}" style="font-family:'Noto Sans TC',sans-serif; color:#0e1a12; background:#fff;">
 
+  <a class="skip-link" href="#main-content">跳到主要內容</a>
+
   <!-- ============ HEADER ============ -->
   <div style="position:sticky; top:0; z-index:50; background:rgba(255,255,255,.82); backdrop-filter:blur(16px); border-bottom:1px solid #eef1ee;">
     <div style="max-width:1240px; margin:0 auto; display:flex; align-items:center; justify-content:space-between; padding:15px 40px;">
@@ -224,9 +255,10 @@
     </div>
   </div>
 
+  <main id="main-content" tabindex="-1">
   <!-- ============ PAGE: HOME ============ -->
   <sc-if value="{{ isHome }}" hint-placeholder-val="{{ true }}">
-  <main data-screen-label="首頁">
+  <div data-screen-label="首頁">
     <section style="position:relative; overflow:hidden; background:radial-gradient(920px 520px at 86% -10%, rgba(74,209,90,.28), transparent 62%),radial-gradient(720px 480px at 4% 110%, rgba(31,158,78,.18), transparent 62%),#0a1510;">
       <div style="position:absolute;inset:0;background-image:linear-gradient(rgba(255,255,255,.04) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.04) 1px,transparent 1px);background-size:54px 54px;"></div>
       <div class="platform-hero-inner" style="position:relative;">
@@ -432,12 +464,12 @@
         </div>
       </div>
     </section>
-  </main>
+  </div>
   </sc-if>
 
   <!-- ============ PAGE: RESTAURANTS ============ -->
   <sc-if value="{{ isRestaurants }}">
-  <main data-screen-label="餐廳方案">
+  <div data-screen-label="餐廳方案">
     <section style="position:relative;overflow:hidden;background:radial-gradient(760px 460px at 88% 5%,rgba(74,209,90,.25),transparent 62%),radial-gradient(620px 400px at 2% 100%,rgba(31,158,78,.16),transparent 64%),#0a1510;">
       <div style="position:absolute;inset:0;background-image:linear-gradient(rgba(255,255,255,.04) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.04) 1px,transparent 1px);background-size:54px 54px;"></div>
       <div class="restaurant-wrap restaurant-hero-grid" style="position:relative;padding-top:84px;padding-bottom:88px;">
@@ -664,18 +696,18 @@
         <a class="platform-action" href="{{ restaurantRegistrationUrl }}" style="background:#54ce50;color:#07130a;box-shadow:0 12px 30px rgba(74,209,90,.24);">免費建立餐廳帳號</a>
       </div>
     </section>
-  </main>
+  </div>
   </sc-if>
 
   <!-- ============ PAGE: SUPPLIERS ============ -->
   <sc-if value="{{ isSuppliers }}">
-  <main data-screen-label="供應商方案" style="min-height:60vh; background:#0a1510; color:#fff;">
+  <div data-screen-label="供應商方案" style="min-height:60vh; background:#0a1510; color:#fff;">
     <div style="max-width:1240px; margin:0 auto; padding:96px 40px;">
       <div style="font-family:'Space Grotesk','Noto Sans TC',sans-serif; font-size:13px; font-weight:600; color:#7cf06b; letter-spacing:.16em; text-transform:uppercase; margin-bottom:16px;">For suppliers</div>
       <h1 style="font-family:'Space Grotesk','Noto Sans TC',sans-serif; font-size:48px; line-height:1.2; margin:0 0 20px;">供應商方案</h1>
       <p style="max-width:640px; color:#9fb6a3; font-size:18px; line-height:1.8; margin:0;">讓合適的餐廳需求主動找到你，集中管理商機、報價與訂單。</p>
     </div>
-  </main>
+  </div>
   </sc-if>
 
   <!-- ============ PAGE: CASES ============ -->
@@ -843,6 +875,7 @@
     </div>
   </div>
   </sc-if>
+  </main>
 
   <!-- ============ FOOTER ============ -->
   <div style="background:#081109; color:#9fb6a3;">
