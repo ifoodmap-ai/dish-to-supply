@@ -11,13 +11,43 @@ import { useLanguage } from '@/contexts/LanguageContext';
 import { Eye, EyeOff } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
 
-// 依使用者角色決定登入後要去哪：管理員→後台、供應商→供應商後台、其他→首頁
-const destForSession = (
-  session: { user?: { app_metadata?: { role?: string } } } | null
-) => {
+// 依使用者身分決定登入後要去哪:
+//   管理員 → 平台後台 / 供應商 → 供應商後台 / 餐廳成員 → 餐廳後台 / 其他 → 首頁
+//
+// admin 與 supplier 在 app_metadata.role,餐廳身分則存在 restaurant_accounts 表
+// (一個人可以同時是多家店的成員),所以要查一次 DB。
+const destForSession = async (
+  session: { user?: { id?: string; app_metadata?: { role?: string } } } | null
+): Promise<string> => {
   const role = session?.user?.app_metadata?.role;
   if (role === 'admin') return '/admin';
   if (role === 'supplier') return '/supplier';
+
+  const uid = session?.user?.id;
+  if (!uid) return '/';
+
+  try {
+    const { data } = (await (supabase as never as {
+      from: (t: string) => {
+        select: (c: string) => {
+          eq: (col: string, v: string) => {
+            eq: (col: string, v: boolean) => {
+              limit: (n: number) => Promise<{ data: unknown[] | null }>;
+            };
+          };
+        };
+      };
+    })
+      .from('restaurant_accounts')
+      .select('id')
+      .eq('user_id', uid)
+      .eq('is_active', true)
+      .limit(1)) as { data: unknown[] | null };
+
+    if (data && data.length > 0) return '/restaurant';
+  } catch {
+    // 查不到就照舊回首頁,不要卡住登入
+  }
   return '/';
 };
 
@@ -36,23 +66,23 @@ export default function Auth() {
   const { t } = useLanguage();
 
   useEffect(() => {
-    // Check if user is already logged in
-    const checkSession = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (session) {
-        navigate(destForSession(session));
-      }
-    };
-    checkSession();
+    let cancelled = false;
 
-    // Subscribe to auth changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      if (session) {
-        navigate(destForSession(session));
-      }
+    const go = async (session: Parameters<typeof destForSession>[0]) => {
+      if (!session) return;
+      const dest = await destForSession(session);
+      if (!cancelled) navigate(dest);
+    };
+
+    supabase.auth.getSession().then(({ data: { session } }) => go(session));
+
+    // 注意:不要在 callback 內直接查 DB —— supabase-js v2 在 callback 期間持有
+    // auth lock,會鎖死。跳出 callback 之後再查。
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setTimeout(() => { if (!cancelled) go(session); }, 0);
     });
 
-    return () => subscription.unsubscribe();
+    return () => { cancelled = true; subscription.unsubscribe(); };
   }, [navigate]);
 
   const handleAuth = async (e: React.FormEvent) => {
