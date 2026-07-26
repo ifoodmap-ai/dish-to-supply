@@ -86,6 +86,18 @@ describe("validateRestaurantRegistration", () => {
     ).toHaveProperty("confirmPassword");
   });
 
+  it("accepts an exactly 8-character password with matching confirmation", () => {
+    const password = "12345678";
+
+    expect(
+      validateRestaurantRegistration({
+        ...VALID_INPUT,
+        password,
+        confirmPassword: password,
+      }),
+    ).not.toHaveProperty("password");
+  });
+
   it("requires terms acceptance", () => {
     expect(
       validateRestaurantRegistration({ ...VALID_INPUT, terms: false }),
