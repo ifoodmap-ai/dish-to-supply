@@ -53,6 +53,10 @@ SELECT throws_ok(
 );
 RESET ROLE;
 
+CREATE TEMP TABLE restaurant_count_before AS
+SELECT count(*) AS restaurant_count
+FROM public.restaurants;
+
 SET LOCAL ROLE authenticated;
 SELECT set_config(
   'request.jwt.claims',
@@ -76,11 +80,14 @@ SELECT public.create_restaurant_onboarding(
 RESET ROLE;
 
 SELECT is(
-  (SELECT count(*) FROM public.restaurants
-   WHERE id = (SELECT restaurant_id FROM onboarding_result)),
-  1::bigint,
+  (SELECT count(*) FROM public.restaurants),
+  (SELECT restaurant_count + 1 FROM restaurant_count_before),
   'authenticated caller creates exactly one restaurant'
 );
+
+CREATE TEMP TABLE restaurant_count_after_first AS
+SELECT count(*) AS restaurant_count
+FROM public.restaurants;
 
 SELECT is(
   (SELECT name FROM public.restaurants
@@ -138,9 +145,8 @@ SELECT is(
 );
 
 SELECT is(
-  (SELECT count(*) FROM public.restaurants
-   WHERE id = (SELECT restaurant_id FROM onboarding_result)),
-  1::bigint,
+  (SELECT count(*) FROM public.restaurants),
+  (SELECT restaurant_count FROM restaurant_count_after_first),
   'repeated onboarding does not duplicate the restaurant'
 );
 
