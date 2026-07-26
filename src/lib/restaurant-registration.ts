@@ -48,7 +48,7 @@ interface SessionResult {
 }
 
 interface RpcResult {
-  data: unknown;
+  data: string | null;
   error: { message?: string } | null;
 }
 
@@ -69,8 +69,8 @@ export interface RestaurantRegistrationClient {
     functionName: "create_restaurant_onboarding",
     args: {
       p_name: string;
-      p_contact_name: string;
-      p_contact_phone: string;
+      p_contact_name?: string | null;
+      p_contact_phone?: string | null;
     },
   ): PromiseLike<RpcResult>;
 }
@@ -171,17 +171,26 @@ const runOnboarding = async (
   client: RestaurantRegistrationClient,
   input: RestaurantRegistrationInput,
 ): Promise<{ restaurantId: string }> => {
-  const { data, error } = await client.rpc("create_restaurant_onboarding", {
-    p_name: input.restaurantName.trim(),
-    p_contact_name: input.contactName.trim(),
-    p_contact_phone: input.phone.trim(),
-  });
-
-  if (error || typeof data !== "string" || !UUID_PATTERN.test(data)) {
+  let result: RpcResult;
+  try {
+    result = await client.rpc("create_restaurant_onboarding", {
+      p_name: input.restaurantName.trim(),
+      p_contact_name: input.contactName.trim(),
+      p_contact_phone: input.phone.trim(),
+    });
+  } catch {
     throw new RestaurantRegistrationError("ONBOARDING_FAILED");
   }
 
-  return { restaurantId: data };
+  if (
+    result.error ||
+    typeof result.data !== "string" ||
+    !UUID_PATTERN.test(result.data)
+  ) {
+    throw new RestaurantRegistrationError("ONBOARDING_FAILED");
+  }
+
+  return { restaurantId: result.data };
 };
 
 export const registerRestaurant = async (
@@ -193,7 +202,13 @@ export const registerRestaurant = async (
     throw new RestaurantRegistrationValidationError(fieldErrors);
   }
 
-  const sessionResult = await client.auth.getSession();
+  let sessionResult: SessionResult;
+  try {
+    sessionResult = await client.auth.getSession();
+  } catch {
+    throw new RestaurantRegistrationError("UNKNOWN");
+  }
+
   if (sessionResult.error) {
     throw new RestaurantRegistrationError("UNKNOWN");
   }
@@ -202,32 +217,41 @@ export const registerRestaurant = async (
     return runOnboarding(client, input);
   }
 
-  const { data, error } = await client.auth.signUp({
-    email: input.email.trim().toLowerCase(),
-    password: input.password,
-    options: {
-      data: {
-        display_name: input.contactName.trim(),
+  let authResult: AuthResult;
+  try {
+    authResult = await client.auth.signUp({
+      email: input.email.trim().toLowerCase(),
+      password: input.password,
+      options: {
+        data: {
+          display_name: input.contactName.trim(),
+        },
       },
-    },
-  });
-
-  if (error) {
+    });
+  } catch (error) {
     throw new RestaurantRegistrationError(
-      isExistingUserError(error) ? "EMAIL_EXISTS" : "UNKNOWN",
+      error instanceof Error && isExistingUserError(error)
+        ? "EMAIL_EXISTS"
+        : "UNKNOWN",
+    );
+  }
+
+  if (authResult.error) {
+    throw new RestaurantRegistrationError(
+      isExistingUserError(authResult.error) ? "EMAIL_EXISTS" : "UNKNOWN",
     );
   }
 
   if (
-    !data.session &&
-    data.user &&
-    Array.isArray(data.user.identities) &&
-    data.user.identities.length === 0
+    !authResult.data.session &&
+    authResult.data.user &&
+    Array.isArray(authResult.data.user.identities) &&
+    authResult.data.user.identities.length === 0
   ) {
     throw new RestaurantRegistrationError("EMAIL_EXISTS");
   }
 
-  if (!data.session) {
+  if (!authResult.data.session) {
     throw new RestaurantRegistrationError("EMAIL_CONFIRMATION_REQUIRED");
   }
 

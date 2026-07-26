@@ -1,5 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 
+import type { supabase } from "../integrations/supabase/client";
+
 import {
   RestaurantRegistrationError,
   RestaurantRegistrationValidationError,
@@ -19,6 +21,11 @@ const VALID_INPUT: RestaurantRegistrationInput = {
 };
 
 const UUID = "123e4567-e89b-12d3-a456-426614174000";
+
+// Compile-time contract: the real generated Supabase client must be accepted.
+const registerWithRealClient = (client: typeof supabase) =>
+  registerRestaurant(client, VALID_INPUT);
+void registerWithRealClient;
 
 const createClient = () => {
   const getSession = vi.fn().mockResolvedValue({
@@ -93,6 +100,29 @@ describe("validateRestaurantRegistration", () => {
       }),
     ).not.toHaveProperty("phone");
   });
+
+  it.each([
+    ["restaurantName", "餐廳", false],
+    ["restaurantName", "餐".repeat(100), false],
+    ["restaurantName", "一", true],
+    ["restaurantName", "餐".repeat(101), true],
+    ["contactName", "人".repeat(80), false],
+    ["contactName", "人".repeat(81), true],
+    ["phone", "1".repeat(8), false],
+    ["phone", "1".repeat(15), false],
+    ["phone", "1".repeat(7), true],
+    ["phone", "1".repeat(16), true],
+  ])(
+    "enforces the exact %s boundary for a value of length %i",
+    (field, value, shouldHaveError) => {
+      const errors = validateRestaurantRegistration({
+        ...VALID_INPUT,
+        [field]: value,
+      });
+
+      expect(field in errors).toBe(shouldHaveError);
+    },
+  );
 });
 
 describe("registerRestaurant", () => {
@@ -171,6 +201,15 @@ describe("registerRestaurant", () => {
     });
   });
 
+  it("maps a rejected existing-email auth error to email exists", async () => {
+    const { client, signUp } = createClient();
+    signUp.mockRejectedValue(new Error("User already registered"));
+
+    await expect(registerRestaurant(client, VALID_INPUT)).rejects.toMatchObject({
+      code: "EMAIL_EXISTS",
+    });
+  });
+
   it("calls onboarding RPC with only approved trimmed fields", async () => {
     const { client, rpc } = createClient();
 
@@ -211,6 +250,77 @@ describe("registerRestaurant", () => {
     expect(caught).toMatchObject({ code: "ONBOARDING_FAILED" });
     expect((caught as Error).message).not.toContain("private_table");
   });
+
+  it.each([
+    {
+      name: "a rejected getSession call",
+      configure: ({
+        getSession,
+      }: ReturnType<typeof createClient>) =>
+        getSession.mockRejectedValue(
+          new Error("session failed at https://auth.internal.example"),
+        ),
+      expectedCode: "UNKNOWN",
+    },
+    {
+      name: "a resolved getSession error",
+      configure: ({
+        getSession,
+      }: ReturnType<typeof createClient>) =>
+        getSession.mockResolvedValue({
+          data: { session: null },
+          error: {
+            message: "session failed at https://auth.internal.example",
+          },
+        }),
+      expectedCode: "UNKNOWN",
+    },
+    {
+      name: "a rejected signUp call",
+      configure: ({ signUp }: ReturnType<typeof createClient>) =>
+        signUp.mockRejectedValue(
+          new Error("signup failed at https://auth.internal.example"),
+        ),
+      expectedCode: "UNKNOWN",
+    },
+    {
+      name: "an ordinary resolved signUp error",
+      configure: ({ signUp }: ReturnType<typeof createClient>) =>
+        signUp.mockResolvedValue({
+          data: { user: null, session: null },
+          error: {
+            message: "signup failed at https://auth.internal.example",
+          },
+        }),
+      expectedCode: "UNKNOWN",
+    },
+    {
+      name: "a rejected RPC call",
+      configure: ({ rpc }: ReturnType<typeof createClient>) =>
+        rpc.mockRejectedValue(
+          new Error("database failed at https://db.internal.example"),
+        ),
+      expectedCode: "ONBOARDING_FAILED",
+    },
+  ])(
+    "maps $name to a typed generic error without leaking details",
+    async ({ configure, expectedCode }) => {
+      const clientState = createClient();
+      configure(clientState);
+
+      let caught: unknown;
+      try {
+        await registerRestaurant(clientState.client, VALID_INPUT);
+      } catch (error) {
+        caught = error;
+      }
+
+      expect(caught).toBeInstanceOf(RestaurantRegistrationError);
+      expect(caught).toMatchObject({ code: expectedCode });
+      expect((caught as Error).message).not.toContain("internal.example");
+      expect((caught as Error).message).not.toContain("https://");
+    },
+  );
 
   it("returns the UUID restaurant ID", async () => {
     const { client } = createClient();

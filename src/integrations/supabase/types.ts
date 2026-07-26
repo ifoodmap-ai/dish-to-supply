@@ -82,7 +82,14 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      create_restaurant_onboarding: {
+        Args: {
+          p_contact_name?: string | null
+          p_contact_phone?: string | null
+          p_name: string
+        }
+        Returns: string
+      }
     }
     Enums: {
       [_ in never]: never
