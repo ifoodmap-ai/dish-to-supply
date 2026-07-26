@@ -41,7 +41,48 @@
     return pathByPage[page] || '/';
   }
 
+  function shouldHandleClick(event) {
+    if (!event) return true;
+    if (event.defaultPrevented) return false;
+    if (typeof event.button === 'number' && event.button !== 0) return false;
+    return !event.metaKey && !event.ctrlKey && !event.shiftKey && !event.altKey;
+  }
+
+  function createHistoryController(options) {
+    var win = options.window;
+    var onPage = options.onPage;
+    var started = false;
+    var onPopState = function () {
+      onPage(pathToPage(win.location.pathname));
+    };
+
+    return {
+      start: function () {
+        if (started) return;
+        win.addEventListener('popstate', onPopState);
+        started = true;
+      },
+      navigate: function (page, event) {
+        if (!shouldHandleClick(event)) return false;
+        if (event && typeof event.preventDefault === 'function') event.preventDefault();
+
+        var path = pageToPath(page);
+        if (win.location.pathname !== path) {
+          win.history.pushState({}, '', path);
+        }
+        onPage(page);
+        return true;
+      },
+      stop: function () {
+        if (!started) return;
+        win.removeEventListener('popstate', onPopState);
+        started = false;
+      },
+    };
+  }
+
   return {
+    createHistoryController: createHistoryController,
     pathToPage: pathToPage,
     pageToPath: pageToPath,
   };
