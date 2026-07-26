@@ -45,6 +45,19 @@ function assertMobileLogin(fragment) {
   assert.match(fragment, /login\.textContent = '登入平台'/);
 }
 
+function contrastRatio(foreground, background) {
+  const luminance = (hex) => {
+    const channels = hex.slice(1).match(/.{2}/g).map((channel) => parseInt(channel, 16) / 255);
+    const linear = channels.map((channel) => (
+      channel <= 0.04045 ? channel / 12.92 : ((channel + 0.055) / 1.055) ** 2.4
+    ));
+    return (0.2126 * linear[0]) + (0.7152 * linear[1]) + (0.0722 * linear[2]);
+  };
+  const lighter = Math.max(luminance(foreground), luminance(background));
+  const darker = Math.min(luminance(foreground), luminance(background));
+  return (lighter + 0.05) / (darker + 0.05);
+}
+
 test('homepage presents the approved two-sided platform message and actions', () => {
   assert.ok(homeStart >= 0 && homeEnd > homeStart);
   assert.match(home, />AI 驅動的 B2B 食材採購平台</);
@@ -99,7 +112,12 @@ test('homepage gives both roles equal capabilities and real product CTAs', () =>
 });
 
 test('homepage uses semantic labelled product mockups without old scene placeholders', () => {
-  assert.match(home, /aria-label="產品功能示意畫面"/);
+  assert.match(home, /<h2 id="product-demo-heading"[^>]*>產品功能示意畫面<\/h2>/);
+  assert.match(home, /<section class="platform-mock-grid" aria-labelledby="product-demo-heading">/);
+  assert.match(home, /<article class="platform-mock"[^>]+aria-labelledby="restaurant-demo-title"/);
+  assert.match(home, /<h3 id="restaurant-demo-title"[^>]*>餐廳採購總覽<\/h3>/);
+  assert.match(home, /<article class="platform-mock"[^>]+aria-labelledby="supplier-demo-title"/);
+  assert.match(home, /<h3 id="supplier-demo-title"[^>]*>供應商營運總覽<\/h3>/);
   assert.match(home, /(?:示例|示範)/);
   for (const restaurantItem of ['成本 KPI', '待處理訂單', '供應商比較']) {
     assert.match(home, new RegExp(restaurantItem));
@@ -113,9 +131,11 @@ test('homepage uses semantic labelled product mockups without old scene placehol
 });
 
 test('homepage renders all three approved outcome cases before the final dual CTA', () => {
-  const casesHeading = home.indexOf('實際使用成果');
+  const casesHeading = home.indexOf('案例成果');
   const finalCta = home.indexOf('現在就從適合你的入口開始');
   assert.ok(casesHeading >= 0 && finalCta > casesHeading);
+  assert.match(home, /成果依業態、採購規模與執行期間而異。/);
+  assert.match(home, /平台現有公開數據/);
 
   assertApprovedCases(home);
 });
@@ -140,7 +160,7 @@ test('mobile drawer mirrors desktop destinations and uses the shared external lo
 
 test('content guards fail when home stats, home cases, or mobile login are removed', () => {
   const homeWithoutStats = home.replace(/<section aria-label="平台服務數據"[\s\S]*?<\/section>/, '');
-  const caseMarker = home.indexOf('實際使用成果');
+  const caseMarker = home.indexOf('案例成果');
   const caseStart = home.lastIndexOf('<section', caseMarker);
   const caseEnd = home.indexOf('</section>', caseMarker) + '</section>'.length;
   const homeWithoutCases = home.slice(0, caseStart) + home.slice(caseEnd);
@@ -149,6 +169,26 @@ test('content guards fail when home stats, home cases, or mobile login are remov
   assert.throws(() => assertHomeMetricsAndWorkflow(homeWithoutStats));
   assert.throws(() => assertApprovedCases(homeWithoutCases));
   assert.throws(() => assertMobileLogin(drawerWithoutLogin));
+});
+
+test('small homepage labels and outcome captions meet WCAG AA contrast', () => {
+  for (const background of ['#ffffff', '#f8faf8', '#f3f7f3']) {
+    assert.ok(contrastRatio('#166534', background) >= 4.5);
+  }
+  assert.ok(contrastRatio('#5b6b62', '#ffffff') >= 4.5);
+  assert.doesNotMatch(home, /style="(?=[^"]*font-size:1[23]px)(?=[^"]*color:#1f9e4e)[^"]*"/);
+  assert.doesNotMatch(home, /font-size:12px;color:#748278/);
+  assert.match(home, /style="(?=[^"]*font-size:13px)(?=[^"]*color:#166534)[^"]*"/);
+  for (const caption of [
+    '完成供應商比較',
+    '食材採購成本',
+    '穩定合作供應商',
+    '斷貨次數',
+    '回購率提升',
+    '顧客評價',
+  ]) {
+    assert.match(home, new RegExp(`font-size:12px;color:#5b6b62[^"]*">${caption}`));
+  }
 });
 
 test('homepage CTAs expose stable focus, touch, responsive and reduced-motion rules', () => {
