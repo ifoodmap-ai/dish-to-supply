@@ -103,7 +103,7 @@ const RestaurantRoute = ({ children }: Props) => {
     );
   }
 
-  if (!account) return <Navigate to="/auth" replace />;
+  if (!account) return <Navigate to="/" replace />;
 
   return (
     <RestaurantContext.Provider value={account}>

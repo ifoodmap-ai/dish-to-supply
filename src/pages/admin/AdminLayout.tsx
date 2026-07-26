@@ -8,6 +8,7 @@ import {
 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
+import PortalSwitcher from '@/components/PortalSwitcher';
 
 const navGroups: { group: string; items: { label: string; icon: typeof LayoutDashboard; to: string }[] }[] = [
   {
@@ -73,7 +74,7 @@ const AdminLayout = () => {
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
-    navigate('/auth');
+    navigate('/');
   };
 
   const Sidebar = () => (
@@ -111,6 +112,7 @@ const AdminLayout = () => {
         ))}
       </nav>
       <div className="px-4 py-4 border-t border-slate-700 space-y-2">
+        <PortalSwitcher current="admin" tone="dark" />
         {userEmail && (
           <p className="text-xs text-slate-400 truncate px-1">{userEmail}</p>
         )}

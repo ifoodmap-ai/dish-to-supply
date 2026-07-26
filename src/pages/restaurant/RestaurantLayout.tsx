@@ -2,14 +2,16 @@ import { useState } from "react";
 import { NavLink, Outlet, useNavigate } from "react-router-dom";
 import {
   LayoutDashboard, UtensilsCrossed, ShoppingCart, PackageCheck,
-  TrendingDown, Store, FlaskConical, Users, Settings, LogOut, Menu, X,
+  TrendingDown, Store, FlaskConical, Users, Settings, LogOut, Menu, X, Sparkles,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { useRestaurant, canSeeCost } from "@/components/RestaurantRoute";
+import PortalSwitcher from "@/components/PortalSwitcher";
 
 const navItems = [
   { label: "營運總覽", icon: LayoutDashboard, to: "/restaurant", end: true },
+  { label: "AI 菜單分析", icon: Sparkles, to: "/restaurant/analyze" },
   { label: "我的菜單", icon: UtensilsCrossed, to: "/restaurant/menu", costOnly: true },
   { label: "智慧採購", icon: ShoppingCart, to: "/restaurant/purchase" },
   { label: "訂單與收貨", icon: PackageCheck, to: "/restaurant/orders" },
@@ -69,7 +71,8 @@ const RestaurantLayout = () => {
           </NavLink>
         ))}
       </nav>
-      <div className="px-4 py-4 border-t border-emerald-800">
+      <div className="px-4 py-4 border-t border-emerald-800 space-y-2">
+        <PortalSwitcher current="restaurant" tone="dark" />
         <Button
           variant="ghost"
           size="sm"

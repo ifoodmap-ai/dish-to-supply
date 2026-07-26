@@ -195,6 +195,22 @@ const AdminAccountsPage = () => {
     return { total: items.length, restaurant, supplier, disabled };
   }, [items]);
 
+  /**
+   * 身分衝突:同一個 user_id 同時掛在餐廳端與供應商端。
+   * demo 期間為了方便來回看三端會刻意這樣設,但正式營運要清掉 ——
+   * 一個人既是買方又是賣方,後台的權限邊界就失去意義。
+   */
+  const conflicts = useMemo(() => {
+    const byUser = new Map<string, AccountItem[]>();
+    for (const i of items) {
+      if (!i.is_active) continue;
+      byUser.set(i.user_id, [...(byUser.get(i.user_id) ?? []), i]);
+    }
+    return [...byUser.entries()]
+      .filter(([, list]) => new Set(list.map((x) => x.kind)).size > 1)
+      .map(([user_id, list]) => ({ user_id, list }));
+  }, [items]);
+
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
     return items.filter((i) => {
@@ -236,6 +252,44 @@ const AdminAccountsPage = () => {
       <p className="text-sm text-slate-500 mb-6">
         餐廳端與供應商端所有登入帳號的綁定關係與啟用狀態
       </p>
+
+      {/* 身分衝突警示 */}
+      {conflicts.length > 0 && (
+        <Card className="border border-amber-300 bg-amber-50 mb-6">
+          <CardContent className="p-4">
+            <div className="flex gap-3">
+              <ShieldX className="h-5 w-5 text-amber-600 shrink-0 mt-0.5" />
+              <div className="min-w-0">
+                <p className="font-semibold text-amber-900">
+                  {conflicts.length} 個帳號同時持有多種身分
+                </p>
+                <p className="text-sm text-amber-800 mt-0.5">
+                  同一個人既是買方又是賣方,後台的權限邊界會失去意義。
+                  Demo 期間為了來回檢視三端可以這樣設,<strong>正式營運前請清理</strong>。
+                </p>
+                <ul className="mt-3 space-y-1.5">
+                  {conflicts.map(({ user_id, list }) => (
+                    <li key={user_id} className="text-sm text-amber-900 flex flex-wrap items-center gap-2">
+                      <code className="bg-amber-100 px-1.5 py-0.5 rounded text-xs">
+                        {user_id.slice(0, 8)}
+                      </code>
+                      {list.map((i) => (
+                        <span
+                          key={i.key}
+                          className="inline-flex items-center gap-1 text-xs bg-white border border-amber-200 rounded px-2 py-0.5"
+                        >
+                          {KIND_META[i.kind].label}
+                          {i.orgName ? ` · ${i.orgName}` : ''}
+                        </span>
+                      ))}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* KPI */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">

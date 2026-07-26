@@ -4,6 +4,7 @@ import {
   LayoutDashboard, Radar, Tags, TrendingUp, Users, Star,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import PortalSwitcher from "@/components/PortalSwitcher";
 import { useEffect, useState } from "react";
 
 const navItems = [
@@ -32,7 +33,7 @@ export default function SupplierLayout() {
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
-    navigate("/auth");
+    navigate("/");
   };
 
   return (
@@ -67,8 +68,9 @@ export default function SupplierLayout() {
           ))}
         </nav>
 
-        <div className="px-4 py-4 border-t border-gray-100">
-          <p className="text-xs text-gray-400 truncate mb-2">{email}</p>
+        <div className="px-4 py-4 border-t border-gray-100 space-y-2">
+          <PortalSwitcher current="supplier" tone="light" />
+          <p className="text-xs text-gray-400 truncate">{email}</p>
           <button
             onClick={handleLogout}
             className="flex items-center gap-2 text-xs text-gray-500 hover:text-red-500 transition-colors"

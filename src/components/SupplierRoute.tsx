@@ -43,7 +43,7 @@ export default function SupplierRoute({ children }: { children: React.ReactNode 
     );
   }
 
-  if (!authenticated) return <Navigate to="/auth" replace />;
+  if (!authenticated) return <Navigate to="/" replace />;
 
   if (!supplierAccount) {
     return (

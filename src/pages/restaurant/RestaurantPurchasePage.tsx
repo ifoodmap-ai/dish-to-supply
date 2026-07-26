@@ -13,6 +13,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { supabase } from "@/integrations/supabase/client";
 import { useRestaurant, needsApproval } from "@/components/RestaurantRoute";
+import { ANALYSIS_HANDOFF_KEY } from "./RestaurantAnalyzePage";
 import { recordOrderEvent } from "@/lib/orders";
 
 /* ── 新資料表不在 types.ts,沿用專案的 loose cast 慣例 ─────────────── */
@@ -77,7 +78,21 @@ const RestaurantPurchasePage = () => {
   const [userId, setUserId] = useState<string | null>(null);
   const [suggestions, setSuggestions] = useState<Suggestion[]>([]);
   const [frequent, setFrequent] = useState<{ name: string; unit: string; quantity: string }[]>([]);
-  const [manual, setManual] = useState<ManualItem[]>([]);
+  // AI 菜單分析頁按「帶到智慧採購」時暫存的食材,進頁時接手
+  const [manual, setManual] = useState<ManualItem[]>(() => {
+    try {
+      const raw = sessionStorage.getItem(ANALYSIS_HANDOFF_KEY);
+      if (!raw) return [];
+      sessionStorage.removeItem(ANALYSIS_HANDOFF_KEY);
+      const names = JSON.parse(raw) as unknown;
+      if (!Array.isArray(names)) return [];
+      return names
+        .filter((n): n is string => typeof n === "string" && n.trim().length > 0)
+        .map((name, i) => ({ key: `handoff-${i}`, name: name.trim(), quantity: "", unit: "kg" }));
+    } catch {
+      return [];
+    }
+  });
   const [form, setForm] = useState({ name: "", quantity: "", unit: "" });
   const [notes, setNotes] = useState("");
   const [drafts, setDrafts] = useState<OrderRow[]>([]);
