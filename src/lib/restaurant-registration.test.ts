@@ -113,6 +113,63 @@ describe("validateRestaurantRegistration", () => {
     ).not.toHaveProperty("phone");
   });
 
+  it("accepts a 30-character formatted phone number", () => {
+    const phone = "+1-2-3-4-5-6-7-8-9-0-1-2-3-4-5";
+    expect(phone).toHaveLength(30);
+
+    expect(
+      validateRestaurantRegistration({ ...VALID_INPUT, phone }),
+    ).not.toHaveProperty("phone");
+  });
+
+  it("rejects a 31-character formatted phone before auth", async () => {
+    const phone = "(1-2-3-4-5-6-7-8-9-0-1-2-3-4-5)";
+    const { client, getSession, signUp, rpc } = createClient();
+    expect(phone).toHaveLength(31);
+
+    await expect(
+      registerRestaurant(client, { ...VALID_INPUT, phone }),
+    ).rejects.toMatchObject({
+      name: "RestaurantRegistrationValidationError",
+      fieldErrors: { phone: expect.any(String) },
+    });
+    expect(getSession).not.toHaveBeenCalled();
+    expect(signUp).not.toHaveBeenCalled();
+    expect(rpc).not.toHaveBeenCalled();
+  });
+
+  it("counts supplementary Unicode characters as one restaurant-name character", () => {
+    expect(
+      validateRestaurantRegistration({
+        ...VALID_INPUT,
+        restaurantName: "🍜".repeat(100),
+      }),
+    ).not.toHaveProperty("restaurantName");
+
+    expect(
+      validateRestaurantRegistration({
+        ...VALID_INPUT,
+        restaurantName: "🍜".repeat(101),
+      }),
+    ).toHaveProperty("restaurantName");
+  });
+
+  it("counts supplementary Unicode characters as one contact-name character", () => {
+    expect(
+      validateRestaurantRegistration({
+        ...VALID_INPUT,
+        contactName: "𠮷".repeat(80),
+      }),
+    ).not.toHaveProperty("contactName");
+
+    expect(
+      validateRestaurantRegistration({
+        ...VALID_INPUT,
+        contactName: "𠮷".repeat(81),
+      }),
+    ).toHaveProperty("contactName");
+  });
+
   it.each([
     ["restaurantName", "餐廳", false],
     ["restaurantName", "餐".repeat(100), false],
@@ -354,7 +411,11 @@ describe("registerRestaurant", () => {
   it("retries idempotent onboarding directly when a session already exists", async () => {
     const { client, getSession, signUp, rpc } = createClient();
     getSession.mockResolvedValue({
-      data: { session: { access_token: "existing-token" } },
+      data: {
+        session: {
+          user: { email: "  OWNER@EXAMPLE.COM  " },
+        },
+      },
       error: null,
     });
 
@@ -363,6 +424,46 @@ describe("registerRestaurant", () => {
     });
     expect(signUp).not.toHaveBeenCalled();
     expect(rpc).toHaveBeenCalledOnce();
+  });
+
+  it("rejects an existing session for a different email without side effects", async () => {
+    const { client, getSession, signUp, rpc } = createClient();
+    getSession.mockResolvedValue({
+      data: {
+        session: {
+          user: { email: "someone-else@example.com" },
+        },
+      },
+      error: null,
+    });
+
+    await expect(registerRestaurant(client, VALID_INPUT)).rejects.toMatchObject({
+      name: "RestaurantRegistrationError",
+      code: "UNKNOWN",
+      message: expect.stringContaining("登入帳號"),
+    });
+    expect(signUp).not.toHaveBeenCalled();
+    expect(rpc).not.toHaveBeenCalled();
+  });
+
+  it("rejects an existing session without an email without side effects", async () => {
+    const { client, getSession, signUp, rpc } = createClient();
+    getSession.mockResolvedValue({
+      data: {
+        session: {
+          user: {},
+        },
+      },
+      error: null,
+    });
+
+    await expect(registerRestaurant(client, VALID_INPUT)).rejects.toMatchObject({
+      name: "RestaurantRegistrationError",
+      code: "UNKNOWN",
+      message: expect.stringContaining("登入帳號"),
+    });
+    expect(signUp).not.toHaveBeenCalled();
+    expect(rpc).not.toHaveBeenCalled();
   });
 
   it("exposes typed validation errors for UI field mapping", () => {

@@ -40,9 +40,15 @@ interface AuthResult {
   error: AuthError | null;
 }
 
+interface RegistrationSession {
+  user: {
+    email?: string | null;
+  };
+}
+
 interface SessionResult {
   data: {
-    session: unknown | null;
+    session: RegistrationSession | null;
   };
   error: AuthError | null;
 }
@@ -82,11 +88,17 @@ const ERROR_MESSAGES: Record<RestaurantRegistrationErrorCode, string> = {
   UNKNOWN: "註冊失敗，請稍後再試",
 };
 
+const SESSION_ACCOUNT_MISMATCH_MESSAGE =
+  "目前登入帳號與註冊 Email 不一致，請重新登入後再試";
+
 export class RestaurantRegistrationError extends Error {
   readonly code: RestaurantRegistrationErrorCode;
 
-  constructor(code: RestaurantRegistrationErrorCode) {
-    super(ERROR_MESSAGES[code]);
+  constructor(
+    code: RestaurantRegistrationErrorCode,
+    message = ERROR_MESSAGES[code],
+  ) {
+    super(message);
     this.name = "RestaurantRegistrationError";
     this.code = code;
   }
@@ -106,6 +118,7 @@ const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const PHONE_CHARACTERS_PATTERN = /^[\d\s+()-]+$/;
 const UUID_PATTERN =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+const codePointLength = (value: string): number => Array.from(value).length;
 
 export const validateRestaurantRegistration = (
   input: RestaurantRegistrationInput,
@@ -116,19 +129,22 @@ export const validateRestaurantRegistration = (
   const phone = input.phone.trim();
   const email = input.email.trim().toLowerCase();
   const phoneDigitCount = phone.replace(/\D/g, "").length;
+  const restaurantNameLength = codePointLength(restaurantName);
+  const contactNameLength = codePointLength(contactName);
 
-  if (restaurantName.length < 2 || restaurantName.length > 100) {
+  if (restaurantNameLength < 2 || restaurantNameLength > 100) {
     errors.restaurantName = "餐廳名稱需為 2 至 100 個字元";
   }
 
   if (!contactName) {
     errors.contactName = "請輸入聯絡人姓名";
-  } else if (contactName.length > 80) {
+  } else if (contactNameLength > 80) {
     errors.contactName = "聯絡人姓名不可超過 80 個字元";
   }
 
   if (
     !phone ||
+    phone.length > 30 ||
     !PHONE_CHARACTERS_PATTERN.test(phone) ||
     phoneDigitCount < 8 ||
     phoneDigitCount > 15
@@ -214,6 +230,17 @@ export const registerRestaurant = async (
   }
 
   if (sessionResult.data.session) {
+    const sessionEmail = sessionResult.data.session.user.email
+      ?.trim()
+      .toLowerCase();
+    const submittedEmail = input.email.trim().toLowerCase();
+    if (!sessionEmail || sessionEmail !== submittedEmail) {
+      throw new RestaurantRegistrationError(
+        "UNKNOWN",
+        SESSION_ACCOUNT_MISMATCH_MESSAGE,
+      );
+    }
+
     return runOnboarding(client, input);
   }
 

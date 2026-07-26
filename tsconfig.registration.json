@@ -1,0 +1,15 @@
+{
+  "extends": "./tsconfig.app.json",
+  "compilerOptions": {
+    "incremental": false,
+    "noEmit": true
+  },
+  "files": [
+    "src/vite-env.d.ts",
+    "src/integrations/supabase/client.ts",
+    "src/integrations/supabase/types.ts",
+    "src/lib/restaurant-registration.ts",
+    "src/lib/restaurant-registration.test.ts"
+  ],
+  "include": []
+}
