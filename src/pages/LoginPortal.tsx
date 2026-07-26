@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card } from "@/components/ui/card";
+import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "sonner";
 import { useLanguage } from "@/contexts/LanguageContext";
 import {
@@ -69,14 +70,24 @@ const ADMIN_CARD: RoleCard = {
 
 const CARDS = IS_ADMIN_BUILD ? [ADMIN_CARD] : ROLE_CARDS;
 
+const REMEMBERED_EMAIL_KEY = "ifm_remembered_email";
+
 const LoginPortal = () => {
   const navigate = useNavigate();
   const { language, setLanguage } = useLanguage();
   const [selected, setSelected] = useState<PortalKey | null>(
     CARDS.length === 1 ? CARDS[0].key : null
   );
-  const [email, setEmail] = useState("");
+  // 「記住我」只記 email。密碼不進 localStorage —— 那是純文字、任何 XSS 都讀得到,
+  // 而這把密碼進得去平台所有資料。密碼交給瀏覽器/系統的密碼管理員(加密儲存)處理,
+  // 表單的 autoComplete 屬性已經讓它能正常運作。
+  const [email, setEmail] = useState(() => {
+    try { return localStorage.getItem(REMEMBERED_EMAIL_KEY) ?? ""; } catch { return ""; }
+  });
   const [password, setPassword] = useState("");
+  const [remember, setRemember] = useState(() => {
+    try { return !!localStorage.getItem(REMEMBERED_EMAIL_KEY); } catch { return false; }
+  });
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [checking, setChecking] = useState(true);
@@ -112,6 +123,11 @@ const LoginPortal = () => {
     try {
       const { data, error } = await supabase.auth.signInWithPassword({ email, password });
       if (error) throw error;
+
+      try {
+        if (remember) localStorage.setItem(REMEMBERED_EMAIL_KEY, email);
+        else localStorage.removeItem(REMEMBERED_EMAIL_KEY);
+      } catch { /* 無痕模式寫不進去,不影響登入 */ }
 
       const portals = await getUserPortals(data.session);
 
@@ -263,6 +279,17 @@ const LoginPortal = () => {
                       {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                     </button>
                   </div>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <Checkbox
+                    id="remember"
+                    checked={remember}
+                    onCheckedChange={(v) => setRemember(v === true)}
+                  />
+                  <Label htmlFor="remember" className="text-sm font-normal text-slate-600 cursor-pointer">
+                    記住我的帳號
+                  </Label>
                 </div>
 
                 <Button type="submit" className="w-full" disabled={loading}>
