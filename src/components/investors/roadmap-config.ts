@@ -1,7 +1,7 @@
-import { Sparkles, ClipboardCheck, Truck, type LucideIcon } from 'lucide-react';
+import { Sparkles, UtensilsCrossed, Truck, Gauge, type LucideIcon } from 'lucide-react';
 
 export type RoadmapStatus = 'done' | 'in_progress' | 'planned';
-export type RoadmapBlock = 'ai_matching' | 'procurement' | 'supplier_portal';
+export type RoadmapBlock = 'ai_matching' | 'restaurant_portal' | 'supplier_portal' | 'procurement';
 
 export interface RoadmapFeature {
   id: string;
@@ -37,11 +37,13 @@ export interface BlockMeta {
   pipelineLabel: string;
 }
 
-// Order defines the pipeline flow on the map: AI 媒合 → 採購 → 供應商
+// Order defines the pipeline flow on the map:
+//   AI 媒合(需求萃取) → 餐廳端(叫貨收貨) → 供應商端(報價出貨) → 平台營運(監管數據)
 export const BLOCKS: BlockMeta[] = [
-  { key: 'ai_matching', title: 'AI 媒合功能', subtitle: 'AI Matching', icon: Sparkles, pipelineLabel: 'AI 媒合' },
-  { key: 'procurement', title: '採購系統', subtitle: 'Procurement', icon: ClipboardCheck, pipelineLabel: '採購審核' },
+  { key: 'ai_matching', title: 'AI 媒合引擎', subtitle: 'AI Matching', icon: Sparkles, pipelineLabel: 'AI 媒合' },
+  { key: 'restaurant_portal', title: '餐廳端系統', subtitle: 'Restaurant Portal', icon: UtensilsCrossed, pipelineLabel: '餐廳叫貨' },
   { key: 'supplier_portal', title: '供應商系統', subtitle: 'Supplier Portal', icon: Truck, pipelineLabel: '供應商出貨' },
+  { key: 'procurement', title: '平台營運後台', subtitle: 'Platform Ops', icon: Gauge, pipelineLabel: '平台營運' },
 ];
 
 export interface StatusMeta {
@@ -108,7 +110,7 @@ export const FALLBACK_FEATURES: RoadmapFeature[] = [
   fb(10, 'ai_matching', 4, '需求預測與備貨建議', '依歷史訂單預測採購需求,提前給供應商備貨建議', 'done', 10, '/roadmap/feat-forecast.png'),
   fb(11, 'ai_matching', 1, '買家聯絡資訊擷取', 'AI 分析完成後引導買家留下店名與 LINE/手機,需求不再流失,自動進入後台跟進', 'done', 11, '/roadmap/feat-contact-gate.png'),
   fb(12, 'ai_matching', 3, '買家端即時媒合結果', '買家當場看到真實供應商排名:媒合分數、符合品項數、可供應品項與價格', 'done', 12, '/roadmap/feat-real-match.png'),
-  fb(13, 'ai_matching', 4, '買家採購入口', '買家帳號:歷史需求、收到的報價、一鍵回購', 'done', 13, '/roadmap/feat-buyer-portal.png'),
+  fb(13, 'restaurant_portal', 4, '買家採購入口', '買家帳號:歷史需求、收到的報價、一鍵回購', 'done', 13, '/roadmap/feat-buyer-portal.png'),
   fb(14, 'procurement', 1, '分析紀錄後台管理', '所有 AI 分析需求集中列表、狀態分類與追蹤', 'done', 1, '/roadmap/admin-analyses.png'),
   fb(15, 'procurement', 1, '需求審核流程', '管理員審核 AI 分析結果,一鍵批准發送或拒絕', 'done', 2, '/roadmap/analysis-detail.png'),
   fb(16, 'procurement', 1, '完整對話紀錄檢視', '聊天室式圖文穿插紀錄,圖片燈箱放大檢視', 'done', 3, '/roadmap/analysis-detail.png'),

@@ -1,14 +1,23 @@
 import { NavLink, Outlet, useNavigate } from "react-router-dom";
-import { Inbox, Truck, Boxes, FileText, MapPin, LogOut } from "lucide-react";
+import {
+  Inbox, Truck, Boxes, FileText, MapPin, LogOut,
+  LayoutDashboard, Radar, Tags, TrendingUp, Users, Star,
+} from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useEffect, useState } from "react";
 
 const navItems = [
-  { to: "/supplier", label: "收單紀錄", icon: Inbox, end: true },
-  { to: "/supplier/catalog", label: "商品目錄", icon: Boxes, end: false },
+  { to: "/supplier", label: "營運總覽", icon: LayoutDashboard, end: true },
+  { to: "/supplier/leads", label: "商機雷達", icon: Radar, end: false },
+  { to: "/supplier/orders", label: "收單紀錄", icon: Inbox, end: false },
   { to: "/supplier/quotes", label: "線上報價", icon: FileText, end: false },
+  { to: "/supplier/catalog", label: "商品目錄", icon: Boxes, end: false },
+  { to: "/supplier/pricing", label: "定價助手", icon: Tags, end: false },
+  { to: "/supplier/forecast", label: "需求預測", icon: TrendingUp, end: false },
+  { to: "/supplier/customers", label: "客戶管理", icon: Users, end: false },
   { to: "/supplier/logistics", label: "物流追蹤", icon: MapPin, end: false },
   { to: "/supplier/shipments", label: "出貨紀錄", icon: Truck, end: false },
+  { to: "/supplier/reviews", label: "我的評價", icon: Star, end: false },
 ];
 
 export default function SupplierLayout() {
