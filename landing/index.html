@@ -3,6 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="/routing.js"></script>
 <script src="./support.js"></script>
 </head>
 <body>
@@ -62,7 +63,8 @@
       </div>
       <div style="display:flex; align-items:center; gap:32px;">
         <span onClick="{{ goHome }}" style="{{ navHome }}">首頁</span>
-        <span onClick="{{ goServices }}" style="{{ navServices }}">服務</span>
+        <span onClick="{{ goRestaurants }}" style="{{ navRestaurants }}">餐廳方案</span>
+        <span onClick="{{ goSuppliers }}" style="{{ navSuppliers }}">供應商方案</span>
         <span onClick="{{ goCases }}" style="{{ navCases }}">客戶案例</span>
         <span onClick="{{ goAbout }}" style="{{ navAbout }}">關於我們</span>
         <span onClick="{{ goContact }}" style="{{ navContact }}">聯絡我們</span>
@@ -88,7 +90,7 @@
           <p style="font-size:18px; line-height:1.78; color:#9fb6a3; margin:0 0 36px; max-width:480px;">填寫一次需求，AI 從產地、工廠、大中小盤即時分析資料庫，主動為你媒合最合適的供應商。全台最大 B2B 食材採購媒合平台。</p>
           <div style="display:flex; gap:14px; margin-bottom:38px;">
             <span onClick="{{ goContact }}" style="display:inline-flex; align-items:center; gap:8px; background:linear-gradient(135deg,#46c138,#1f9e4e); color:#fff; font-weight:700; font-size:16px; padding:16px 30px; border-radius:100px; cursor:pointer; box-shadow:0 14px 34px rgba(61,174,43,.4); transition:transform .2s ease, box-shadow .2s ease;" style-hover="transform:translateY(-3px); box-shadow:0 20px 44px rgba(61,174,43,.55);">立即免費媒合 →</span>
-            <span onClick="{{ goServices }}" style="display:inline-flex; align-items:center; background:rgba(255,255,255,.08); border:1px solid rgba(255,255,255,.2); color:#fff; font-weight:700; font-size:16px; padding:16px 28px; border-radius:100px; cursor:pointer; transition:background .2s ease;" style-hover="background:rgba(255,255,255,.16);">我是供應商</span>
+            <span onClick="{{ goSuppliers }}" style="display:inline-flex; align-items:center; background:rgba(255,255,255,.08); border:1px solid rgba(255,255,255,.2); color:#fff; font-weight:700; font-size:16px; padding:16px 28px; border-radius:100px; cursor:pointer; transition:background .2s ease;" style-hover="background:rgba(255,255,255,.16);">我是供應商</span>
           </div>
           <div style="display:flex; align-items:center; gap:14px; font-size:14px; color:#8aa18e;">
             <div style="display:flex;">
@@ -224,7 +226,7 @@
             <div style="font-family:'Space Grotesk','Noto Sans TC',sans-serif; font-size:13px;font-weight:600;color:#7cf06b;letter-spacing:.16em;text-transform:uppercase;margin-bottom:14px;">Our services</div>
             <h2 style="font-family:'Space Grotesk','Noto Sans TC',sans-serif; font-size:38px;font-weight:900;color:#fff;margin:0; letter-spacing:-.01em;">不只媒合，更是完整採購夥伴</h2>
           </div>
-          <span onClick="{{ goServices }}" data-reveal style="color:#9fe089;font-weight:700;font-size:15px;cursor:pointer;white-space:nowrap;">查看所有服務 →</span>
+          <span onClick="{{ goRestaurants }}" data-reveal style="color:#9fe089;font-weight:700;font-size:15px;cursor:pointer;white-space:nowrap;">查看餐廳方案 →</span>
         </div>
         <div style="display:grid; grid-template-columns:repeat(3,1fr); gap:20px;">
           <sc-for list="{{ services }}" as="sv" hint-placeholder-count="3">
@@ -267,9 +269,9 @@
   </div>
   </sc-if>
 
-  <!-- ============ PAGE: SERVICES ============ -->
-  <sc-if value="{{ isServices }}">
-  <div data-screen-label="服務">
+  <!-- ============ PAGE: RESTAURANTS ============ -->
+  <sc-if value="{{ isRestaurants }}">
+  <div data-screen-label="餐廳方案">
     <div style="position:relative; overflow:hidden; background:radial-gradient(820px 460px at 88% -10%, rgba(74,209,90,.26), transparent 60%), #0a1510;">
       <div style="position:absolute; inset:0; background-image:linear-gradient(rgba(255,255,255,.04) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,.04) 1px, transparent 1px); background-size:54px 54px; -webkit-mask-image:radial-gradient(700px 400px at 50% 20%, #000, transparent 75%); mask-image:radial-gradient(700px 400px at 50% 20%, #000, transparent 75%);"></div>
       <div style="position:relative; max-width:1240px; margin:0 auto; padding:84px 40px;">
@@ -310,6 +312,17 @@
       </div>
     </div>
   </div>
+  </sc-if>
+
+  <!-- ============ PAGE: SUPPLIERS ============ -->
+  <sc-if value="{{ isSuppliers }}">
+  <main data-screen-label="供應商方案" style="min-height:60vh; background:#0a1510; color:#fff;">
+    <div style="max-width:1240px; margin:0 auto; padding:96px 40px;">
+      <div style="font-family:'Space Grotesk','Noto Sans TC',sans-serif; font-size:13px; font-weight:600; color:#7cf06b; letter-spacing:.16em; text-transform:uppercase; margin-bottom:16px;">For suppliers</div>
+      <h1 style="font-family:'Space Grotesk','Noto Sans TC',sans-serif; font-size:48px; line-height:1.2; margin:0 0 20px;">供應商方案</h1>
+      <p style="max-width:640px; color:#9fb6a3; font-size:18px; line-height:1.8; margin:0;">讓合適的餐廳需求主動找到你，集中管理商機、報價與訂單。</p>
+    </div>
+  </main>
   </sc-if>
 
   <!-- ============ PAGE: CASES ============ -->
@@ -505,10 +518,10 @@
         <div>
           <div style="font-size:14px; font-weight:700; color:#fff; margin-bottom:16px;">服務</div>
           <div style="display:flex; flex-direction:column; gap:11px; font-size:14px;">
-            <span onClick="{{ goServices }}" style="cursor:pointer;">AI 需求媒合</span>
-            <span onClick="{{ goServices }}" style="cursor:pointer;">採購系統建置</span>
-            <span onClick="{{ goServices }}" style="cursor:pointer;">評價機制說明</span>
-            <span onClick="{{ goServices }}" style="cursor:pointer;">標章與履歷連動</span>
+            <span onClick="{{ goRestaurants }}" style="cursor:pointer;">餐廳方案</span>
+            <span onClick="{{ goSuppliers }}" style="cursor:pointer;">供應商方案</span>
+            <span onClick="{{ goRestaurants }}" style="cursor:pointer;">採購系統建置</span>
+            <span onClick="{{ goSuppliers }}" style="cursor:pointer;">商機媒合</span>
           </div>
         </div>
         <div>
@@ -534,7 +547,11 @@
 </x-dc>
 <script type="text/x-dc" data-dc-script>
 class Component extends DCLogic {
-  state = { page: 'home' };
+  state = {
+    page: typeof window !== 'undefined' && window.IfmRouting
+      ? window.IfmRouting.pathToPage(window.location.pathname)
+      : 'home',
+  };
 
   setupReveal() {
     const root = this.rootEl || (typeof document !== 'undefined' ? document : null);
@@ -605,12 +622,33 @@ class Component extends DCLogic {
     requestAnimationFrame(tick);
   }
 
-  componentDidMount() { requestAnimationFrame(() => this.setupReveal()); setTimeout(() => this.setupReveal(), 350); }
+  componentDidMount() {
+    if (typeof window !== 'undefined') {
+      this._onPopState = this._onPopState || (() => {
+        this.setState({ page: window.IfmRouting.pathToPage(window.location.pathname) });
+      });
+      window.addEventListener('popstate', this._onPopState);
+    }
+    requestAnimationFrame(() => this.setupReveal());
+    setTimeout(() => this.setupReveal(), 350);
+  }
   componentDidUpdate() { requestAnimationFrame(() => this.setupReveal()); }
-  componentWillUnmount() { if (this._io) this._io.disconnect(); if (this._cio) this._cio.disconnect(); }
+  componentWillUnmount() {
+    if (typeof window !== 'undefined' && this._onPopState) {
+      window.removeEventListener('popstate', this._onPopState);
+    }
+    if (this._io) this._io.disconnect();
+    if (this._cio) this._cio.disconnect();
+  }
 
   go(p) {
     return () => {
+      if (typeof window !== 'undefined' && window.IfmRouting) {
+        const path = window.IfmRouting.pageToPath(p);
+        if (window.location.pathname !== path) {
+          window.history.pushState({}, '', path);
+        }
+      }
       this.setState({ page: p });
       if (typeof window !== 'undefined') window.scrollTo({ top: 0, behavior: 'auto' });
     };
@@ -633,17 +671,20 @@ class Component extends DCLogic {
     return {
       rootRef: (el) => { this.rootEl = el; },
       isHome: page === 'home',
-      isServices: page === 'services',
+      isRestaurants: page === 'restaurants',
+      isSuppliers: page === 'suppliers',
       isCases: page === 'cases',
       isAbout: page === 'about',
       isContact: page === 'contact',
       goHome: this.go('home'),
-      goServices: this.go('services'),
+      goRestaurants: this.go('restaurants'),
+      goSuppliers: this.go('suppliers'),
       goCases: this.go('cases'),
       goAbout: this.go('about'),
       goContact: this.go('contact'),
       navHome: this.navStyle(page === 'home'),
-      navServices: this.navStyle(page === 'services'),
+      navRestaurants: this.navStyle(page === 'restaurants'),
+      navSuppliers: this.navStyle(page === 'suppliers'),
       navCases: this.navStyle(page === 'cases'),
       navAbout: this.navStyle(page === 'about'),
       navContact: this.navStyle(page === 'contact'),
@@ -1157,7 +1198,7 @@ class Component extends DCLogic {
     .observe(root, { childList: true, subtree: true });
 
   // ---- 漢堡選單（注入 #dc-root 之外，避免被框架重繪清掉）----
-  var LABELS = ['首頁', '服務', '客戶案例', '關於我們', '聯絡我們'];
+  var LABELS = ['首頁', '餐廳方案', '供應商方案', '客戶案例', '關於我們', '聯絡我們'];
 
   var btn = document.createElement('div');
   btn.className = 'm-hamburger';
