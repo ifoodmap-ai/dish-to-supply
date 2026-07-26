@@ -69,6 +69,23 @@ function assertReducedMotionSkipLink(fragment) {
   assert.match(fragment, /\.skip-link\s*\{[^}]*transition:\s*none[^}]*\}/s);
 }
 
+function assertRestaurantOverflowRegions(fragment) {
+  const labels = [
+    '菜單分析示意表，可左右捲動',
+    '成本比較示意表，可左右捲動',
+    '團隊權限示意表，可左右捲動',
+  ];
+  assert.equal((fragment.match(/class="restaurant-mock-scroll"/g) || []).length, labels.length);
+  assert.equal((fragment.match(/class="restaurant-mock-scroll"[^>]*tabindex="0"/g) || []).length, labels.length);
+  assert.equal((fragment.match(/class="restaurant-mock-scroll"[^>]*role="region"/g) || []).length, labels.length);
+  for (const label of labels) {
+    assert.match(
+      fragment,
+      new RegExp(`<div class="restaurant-mock-scroll"[^>]*aria-label="${label}"[^>]*>`),
+    );
+  }
+}
+
 function assertMobileLogin(fragment) {
   assert.match(fragment, /login\.href = window\.IFM_PRODUCT_BASE_URL \+ '\/'/);
   assert.match(fragment, /login\.textContent = '登入平台'/);
@@ -368,4 +385,32 @@ test('skip link disables its transition for reduced-motion users', () => {
     '',
   );
   assert.throws(() => assertReducedMotionSkipLink(withoutSkipRule));
+});
+
+test('only horizontally overflowing restaurant mockups are labelled keyboard regions', () => {
+  assertRestaurantOverflowRegions(restaurants);
+  assert.match(source, /\.restaurant-mock-scroll:focus-visible\s*\{/);
+
+  const withoutFirstTabStop = restaurants.replace(
+    /(<div class="restaurant-mock-scroll"[^>]*?) tabindex="0"/,
+    '$1',
+  );
+  assert.throws(() => assertRestaurantOverflowRegions(withoutFirstTabStop));
+});
+
+test('site shell exposes one header, labelled desktop and mobile navigation, and one footer', () => {
+  assert.equal((source.match(/<header\b/g) || []).length, 1);
+  assert.equal((source.match(/<\/header>/g) || []).length, 1);
+  assert.equal((source.match(/<footer\b/g) || []).length, 1);
+  assert.equal((source.match(/<\/footer>/g) || []).length, 1);
+  assert.match(source, /<nav aria-label="主要導覽"[^>]*>/);
+  assert.match(source, /document\.createElement\('nav'\)/);
+  assert.match(source, /menu\.setAttribute\('aria-label', '行動版主選單'\)/);
+
+  const headerEnd = source.indexOf('</header>');
+  const mainStart = source.indexOf('<main id="main-content"');
+  const mainEnd = source.indexOf('</main>', mainStart);
+  const footerStart = source.indexOf('<footer');
+  assert.ok(headerEnd >= 0 && mainStart > headerEnd);
+  assert.ok(mainEnd > mainStart && footerStart > mainEnd);
 });

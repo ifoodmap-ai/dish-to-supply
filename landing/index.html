@@ -183,6 +183,11 @@
   }
   .restaurant-mock-body { padding:20px; min-width:0; }
   .restaurant-mock-scroll { max-width:100%; overflow-x:auto; overscroll-behavior-inline:contain; }
+  .restaurant-mock-scroll:focus-visible {
+    outline:3px solid #166534;
+    outline-offset:3px;
+    border-radius:8px;
+  }
   .restaurant-mock-table { width:100%; min-width:470px; border-collapse:collapse; }
   .restaurant-mock-table th,
   .restaurant-mock-table td { padding:11px 12px; border-bottom:1px solid #e5ece6; text-align:left; font-size:13px; white-space:nowrap; }
@@ -238,23 +243,23 @@
   <a class="skip-link" href="#main-content">跳到主要內容</a>
 
   <!-- ============ HEADER ============ -->
-  <div style="position:sticky; top:0; z-index:50; background:rgba(255,255,255,.82); backdrop-filter:blur(16px); border-bottom:1px solid #eef1ee;">
+  <header style="position:sticky; top:0; z-index:50; background:rgba(255,255,255,.82); backdrop-filter:blur(16px); border-bottom:1px solid #eef1ee;">
     <div style="max-width:1240px; margin:0 auto; display:flex; align-items:center; justify-content:space-between; padding:15px 40px;">
       <a href="/" onClick="{{ goHome }}" style="display:flex; align-items:center; gap:10px; cursor:pointer; text-decoration:none;">
         <img src="/logo.png" alt="iFoodmap 食材地圖" style="height:40px; width:auto; display:block;" />
       </a>
-      <div style="display:flex; align-items:center; gap:32px;">
+      <nav aria-label="主要導覽" style="display:flex; align-items:center; gap:32px;">
         <a href="/" onClick="{{ goHome }}" aria-current="{{ ariaCurrentHome }}" style="{{ navHome }}">平台介紹</a>
         <a href="/restaurants" onClick="{{ goRestaurants }}" aria-current="{{ ariaCurrentRestaurants }}" style="{{ navRestaurants }}">餐廳方案</a>
         <a href="/suppliers" onClick="{{ goSuppliers }}" aria-current="{{ ariaCurrentSuppliers }}" style="{{ navSuppliers }}">供應商方案</a>
         <a href="/cases" onClick="{{ goCases }}" aria-current="{{ ariaCurrentCases }}" style="{{ navCases }}">成功案例</a>
         <a href="/about" onClick="{{ goAbout }}" aria-current="{{ ariaCurrentAbout }}" style="{{ navAbout }}">關於我們</a>
-      </div>
+      </nav>
       <div style="display:flex; align-items:center;">
         <a class="platform-action" href="{{ loginUrl }}" style="border:1px solid #cfdad2; color:#26372c; background:#fff;">登入平台</a>
       </div>
     </div>
-  </div>
+  </header>
 
   <main id="main-content" tabindex="-1">
   <!-- ============ PAGE: HOME ============ -->
@@ -569,7 +574,7 @@
                 <div><strong style="display:block;font-size:15px;">夏季午餐菜單.pdf</strong><span style="display:block;margin-top:4px;color:#5b6b62;font-size:13px;">已完成辨識 · 等待確認</span></div>
                 <span style="padding:7px 10px;border-radius:999px;background:#e4f4e3;color:#166534;font-size:13px;font-weight:700;">檢視結果</span>
               </div>
-              <div class="restaurant-mock-scroll" style="margin-top:14px;">
+              <div class="restaurant-mock-scroll" tabindex="0" role="region" aria-label="菜單分析示意表，可左右捲動" style="margin-top:14px;">
                 <table class="restaurant-mock-table" aria-label="菜單分析示例">
                   <thead><tr><th>菜色</th><th>辨識食材</th><th>用量</th><th>狀態</th></tr></thead>
                   <tbody><tr><td>季節時蔬</td><td>青花菜、紅蘿蔔</td><td>180 g</td><td style="color:#166534;font-weight:700;">已確認</td></tr><tr><td>香煎雞腿</td><td>去骨雞腿</td><td>220 g</td><td style="color:#7c4a03;font-weight:700;">待編輯</td></tr></tbody>
@@ -597,7 +602,7 @@
                 <div><span style="display:block;font-size:13px;color:#5b6b62;">香煎雞腿食材成本</span><strong style="display:block;margin-top:5px;font-size:25px;color:#17261c;">$76.40</strong></div>
                 <span style="color:#166534;font-size:13px;font-weight:700;">成本占比 31.8%</span>
               </div>
-              <div class="restaurant-mock-scroll">
+              <div class="restaurant-mock-scroll" tabindex="0" role="region" aria-label="成本比較示意表，可左右捲動">
                 <table class="restaurant-mock-table" aria-label="供應商價格比較示例">
                   <thead><tr><th>供應商</th><th>品項規格</th><th>單價</th><th>更新日</th></tr></thead>
                   <tbody><tr><td>安心食材</td><td>去骨雞腿 2 kg</td><td>$185 / kg</td><td>07/25</td></tr><tr><td>產地鮮配</td><td>去骨雞腿 2 kg</td><td>$192 / kg</td><td>07/24</td></tr></tbody>
@@ -644,7 +649,7 @@
           <div class="restaurant-product-mock" data-reveal>
             <div class="restaurant-mock-bar"><span>產品功能示意畫面 · 示例資料</span><span>團隊與分店</span></div>
             <div class="restaurant-mock-body">
-              <div class="restaurant-mock-scroll">
+              <div class="restaurant-mock-scroll" tabindex="0" role="region" aria-label="團隊權限示意表，可左右捲動">
                 <table class="restaurant-mock-table" aria-label="團隊權限示例">
                   <thead><tr><th>成員</th><th>分店</th><th>角色</th><th>狀態</th></tr></thead>
                   <tbody><tr><td>王店長</td><td>總店</td><td>manager</td><td style="color:#166534;font-weight:700;">啟用</td></tr><tr><td>陳採購</td><td>總店、東區店</td><td>purchaser</td><td style="color:#166534;font-weight:700;">啟用</td></tr></tbody>
@@ -879,7 +884,7 @@
   </main>
 
   <!-- ============ FOOTER ============ -->
-  <div style="background:#081109; color:#9fb6a3;">
+  <footer style="background:#081109; color:#9fb6a3;">
     <div style="max-width:1240px; margin:0 auto; padding:68px 40px 40px;">
       <div style="display:grid; grid-template-columns:1.6fr 1fr 1fr 1fr; gap:40px; padding-bottom:48px; border-bottom:1px solid #16271b;">
         <div>
@@ -922,7 +927,7 @@
       </div>
       <div style="padding-top:28px; font-size:13px; color:#5e7464;">© 2026 iFoodMap 食材地圖. All rights reserved.</div>
     </div>
-  </div>
+  </footer>
 
 </div>
 
