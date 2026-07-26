@@ -42,7 +42,7 @@ const ROLE_CARDS: RoleCard[] = [
     accent: "text-emerald-600",
     dot: "bg-emerald-600",
     ring: "ring-emerald-500 border-emerald-500 bg-emerald-50/60",
-    footer: { text: "還沒有帳號?", linkText: "了解如何開通", to: "/suppliers" },
+    footer: { text: "還沒有帳號?", linkText: "免費建立餐廳帳號", to: "/register/restaurant" },
   },
   {
     key: "supplier",

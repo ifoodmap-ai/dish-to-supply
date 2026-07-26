@@ -15,6 +15,7 @@ import { LanguageProvider } from "@/contexts/LanguageContext";
 import { IS_ADMIN_BUILD } from "@/lib/portal";
 
 import LoginPortal from "./pages/LoginPortal";
+import RestaurantRegisterPage from "./pages/RestaurantRegisterPage";
 import NotFound from "./pages/NotFound";
 
 // 公開頁(僅前台站)
@@ -130,6 +131,7 @@ const MainRoutes = () => (
     <Route path="/login" element={<Navigate to="/" replace />} />
 
     {/* 公開頁 */}
+    <Route path="/register/restaurant" element={<RestaurantRegisterPage />} />
     <Route path="/suppliers" element={<SuppliersPage />} />
     <Route path="/join" element={<JoinSupplierPage />} />
     <Route path="/my" element={<BuyerPortalPage />} />
