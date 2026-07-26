@@ -5,7 +5,7 @@
 | 站台 | 網址 | 內容 | 部署方式 |
 |---|---|---|---|
 | **前台 + 餐廳 + 供應商** | https://dish-to-supply.vercel.app | 登入首頁、餐廳後台、供應商後台、公開頁 | GitHub push main **自動部署** |
-| **平台營運後台** | https://ifoodmap-admin.vercel.app | 只有 `/admin/*` | **手動** `vercel deploy --prod` |
+| **平台營運後台** | https://ifoodmap-admin.vercel.app | 只有 `/admin/*` | GitHub push main **自動部署** |
 
 管理員後台**刻意不出現在客戶看得到的網域上** —— 主站的 `/admin` 會顯示 404。
 
@@ -21,26 +21,35 @@
 
 Vite 在建置時把 `import.meta.env.VITE_*` 內聯進 bundle,**改了值一定要重新建置**,不是改 Vercel 環境變數就會生效。
 
-## 前台站(自動)
+## 兩站都是自動部署
 
 ```bash
 git push origin main
 ```
 
-## 管理員站(手動,改到 admin 相關程式碼時要重跑)
+`.github/workflows/deploy-vercel.yml` 有兩個平行的 job,一次推同時更新兩站。
+兩個專案都在 **ifoodmap team** 底下。
 
-CLI 登入的帳號在 `Armand's projects` team;`dish-to-supply` 屬於另一個 team,
-所以管理員站是獨立專案、走 prebuilt 靜態部署,不接 GitHub。
+用到的 GitHub secrets:
+
+| Secret | 用途 |
+|---|---|
+| `VERCEL_TOKEN` | 部署權杖 |
+| `VERCEL_ORG_ID` | team scope |
+| `VERCEL_PROJECT_ID_DISH` | 前台站 |
+| `VERCEL_PROJECT_ID_ADMIN` | 管理員站 |
+
+`VITE_PORTAL=admin` **設在 Vercel 專案的環境變數上**,不是在 workflow 裡 ——
+Vercel 建置時自動帶入,所以兩個 job 的指令完全一樣,只差 PROJECT_ID。
+
+### 手動部署(需要時)
 
 ```bash
 cd ~/.gemini/File/ifoodmap
-VITE_PORTAL=admin npm run build
-rm -rf /tmp/ifoodmap-admin && mkdir -p /tmp/ifoodmap-admin
-cp -R dist/* /tmp/ifoodmap-admin/ && cp vercel.json /tmp/ifoodmap-admin/
-cd /tmp/ifoodmap-admin && npx vercel deploy --prod --yes --name ifoodmap-admin
+VERCEL_ORG_ID=team_VJzPZOwBqciuXnPC0XltX4MW \
+VERCEL_PROJECT_ID=prj_cf9IKsaZJd5AwOr9Jg3TRGmRZUrU \
+  npx vercel deploy --prod --yes --token <ifoodmap-team-token>
 ```
-
-跑完記得回專案 `npm run build` 一次,否則本機 `dist/` 會留著 admin 版本。
 
 ## 跨站 session
 

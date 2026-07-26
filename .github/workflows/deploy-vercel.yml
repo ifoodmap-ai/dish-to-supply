@@ -1,5 +1,10 @@
 name: Deploy Frontend to Vercel
 
+# 同一份 codebase 部署成兩個站:
+#   dish-to-supply   前台 + 餐廳後台 + 供應商後台
+#   ifoodmap-admin   只有平台營運後台(靠專案上的 VITE_PORTAL=admin 環境變數分流)
+# 兩個 job 平行跑,任一失敗不影響另一個。
+
 on:
   push:
     branches:
@@ -14,7 +19,8 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  deploy:
+  deploy-main:
+    name: 前台 + 餐廳 + 供應商 (dish-to-supply)
     runs-on: ubuntu-latest
 
     steps:
@@ -32,4 +38,29 @@ jobs:
           VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
           VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
           VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID_DISH }}
+        run: vercel deploy --prod --yes --token $VERCEL_TOKEN --scope $VERCEL_ORG_ID
+
+  deploy-admin:
+    name: 平台營運後台 (ifoodmap-admin)
+    runs-on: ubuntu-latest
+    # 沒設 secret 時直接跳過,不要讓整條 workflow 變紅
+    if: ${{ vars.ENABLE_ADMIN_DEPLOY != 'false' }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Install Vercel CLI
+        run: npm install --global vercel@latest
+
+      # VITE_PORTAL=admin 設在 Vercel 專案的環境變數上,
+      # Vercel 建置時會自動帶入 —— 這裡不需要再傳一次。
+      - name: Deploy to Vercel
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID_ADMIN }}
         run: vercel deploy --prod --yes --token $VERCEL_TOKEN --scope $VERCEL_ORG_ID
