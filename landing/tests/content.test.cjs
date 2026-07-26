@@ -65,6 +65,10 @@ function assertRestaurantRegistrationCta(fragment) {
   );
 }
 
+function assertReducedMotionSkipLink(fragment) {
+  assert.match(fragment, /\.skip-link\s*\{[^}]*transition:\s*none[^}]*\}/s);
+}
+
 function assertMobileLogin(fragment) {
   assert.match(fragment, /login\.href = window\.IFM_PRODUCT_BASE_URL \+ '\/'/);
   assert.match(fragment, /login\.textContent = '登入平台'/);
@@ -324,7 +328,7 @@ test('restaurant content guards fail if capabilities or registration CTA are rem
 
 test('restaurant in-page capability target clears the sticky header', () => {
   assert.match(restaurants, /href="#restaurant-capabilities"/);
-  assert.match(source, /#restaurant-capabilities\s*\{[^}]*scroll-margin-top:\s*(?:8[8-9]|9[0-6])px/s);
+  assert.match(source, /#restaurant-capabilities\s*\{[^}]*scroll-margin-top:\s*96px/s);
 });
 
 test('every route shares one keyboard skip target and one main landmark', () => {
@@ -335,7 +339,7 @@ test('every route shares one keyboard skip target and one main landmark', () => 
     /<a class="skip-link" href="#main-content">跳到主要內容<\/a>[\s\S]*?<!-- ============ HEADER ============ -->/,
   );
   assert.match(source, /<main id="main-content" tabindex="-1">/);
-  assert.match(source, /#main-content\s*\{[^}]*scroll-margin-top:\s*(?:8[8-9]|9[0-6])px/s);
+  assert.match(source, /#main-content\s*\{[^}]*scroll-margin-top:\s*96px/s);
   assert.match(source, /\.skip-link:focus-visible\s*\{/);
 
   const mainStart = source.indexOf('<main id="main-content" tabindex="-1">');
@@ -351,4 +355,17 @@ test('every route shares one keyboard skip target and one main landmark', () => 
     const markerPosition = source.indexOf(marker);
     assert.ok(markerPosition > mainStart && markerPosition < mainEnd);
   }
+});
+
+test('skip link disables its transition for reduced-motion users', () => {
+  const reducedMotionStart = source.indexOf('@media (prefers-reduced-motion:reduce)');
+  const reducedMotionEnd = source.indexOf('</style>', reducedMotionStart);
+  const reducedMotion = source.slice(reducedMotionStart, reducedMotionEnd);
+  assertReducedMotionSkipLink(reducedMotion);
+
+  const withoutSkipRule = reducedMotion.replace(
+    /\.skip-link\s*\{[^}]*transition:\s*none[^}]*\}/s,
+    '',
+  );
+  assert.throws(() => assertReducedMotionSkipLink(withoutSkipRule));
 });
