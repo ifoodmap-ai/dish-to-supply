@@ -24,7 +24,7 @@ describe("restaurant registration route", () => {
     render(<App />);
 
     expect(
-      screen.getByRole("heading", { name: "免費建立餐廳帳號" }),
+      screen.getByRole("heading", { name: "建立餐廳帳號" }),
     ).toBeInTheDocument();
   });
 });

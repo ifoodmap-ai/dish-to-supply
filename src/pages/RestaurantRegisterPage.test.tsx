@@ -128,7 +128,7 @@ describe("RestaurantRegisterPage", () => {
     renderPage();
 
     expect(
-      screen.getByRole("heading", { name: "免費建立餐廳帳號" }),
+      screen.getByRole("heading", { name: "建立餐廳帳號" }),
     ).toBeInTheDocument();
     expect(screen.getByLabelText("餐廳名稱")).toHaveAttribute(
       "autocomplete",
@@ -366,7 +366,7 @@ describe("LoginPortal restaurant signup entry", () => {
     );
 
     expect(
-      screen.getByRole("link", { name: "免費建立餐廳帳號" }),
+      screen.getByRole("link", { name: "建立餐廳帳號" }),
     ).toHaveAttribute("href", "/register/restaurant");
   });
 });

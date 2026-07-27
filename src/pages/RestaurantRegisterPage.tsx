@@ -264,7 +264,7 @@ const RestaurantRegisterPage = () => {
               餐廳採購，從今天開始更簡單
             </p>
             <h1 className="mt-3 text-3xl font-bold tracking-tight text-slate-950 sm:text-4xl">
-              免費建立餐廳帳號
+              建立餐廳帳號
             </h1>
             <p className="mt-4 max-w-lg text-base leading-7 text-slate-600">
               一次整合食材媒合、成本掌握與訂單管理，立即建立專屬於餐廳的採購工作台。

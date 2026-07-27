@@ -13,8 +13,8 @@ import { track } from "@/lib/analytics";
 const sellingPoints = [
   {
     icon: Store,
-    title: "免費上架",
-    description: "免費建立供應商檔案與商品目錄,不收上架費,零成本觸及更多餐飲買家。",
+    title: "供應商上架",
+    description: "建立供應商檔案與商品目錄，申請上架並觸及更多餐飲買家。",
   },
   {
     icon: Sparkles,

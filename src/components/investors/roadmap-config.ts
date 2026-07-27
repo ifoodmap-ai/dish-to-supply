@@ -134,7 +134,7 @@ export const FALLBACK_FEATURES: RoadmapFeature[] = [
   fb(34, 'supplier_portal', 3, '物流追蹤', '出貨後物流狀態即時追蹤與異常提醒', 'done', 7, '/roadmap/feat-logistics.png'),
   fb(35, 'supplier_portal', 4, 'LINE 即時通知', '新訂單、出貨提醒即時 LINE 推播(沙盒示範版已完成,實際上線待 LINE 官方帳號串接)', 'in_progress', 8, '/roadmap/feat-notifications.png'),
   fb(36, 'supplier_portal', 4, '供應商評價系統', '買家評價供應商,建立平台信任機制', 'done', 9, '/roadmap/supplier-reviews.png'),
-  fb(37, 'supplier_portal', 3, '供應商自助入駐', '公開申請頁,供應商自助送件,免費上架', 'done', 10, '/roadmap/feat-join.png'),
+  fb(37, 'supplier_portal', 3, '供應商自助入駐', '公開申請頁,供應商自助送件,供應商上架', 'done', 10, '/roadmap/feat-join.png'),
   fb(38, 'supplier_portal', 3, '供應商公開目錄', '買家可瀏覽全部合作供應商與真實商品型錄', 'done', 11, '/roadmap/feat-suppliers-dir.png'),
   fb(39, 'supplier_portal', 3, '供應商營運總覽', '本月成交、詢價回覆率、平均回覆時間、待處理商機與流失預警', 'done', 12, null),
   fb(40, 'supplier_portal', 3, '商機雷達', '主動推播:這些餐廳在找你有的品項,但沒問到你 —— 直接帶生意上門', 'done', 13, null),
