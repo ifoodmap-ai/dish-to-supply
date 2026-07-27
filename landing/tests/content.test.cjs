@@ -13,6 +13,18 @@ const restaurants = source.slice(restaurantsStart, restaurantsEnd);
 const suppliersStart = source.indexOf('<!-- ============ PAGE: SUPPLIERS ============ -->');
 const suppliersEnd = source.indexOf('<!-- ============ PAGE: CASES ============ -->');
 const suppliers = source.slice(suppliersStart, suppliersEnd);
+const casesStart = source.indexOf('<!-- ============ PAGE: CASES ============ -->');
+const casesEnd = source.indexOf('<!-- ============ PAGE: ABOUT ============ -->');
+const cases = source.slice(casesStart, casesEnd);
+const aboutStart = source.indexOf('<!-- ============ PAGE: ABOUT ============ -->');
+const aboutEnd = source.indexOf('<!-- ============ PAGE: CONTACT ============ -->');
+const about = source.slice(aboutStart, aboutEnd);
+const contactStart = source.indexOf('<!-- ============ PAGE: CONTACT ============ -->');
+const contactEnd = source.indexOf('<!-- ============ FOOTER ============ -->');
+const contact = source.slice(contactStart, contactEnd);
+const footerStart = source.indexOf('<!-- ============ FOOTER ============ -->');
+const footerEnd = source.indexOf('</footer>', footerStart) + '</footer>'.length;
+const footer = source.slice(footerStart, footerEnd);
 const headerStart = source.indexOf('<!-- ============ HEADER ============ -->');
 const headerEnd = source.indexOf('<!-- ============ PAGE: HOME ============ -->');
 const header = source.slice(headerStart, headerEnd);
@@ -139,6 +151,21 @@ function assertSupplierOverflowRegions(fragment) {
 function assertMobileLogin(fragment) {
   assert.match(fragment, /login\.href = window\.IFM_PRODUCT_BASE_URL \+ '\/'/);
   assert.match(fragment, /login\.textContent = '登入平台'/);
+}
+
+function assertAiDialogLifecycle(fragment) {
+  assert.match(fragment, /panel\.id = 'ai-assistant-dialog'/);
+  assert.equal((fragment.match(/panel\.setAttribute\('aria-hidden', 'true'\)/g) || []).length, 2);
+  assert.equal((fragment.match(/panel\.inert = true/g) || []).length, 2);
+  assert.match(fragment, /panel\.setAttribute\('aria-hidden', 'true'\)/);
+  assert.match(fragment, /panel\.inert = true/);
+  assert.match(fragment, /fab\.setAttribute\('aria-expanded', 'false'\)/);
+  assert.match(fragment, /function openPanel\(\)[\s\S]*?panel\.removeAttribute\('aria-hidden'\)[\s\S]*?panel\.inert = false[\s\S]*?fab\.setAttribute\('aria-expanded', 'true'\)/);
+  assert.match(fragment, /function closePanel\(\)[\s\S]*?panel\.setAttribute\('aria-hidden', 'true'\)[\s\S]*?panel\.inert = true[\s\S]*?fab\.setAttribute\('aria-expanded', 'false'\)[\s\S]*?fab\.focus\(\)/);
+  assert.match(fragment, /if \(e\.key === 'Escape'\)[\s\S]*?closePanel\(\)/);
+  assert.match(fragment, /if \(e\.key !== 'Tab'\) return;/);
+  assert.match(fragment, /last\.focus\(\)/);
+  assert.match(fragment, /first\.focus\(\)/);
 }
 
 function contrastRatio(foreground, background) {
@@ -592,4 +619,84 @@ test('site shell exposes one header, labelled desktop and mobile navigation, and
   const footerStart = source.indexOf('<footer');
   assert.ok(headerEnd >= 0 && mainStart > headerEnd);
   assert.ok(mainEnd > mainStart && footerStart > mainEnd);
+});
+
+test('supporting pages use one H1 each and contain no placeholder content', () => {
+  for (const [name, fragment] of [['cases', cases], ['about', about], ['contact', contact]]) {
+    assert.ok(fragment.length > 0, `${name} fragment exists`);
+    assert.equal((fragment.match(/<h1\b/g) || []).length, 1, `${name} has one H1`);
+    assert.doesNotMatch(fragment, /頁面準備中|合作夥伴 \d|媒體 \d|\[[^\]]*(?:實拍|介面|示意)[^\]]*\]/);
+  }
+});
+
+test('cases page preserves approved evidence and distinguishes restaurant and supplier outcomes', () => {
+  assert.match(cases, /<h1[^>]*>餐廳與供應商，如何一起改善採購成果<\/h1>/);
+  assertApprovedCases(cases);
+  assert.match(cases, /餐廳端成果/);
+  assert.match(cases, /供應商合作成果/);
+  assert.match(cases, /改善層級/);
+  assert.equal((cases.match(/成果依業態、採購規模與執行期間而異。/g) || []).length, 1);
+  assert.doesNotMatch(cases, /保證(?:降低|提升|成交|達成)|一定(?:降低|提升|成交)/);
+});
+
+test('about page explains the two-sided platform and retains exactly three approved values', () => {
+  assert.match(about, /<h1[^>]*>讓餐廳需求與供應能力，更有效率地相遇<\/h1>/);
+  assert.match(about, /雙邊 B2B 食材採購平台/);
+  assert.match(about, /餐廳/);
+  assert.match(about, /供應商/);
+  for (const value of ['高效媒合', '公平透明', '在地永續']) {
+    assert.match(about, new RegExp(`<h3[^>]*>${value}<\\/h3>`));
+  }
+  assert.equal((about.match(/class="about-value-card"/g) || []).length, 3);
+  assert.doesNotMatch(about, /成立於|團隊成員|合作夥伴|媒體報導/);
+});
+
+test('contact page retains delegated lead contract and exposes accessible fields and status', () => {
+  assert.equal((contact.match(/填寫食材需求/g) || []).length, 1);
+  assert.match(contact, /<h2 id="demand-form-title"[^>]*>填寫食材需求<\/h2>/);
+  assert.match(contact, /role="form" aria-labelledby="demand-form-title"/);
+  for (const id of ['company-name', 'contact-phone', 'contact-line', 'needed-items', 'need-detail']) {
+    assert.match(contact, new RegExp(`<label[^>]+for="${id}"`));
+    assert.match(contact, new RegExp(`<(?:input|textarea)[^>]+id="${id}"`));
+  }
+  assert.match(contact, /role="button"[^>]+tabindex="0"[^>]+aria-live="polite"/);
+  assert.match(source, /\/rest\/v1\/landing_leads/);
+  assert.match(source, /function findDemandCard\(node\)/);
+  assert.match(source, /h\.textContent\.indexOf\('填寫食材需求'\)/);
+  for (const endpoint of ['/api/ai-chat', '/api/ai-menu', '/api/ai-extract']) {
+    assert.match(source, new RegExp(endpoint.replaceAll('/', '\\/')));
+  }
+});
+
+test('metadata consistently describes the approved two-sided platform', () => {
+  const title = 'iFoodmap 食材地圖｜餐廳與供應商的 B2B 食材採購平台';
+  const description = 'iFoodmap 以 AI 串接餐廳需求與全台食材供應商，整合智慧媒合、報價比較、訂單、出貨與採購管理。';
+  assert.match(source, new RegExp(`<title>${title}<\\/title>`));
+  assert.match(source, new RegExp(`<meta name="description" content="${description}">`));
+  assert.match(source, new RegExp(`<meta property="og:title" content="${title}">`));
+  assert.match(source, new RegExp(`<meta property="og:description" content="${description}">`));
+  assert.match(source, new RegExp(`<meta name="twitter:title" content="${title}">`));
+  assert.match(source, new RegExp(`<meta name="twitter:description" content="${description}">`));
+  assert.match(source, /<link rel="canonical" href="https:\/\/ifoodmap-landing\.vercel\.app\/">/);
+});
+
+test('footer has four useful audiences with real internal and product destinations', () => {
+  for (const group of ['餐廳', '供應商', '公司', '客服']) {
+    assert.match(footer, new RegExp(`<div[^>]+class="footer-group-title"[^>]*>${group}<\\/div>`));
+  }
+  for (const route of ['/restaurants', '/suppliers', '/cases', '/about', '/contact']) {
+    assert.match(footer, new RegExp(`href="${route}"`));
+  }
+  assert.match(footer, /href="\{\{\s*restaurantRegistrationUrl\s*\}\}"/);
+  assert.match(footer, /href="\{\{\s*supplierApplicationUrl\s*\}\}"/);
+  assert.match(footer, /href="\{\{\s*loginUrl\s*\}\}"/);
+  assert.doesNotMatch(footer, /<span[^>]*>(?:常見問題|使用條款)<\/span>/);
+});
+
+test('AI dialog closed and open states are keyboard-safe with mutation-sensitive guards', () => {
+  assertAiDialogLifecycle(source);
+  assert.throws(() => assertAiDialogLifecycle(source.replace("panel.inert = true;", '')));
+  assert.throws(() => assertAiDialogLifecycle(source.replace("panel.removeAttribute('aria-hidden');", '')));
+  assert.throws(() => assertAiDialogLifecycle(source.replace("if (e.key === 'Escape')", "if (e.key === 'Never')")));
+  assert.throws(() => assertAiDialogLifecycle(source.replace("if (e.key !== 'Tab') return;", '')));
 });
