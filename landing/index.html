@@ -1231,24 +1231,24 @@
         <div style="display:flex; flex-direction:column; gap:22px;">
           <div style="display:flex; gap:14px; align-items:center;">
             <span style="width:46px;height:46px;border-radius:13px;background:#eaf7e4;color:#1f9e4e;font-weight:900;display:flex;align-items:center;justify-content:center;">電</span>
-            <div><div style="font-size:13px;color:#8a9a8f;">服務專線</div><div style="font-size:17px;font-weight:700;color:#15231b;">02-7704-5539</div></div>
+            <div><div style="font-size:13px;color:#5b6b62;">服務專線</div><div style="font-size:17px;font-weight:700;color:#15231b;">02-7704-5539</div></div>
           </div>
           <div style="display:flex; gap:14px; align-items:center;">
             <span style="width:46px;height:46px;border-radius:13px;background:#eaf7e4;color:#1f9e4e;font-weight:900;display:flex;align-items:center;justify-content:center;">@</span>
-            <div><div style="font-size:13px;color:#8a9a8f;">電子信箱</div><div style="font-size:17px;font-weight:700;color:#15231b;">ifoodmaptw@gmail.com</div></div>
+            <div><div style="font-size:13px;color:#5b6b62;">電子信箱</div><div style="font-size:17px;font-weight:700;color:#15231b;">ifoodmaptw@gmail.com</div></div>
           </div>
           <div style="display:flex; gap:14px; align-items:center;">
             <span style="width:46px;height:46px;border-radius:13px;background:#eaf7e4;color:#1f9e4e;font-weight:900;display:flex;align-items:center;justify-content:center;">時</span>
-            <div><div style="font-size:13px;color:#8a9a8f;">服務時間</div><div style="font-size:17px;font-weight:700;color:#15231b;">週一至週五 9:00 – 18:00</div></div>
+            <div><div style="font-size:13px;color:#5b6b62;">服務時間</div><div style="font-size:17px;font-weight:700;color:#15231b;">週一至週五 9:00 – 18:00</div></div>
           </div>
           <div style="display:flex; gap:14px; align-items:center;">
             <span style="width:46px;height:46px;border-radius:13px;background:#06C755;color:#fff;font-weight:900;display:flex;align-items:center;justify-content:center;font-size:13px;">LINE</span>
-            <div><div style="font-size:13px;color:#8a9a8f;">官方 LINE</div><div style="font-size:17px;font-weight:700;color:#15231b;">加入好友即時諮詢</div></div>
+            <div><div style="font-size:13px;color:#5b6b62;">官方 LINE</div><div style="font-size:17px;font-weight:700;color:#15231b;">加入好友即時諮詢</div></div>
           </div>
         </div>
       </div>
 
-      <div data-reveal role="form" aria-labelledby="demand-form-title" style="background:#fff;border:1px solid #e8efe6;border-radius:24px;padding:42px;box-shadow:0 20px 60px rgba(20,60,30,.08);">
+      <form data-reveal aria-labelledby="demand-form-title" novalidate style="background:#fff;border:1px solid #e8efe6;border-radius:24px;padding:42px;box-shadow:0 20px 60px rgba(20,60,30,.08);">
         <h2 id="demand-form-title" style="font-family:'Space Grotesk','Noto Sans TC',sans-serif;font-size:22px;font-weight:800;color:#15231b;margin:0 0 8px;">填寫食材需求</h2>
         <p id="demand-form-help" style="font-size:14px;line-height:1.65;color:#5b6b62;margin:0 0 24px;">標示「必填」的欄位需填寫；送出狀態會顯示在按鈕位置。</p>
         <div style="display:flex; flex-direction:column; gap:18px;">
@@ -1259,7 +1259,7 @@
           <div class="contact-fields-two">
             <div>
               <label for="contact-phone" style="display:block;font-size:14px;font-weight:600;color:#3c4d42;margin-bottom:8px;">聯絡電話（必填）</label>
-              <input class="contact-field" id="contact-phone" name="contact_phone" required autocomplete="tel" inputmode="tel" placeholder="0900-000-000" style="width:100%;padding:14px 16px;border:1.5px solid #dde5dc;border-radius:12px;font-size:16px;font-family:inherit;" />
+              <input class="contact-field" id="contact-phone" type="tel" name="contact_phone" required autocomplete="tel" inputmode="tel" placeholder="0900-000-000" style="width:100%;padding:14px 16px;border:1.5px solid #dde5dc;border-radius:12px;font-size:16px;font-family:inherit;" />
             </div>
             <div>
               <label for="contact-line" style="display:block;font-size:14px;font-weight:600;color:#3c4d42;margin-bottom:8px;">LINE ID</label>
@@ -1274,9 +1274,9 @@
             <label for="need-detail" style="display:block;font-size:14px;font-weight:600;color:#3c4d42;margin-bottom:8px;">需求說明</label>
             <textarea class="contact-field" id="need-detail" name="detail" placeholder="數量、配送區域、配送頻率等…" rows="4" style="width:100%;padding:14px 16px;border:1.5px solid #dde5dc;border-radius:12px;font-size:16px;font-family:inherit;resize:vertical;"></textarea>
           </div>
-          <span class="contact-submit" role="button" tabindex="0" aria-live="polite" style="display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,#46c138,#1f9e4e);color:#fff;font-weight:700;font-size:16px;padding:16px;border-radius:100px;text-align:center;cursor:pointer;box-shadow:0 12px 30px rgba(61,174,43,.24);">送出需求，免費媒合 →</span>
+          <button class="contact-submit" type="submit" aria-live="polite" style="display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,#46c138,#1f9e4e);color:#fff;font-weight:700;font-size:16px;padding:16px;border-radius:100px;text-align:center;cursor:pointer;box-shadow:0 12px 30px rgba(61,174,43,.24);">送出需求，免費媒合 →</button>
         </div>
-      </div>
+      </form>
     </div>
   </div>
   </sc-if>
@@ -1327,7 +1327,7 @@
           </div>
         </div>
       </div>
-      <div style="padding-top:28px; font-size:13px; color:#5e7464;">© 2026 iFoodMap 食材地圖. All rights reserved.</div>
+      <div style="padding-top:28px; font-size:13px; color:#748779;">© 2026 iFoodMap 食材地圖. All rights reserved.</div>
     </div>
   </footer>
 
@@ -1499,7 +1499,7 @@ class Component extends DCLogic {
 </script>
 
 <!-- 漸進增強：把「填寫食材需求」表單接到 Supabase（landing_leads，匿名只寫不讀）。
-     不動原框架 state / markup，用事件委派攔截送出鈕，避免破壞 100% 還原視覺。 -->
+     以事件委派處理原生表單 submit，保留既有 API payload 與動態頁面相容性。 -->
 <script>
 (function () {
   var SUPA_URL  = 'https://cwvpehqcvbfuynabpqop.supabase.co';
@@ -1517,14 +1517,15 @@ class Component extends DCLogic {
     return null;
   }
 
-  document.addEventListener('click', function (e) {
-    var t = e.target;
-    if (!t || !t.textContent || t.tagName !== 'SPAN') return;
-    if (t.textContent.indexOf('送出需求') === -1) return;       // 只攔送出鈕
+  document.addEventListener('submit', function (e) {
+    var card = findDemandCard(e.target);
+    if (!card || card.tagName !== 'FORM') return;
+    e.preventDefault();
+
+    var t = card.querySelector('.contact-submit');
+    if (!t) return;
     if (t.getAttribute('data-busy') === '1' || t.getAttribute('data-done') === '1') return;
 
-    var card = findDemandCard(t);
-    if (!card) return;
     var fields = card.querySelectorAll('input, textarea');
     if (fields.length < 5) return;
 
@@ -1548,6 +1549,7 @@ class Component extends DCLogic {
     fields[1].removeAttribute('aria-invalid');
     t.setAttribute('data-busy', '1');
     t.setAttribute('aria-disabled', 'true');
+    t.disabled = true;
     t.textContent = '送出中…';
 
     fetch(SUPA_URL + '/rest/v1/landing_leads', {
@@ -1575,23 +1577,17 @@ class Component extends DCLogic {
         t.style.opacity = '0.85';
         for (var i = 0; i < 5; i++) fields[i].value = '';
       } else {
+        t.disabled = false;
         t.textContent = '送出失敗，請稍後再試或加 LINE';
         setTimeout(function () { t.textContent = original; }, 2600);
       }
     }).catch(function () {
       t.removeAttribute('data-busy');
       t.removeAttribute('aria-disabled');
+      t.disabled = false;
       t.textContent = '送出失敗，請稍後再試或加 LINE';
       setTimeout(function () { t.textContent = original; }, 2600);
     });
-  }, true);
-
-  document.addEventListener('keydown', function (e) {
-    var t = e.target;
-    if (!t || !t.classList || !t.classList.contains('contact-submit')) return;
-    if (e.key !== 'Enter' && e.key !== ' ') return;
-    e.preventDefault();
-    t.click();
   });
 })();
 </script>
@@ -1700,6 +1696,11 @@ class Component extends DCLogic {
     background: linear-gradient(135deg,#46c138,#1f9e4e); color: #fff;
     font-weight: 700; font-size: 16px; padding: 15px; border-radius: 100px; cursor: pointer;
     box-shadow: 0 12px 30px rgba(61,174,43,.32); text-decoration: none;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .m-menu,
+    .m-scrim,
+    .m-hamburger span { transition: none !important; }
   }
 </style>
 
@@ -2175,9 +2176,13 @@ class Component extends DCLogic {
     .ai-panel { right: 0; left: 0; bottom: 0; width: 100%; max-width: 100%; height: 86vh; border-radius: 20px 20px 0 0; }
   }
   @media (prefers-reduced-motion: reduce) {
+    .ai-fab { transition: none !important; }
+    .ai-fab:hover,
+    .ai-fab.ai-open { transform: none !important; }
     .ai-fab::after { animation: none !important; }
     .ai-dot { animation: none !important; opacity: .6 !important; }
     .ai-panel { transition: opacity .15s ease !important; transform: none !important; }
+    .ai-backdrop { transition: none !important; }
   }
 </style>
 <script>
@@ -2224,6 +2229,10 @@ class Component extends DCLogic {
   document.body.appendChild(panel);
   document.body.appendChild(fab);
 
+  var appRoot = document.getElementById('dc-root');
+  var appRootWasInert = false;
+  var appRootAriaHidden = null;
+  var previousBodyOverflow = '';
   var body = panel.querySelector('.ai-body');
   var fileInput = panel.querySelector('.ai-file');
   var textInput = panel.querySelector('.ai-text');
@@ -2434,12 +2443,23 @@ class Component extends DCLogic {
     );
   }
   function openPanel() {
+    appRoot = document.getElementById('dc-root');
+    var openDrawerClose = document.querySelector('.m-menu.open .m-menu-close');
+    if (openDrawerClose) openDrawerClose.click();
+    if (appRoot) {
+      appRootWasInert = appRoot.inert;
+      appRootAriaHidden = appRoot.getAttribute('aria-hidden');
+      appRoot.inert = true;
+      appRoot.setAttribute('aria-hidden', 'true');
+    }
+    previousBodyOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
     panel.removeAttribute('aria-hidden');
     panel.inert = false;
     fab.setAttribute('aria-expanded', 'true');
     panel.classList.add('ai-open');
     fab.classList.add('ai-open');
-    if (window.innerWidth <= 520) backdrop.classList.add('ai-show');
+    backdrop.classList.add('ai-show');
     setTimeout(function () {
       if (panel.classList.contains('ai-open')) textInput.focus();
     }, 200);
@@ -2450,6 +2470,12 @@ class Component extends DCLogic {
     panel.classList.remove('ai-open');
     fab.classList.remove('ai-open');
     backdrop.classList.remove('ai-show');
+    document.body.style.overflow = previousBodyOverflow;
+    if (appRoot) {
+      appRoot.inert = appRootWasInert;
+      if (appRootAriaHidden === null) appRoot.removeAttribute('aria-hidden');
+      else appRoot.setAttribute('aria-hidden', appRootAriaHidden);
+    }
     panel.setAttribute('aria-hidden', 'true');
     panel.inert = true;
     fab.setAttribute('aria-expanded', 'false');

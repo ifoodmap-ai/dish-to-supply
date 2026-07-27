@@ -3,15 +3,32 @@ const fs = require('node:fs');
 const path = require('node:path');
 const test = require('node:test');
 
-const { createDrawerFocusManager, createHistoryController, pageToPath, pathToPage } = require('../routing.js');
+const {
+  canonicalUrlForPath,
+  createDrawerFocusManager,
+  createHistoryController,
+  pageToPath,
+  pathToPage,
+} = require('../routing.js');
 const projectRoot = path.resolve(__dirname, '..');
 
 function createFakeWindow(pathname = '/') {
   const listeners = new Map();
   const pushes = [];
+  const metadata = {
+    canonical: createFakeMetadataElement('https://ifoodmap-landing.vercel.app/'),
+    openGraphUrl: createFakeMetadataElement('https://ifoodmap-landing.vercel.app/'),
+  };
 
   return {
     location: { pathname },
+    document: {
+      querySelector(selector) {
+        if (selector === 'link[rel="canonical"]') return metadata.canonical;
+        if (selector === 'meta[property="og:url"]') return metadata.openGraphUrl;
+        return null;
+      },
+    },
     history: {
       pushState(_state, _title, nextPath) {
         pushes.push(nextPath);
@@ -29,7 +46,20 @@ function createFakeWindow(pathname = '/') {
       listeners.get(type)?.();
     },
     listeners,
+    metadata,
     pushes,
+  };
+}
+
+function createFakeMetadataElement(initialValue) {
+  const attributes = new Map([['href', initialValue], ['content', initialValue]]);
+  return {
+    getAttribute(name) {
+      return attributes.get(name) ?? null;
+    },
+    setAttribute(name, value) {
+      attributes.set(name, String(value));
+    },
   };
 }
 
@@ -87,6 +117,39 @@ test('pageToPath maps every page to its canonical public path', () => {
 test('pageToPath falls back to the home path for unknown pages', () => {
   assert.equal(pageToPath('services'), '/');
   assert.equal(pageToPath(), '/');
+});
+
+test('canonicalUrlForPath creates self-referencing public URLs', () => {
+  assert.deepEqual(
+    ['/', '/restaurants', '/suppliers/', '/cases', '/about', '/contact'].map(canonicalUrlForPath),
+    [
+      'https://ifoodmap-landing.vercel.app/',
+      'https://ifoodmap-landing.vercel.app/restaurants',
+      'https://ifoodmap-landing.vercel.app/suppliers',
+      'https://ifoodmap-landing.vercel.app/cases',
+      'https://ifoodmap-landing.vercel.app/about',
+      'https://ifoodmap-landing.vercel.app/contact',
+    ],
+  );
+});
+
+test('history controller synchronizes canonical and Open Graph URLs on direct load, navigation, and popstate', () => {
+  const fakeWindow = createFakeWindow('/about');
+  fakeWindow.history.window = fakeWindow;
+  const controller = createHistoryController({ window: fakeWindow, onPage() {} });
+
+  controller.start();
+  assert.equal(fakeWindow.metadata.canonical.getAttribute('href'), 'https://ifoodmap-landing.vercel.app/about');
+  assert.equal(fakeWindow.metadata.openGraphUrl.getAttribute('content'), 'https://ifoodmap-landing.vercel.app/about');
+
+  controller.navigate('contact', { preventDefault() {} });
+  assert.equal(fakeWindow.metadata.canonical.getAttribute('href'), 'https://ifoodmap-landing.vercel.app/contact');
+  assert.equal(fakeWindow.metadata.openGraphUrl.getAttribute('content'), 'https://ifoodmap-landing.vercel.app/contact');
+
+  fakeWindow.location.pathname = '/suppliers';
+  fakeWindow.dispatch('popstate');
+  assert.equal(fakeWindow.metadata.canonical.getAttribute('href'), 'https://ifoodmap-landing.vercel.app/suppliers');
+  assert.equal(fakeWindow.metadata.openGraphUrl.getAttribute('content'), 'https://ifoodmap-landing.vercel.app/suppliers');
 });
 
 test('history controller starts, navigates, reacts to popstate, and stops', () => {

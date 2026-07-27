@@ -9,6 +9,7 @@
     root.IfmRouting = routing;
   }
 })(typeof window !== 'undefined' ? window : null, function () {
+  var publicBaseUrl = 'https://ifoodmap-landing.vercel.app';
   var pageByPath = {
     '/': 'home',
     '/restaurants': 'restaurants',
@@ -41,6 +42,21 @@
     return pathByPage[page] || '/';
   }
 
+  function canonicalUrlForPath(pathname) {
+    var normalized = normalizePath(pathname);
+    var publicPath = pageByPath[normalized] ? normalized : '/';
+    return publicBaseUrl + publicPath;
+  }
+
+  function syncMetadata(win) {
+    if (!win.document || typeof win.document.querySelector !== 'function') return;
+    var url = canonicalUrlForPath(win.location.pathname);
+    var canonical = win.document.querySelector('link[rel="canonical"]');
+    var openGraphUrl = win.document.querySelector('meta[property="og:url"]');
+    if (canonical) canonical.setAttribute('href', url);
+    if (openGraphUrl) openGraphUrl.setAttribute('content', url);
+  }
+
   function shouldHandleClick(event) {
     if (!event) return true;
     if (event.defaultPrevented) return false;
@@ -53,6 +69,7 @@
     var onPage = options.onPage;
     var started = false;
     var onPopState = function () {
+      syncMetadata(win);
       onPage(pathToPage(win.location.pathname));
     };
 
@@ -60,6 +77,7 @@
       start: function () {
         if (started) return;
         win.addEventListener('popstate', onPopState);
+        syncMetadata(win);
         started = true;
       },
       navigate: function (page, event) {
@@ -70,6 +88,7 @@
         if (win.location.pathname !== path) {
           win.history.pushState({}, '', path);
         }
+        syncMetadata(win);
         onPage(page);
         return true;
       },
@@ -159,6 +178,7 @@
   }
 
   return {
+    canonicalUrlForPath: canonicalUrlForPath,
     createDrawerFocusManager: createDrawerFocusManager,
     createHistoryController: createHistoryController,
     pathToPage: pathToPage,

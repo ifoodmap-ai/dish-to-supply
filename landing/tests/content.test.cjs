@@ -166,6 +166,13 @@ function assertAiDialogLifecycle(fragment) {
   assert.match(fragment, /if \(e\.key !== 'Tab'\) return;/);
   assert.match(fragment, /last\.focus\(\)/);
   assert.match(fragment, /first\.focus\(\)/);
+  assert.match(fragment, /var appRoot = document\.getElementById\('dc-root'\)/);
+  assert.match(fragment, /appRoot\.inert = true/);
+  assert.match(fragment, /appRoot\.setAttribute\('aria-hidden', 'true'\)/);
+  assert.match(fragment, /backdrop\.classList\.add\('ai-show'\)/);
+  assert.match(fragment, /appRoot\.inert = appRootWasInert/);
+  assert.match(fragment, /appRoot\.removeAttribute\('aria-hidden'\)/);
+  assert.match(fragment, /backdrop\.classList\.remove\('ai-show'\)/);
 }
 
 function contrastRatio(foreground, background) {
@@ -654,15 +661,18 @@ test('about page explains the two-sided platform and retains exactly three appro
 test('contact page retains delegated lead contract and exposes accessible fields and status', () => {
   assert.equal((contact.match(/填寫食材需求/g) || []).length, 1);
   assert.match(contact, /<h2 id="demand-form-title"[^>]*>填寫食材需求<\/h2>/);
-  assert.match(contact, /role="form" aria-labelledby="demand-form-title"/);
+  assert.match(contact, /<form[^>]+aria-labelledby="demand-form-title"[^>]+novalidate/);
   for (const id of ['company-name', 'contact-phone', 'contact-line', 'needed-items', 'need-detail']) {
     assert.match(contact, new RegExp(`<label[^>]+for="${id}"`));
     assert.match(contact, new RegExp(`<(?:input|textarea)[^>]+id="${id}"`));
   }
-  assert.match(contact, /role="button"[^>]+tabindex="0"[^>]+aria-live="polite"/);
+  assert.match(contact, /<input[^>]+id="contact-phone"[^>]+type="tel"/);
+  assert.match(contact, /<button class="contact-submit" type="submit"[^>]+aria-live="polite"/);
   assert.match(source, /\/rest\/v1\/landing_leads/);
   assert.match(source, /function findDemandCard\(node\)/);
   assert.match(source, /h\.textContent\.indexOf\('填寫食材需求'\)/);
+  assert.match(source, /document\.addEventListener\('submit'/);
+  assert.doesNotMatch(source, /classList\.contains\('contact-submit'\)[\s\S]*?t\.click\(\)/);
   for (const endpoint of ['/api/ai-chat', '/api/ai-menu', '/api/ai-extract']) {
     assert.match(source, new RegExp(endpoint.replaceAll('/', '\\/')));
   }
@@ -678,6 +688,15 @@ test('metadata consistently describes the approved two-sided platform', () => {
   assert.match(source, new RegExp(`<meta name="twitter:title" content="${title}">`));
   assert.match(source, new RegExp(`<meta name="twitter:description" content="${description}">`));
   assert.match(source, /<link rel="canonical" href="https:\/\/ifoodmap-landing\.vercel\.app\/">/);
+});
+
+test('small contact and footer copy meets deterministic WCAG AA contrast', () => {
+  assert.ok(contrastRatio('#5b6b62', '#ffffff') >= 4.5);
+  assert.ok(contrastRatio('#748779', '#081109') >= 4.5);
+  assert.doesNotMatch(contact, /font-size:13px;color:#8a9a8f/);
+  assert.match(contact, /font-size:13px;color:#5b6b62/);
+  assert.doesNotMatch(footer, /font-size:13px;\s*color:#5e7464/);
+  assert.match(footer, /font-size:13px;\s*color:#748779/);
 });
 
 test('footer has four useful audiences with real internal and product destinations', () => {
@@ -699,4 +718,17 @@ test('AI dialog closed and open states are keyboard-safe with mutation-sensitive
   assert.throws(() => assertAiDialogLifecycle(source.replace("panel.removeAttribute('aria-hidden');", '')));
   assert.throws(() => assertAiDialogLifecycle(source.replace("if (e.key === 'Escape')", "if (e.key === 'Never')")));
   assert.throws(() => assertAiDialogLifecycle(source.replace("if (e.key !== 'Tab') return;", '')));
+  assert.throws(() => assertAiDialogLifecycle(source.replace("appRoot.inert = true;", '')));
+  assert.throws(() => assertAiDialogLifecycle(source.replace("backdrop.classList.add('ai-show');", '')));
+});
+
+test('reduced-motion mode removes drawer, scrim, hamburger and AI FAB transitions', () => {
+  assert.match(
+    source,
+    /@media \(prefers-reduced-motion: reduce\)\s*\{[^}]*\.m-menu,[\s\S]*?\.m-scrim,[\s\S]*?\.m-hamburger span[\s\S]*?transition:\s*none\s*!important/s,
+  );
+  assert.match(
+    source,
+    /@media \(prefers-reduced-motion: reduce\)\s*\{[\s\S]*?\.ai-fab\s*\{[^}]*transition:\s*none\s*!important[^}]*\}[\s\S]*?\.ai-fab:hover,[\s\S]*?\.ai-fab\.ai-open\s*\{[^}]*transform:\s*none\s*!important/s,
+  );
 });
