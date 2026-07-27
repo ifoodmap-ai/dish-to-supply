@@ -112,7 +112,7 @@ const MONTHS = Array.from({ length: 12 }, (_, i) => i + 1);
 const normalize = (s: string): string =>
   (s || '')
     .toLowerCase()
-    .replace(/[\s　·・、,，.。/\\()（）[\]【】「」-]/g, '')
+    .replace(/[\s\u3000·・、,，.。/\\()（）[\]【】「」-]/g, '')
     .trim();
 
 const seasonText = (months: number[] | null): string => {

@@ -82,7 +82,7 @@ const ANOMALY_FACTOR = 3;
 const MIN_SAMPLES = 3;
 
 const normalize = (s: string): string =>
-  (s || '').toLowerCase().replace(/[\s　·・、,，.。/\\()（）[\]【】「」-]/g, '').trim();
+  (s || '').toLowerCase().replace(/[\s\u3000·・、,，.。/\\()（）[\]【】「」-]/g, '').trim();
 
 const median = (nums: number[]): number | null => {
   if (nums.length === 0) return null;
