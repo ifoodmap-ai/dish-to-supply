@@ -67,10 +67,15 @@
   function createHistoryController(options) {
     var win = options.window;
     var onPage = options.onPage;
+    var focusPage = options.focusPage;
     var started = false;
+    var renderPage = function (page, shouldFocus) {
+      onPage(page);
+      if (shouldFocus && typeof focusPage === 'function') focusPage(page);
+    };
     var onPopState = function () {
       syncMetadata(win);
-      onPage(pathToPage(win.location.pathname));
+      renderPage(pathToPage(win.location.pathname), true);
     };
 
     return {
@@ -85,11 +90,10 @@
         if (event && typeof event.preventDefault === 'function') event.preventDefault();
 
         var path = pageToPath(page);
-        if (win.location.pathname !== path) {
-          win.history.pushState({}, '', path);
-        }
+        if (normalizePath(win.location.pathname) === path) return true;
+        win.history.pushState({}, '', path);
         syncMetadata(win);
-        onPage(page);
+        renderPage(page, true);
         return true;
       },
       stop: function () {

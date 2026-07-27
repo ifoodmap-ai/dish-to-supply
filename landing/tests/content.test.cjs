@@ -175,6 +175,19 @@ function assertAiDialogLifecycle(fragment) {
   assert.match(fragment, /backdrop\.classList\.remove\('ai-show'\)/);
 }
 
+function assertAiAnnouncements(fragment) {
+  assert.match(fragment, /<label for="ai-assistant-input" class="ai-sr-only">輸入食材需求<\/label>/);
+  assert.match(fragment, /<input id="ai-assistant-input"[^>]+class="ai-text"/);
+  assert.match(fragment, /body\.setAttribute\('role', 'log'\)/);
+  assert.match(fragment, /body\.setAttribute\('aria-live', 'polite'\)/);
+  assert.match(fragment, /body\.setAttribute\('aria-relevant', 'additions'\)/);
+  assert.match(fragment, /body\.setAttribute\('aria-atomic', 'false'\)/);
+  assert.ok(
+    fragment.indexOf("addMsg('bot', '嗨！我是 iFoodMap AI 採購助手") <
+      fragment.indexOf("body.setAttribute('aria-live', 'polite')"),
+  );
+}
+
 function contrastRatio(foreground, background) {
   const luminance = (hex) => {
     const channels = hex.slice(1).match(/.{2}/g).map((channel) => parseInt(channel, 16) / 255);
@@ -720,6 +733,13 @@ test('AI dialog closed and open states are keyboard-safe with mutation-sensitive
   assert.throws(() => assertAiDialogLifecycle(source.replace("if (e.key !== 'Tab') return;", '')));
   assert.throws(() => assertAiDialogLifecycle(source.replace("appRoot.inert = true;", '')));
   assert.throws(() => assertAiDialogLifecycle(source.replace("backdrop.classList.add('ai-show');", '')));
+});
+
+test('AI input has a persistent label and new messages use a non-repeating live log', () => {
+  assertAiAnnouncements(source);
+  assert.throws(() => assertAiAnnouncements(source.replace('for="ai-assistant-input"', '')));
+  assert.throws(() => assertAiAnnouncements(source.replace("body.setAttribute('role', 'log');", '')));
+  assert.throws(() => assertAiAnnouncements(source.replace("body.setAttribute('aria-relevant', 'additions');", '')));
 });
 
 test('reduced-motion mode removes drawer, scrim, hamburger and AI FAB transitions', () => {

@@ -1416,6 +1416,26 @@ class Component extends DCLogic {
     requestAnimationFrame(tick);
   }
 
+  focusActivePage(page) {
+    requestAnimationFrame(() => {
+      const root = this.rootEl || document;
+      const headings = Array.from(root.querySelectorAll('h1'));
+      const target = headings.find((heading) => {
+        const rect = heading.getBoundingClientRect();
+        const style = window.getComputedStyle(heading);
+        return rect.width > 0 && rect.height > 0 &&
+          style.display !== 'none' && style.visibility !== 'hidden';
+      }) || root.querySelector('#main-content');
+      if (!target) return;
+      const previousTabIndex = target.getAttribute('tabindex');
+      target.setAttribute('tabindex', '-1');
+      target.focus({ preventScroll: true });
+      if (previousTabIndex === null) {
+        target.addEventListener('blur', () => target.removeAttribute('tabindex'), { once: true });
+      }
+    });
+  }
+
   componentDidMount() {
     if (typeof window !== 'undefined' && window.IfmRouting) {
       this._routingController = window.IfmRouting.createHistoryController({
@@ -1423,6 +1443,7 @@ class Component extends DCLogic {
         onPage: (page) => {
           this.setState({ page: page });
         },
+        focusPage: (page) => this.focusActivePage(page),
       });
       this._routingController.start();
     }
@@ -2001,10 +2022,6 @@ class Component extends DCLogic {
     else window.location.href = path;
     hideMenu();
     focusManager.close({ restoreFocus: false });
-    requestAnimationFrame(function () {
-      var heading = root.querySelector('h1');
-      focusManager.close({ focusTarget: heading });
-    });
     window.scrollTo(0, 0);
   }
 
@@ -2163,6 +2180,8 @@ class Component extends DCLogic {
   .ai-lead button { background: linear-gradient(135deg,#46c138,#1f9e4e); color:#fff; font-weight:700; font-size:14px; padding:11px; border:none; border-radius:100px; cursor:pointer; }
 
   .ai-foot { flex-shrink: 0; border-top: 1px solid #eef1ee; background: #fff; padding: 10px; display: flex; align-items: center; gap: 8px; }
+  .ai-sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
+    overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }
   .ai-upload { flex-shrink: 0; width: 40px; height: 40px; border-radius: 11px; border: 1px solid #dde5dc; background: #f6f9f5; cursor: pointer;
     display: flex; align-items: center; justify-content: center; color: #1f9e4e; }
   .ai-upload svg { width: 20px; height: 20px; }
@@ -2219,9 +2238,10 @@ class Component extends DCLogic {
     '<div class="ai-head"><div class="ai-ava">食</div><div><div class="ai-tt" id="ai-assistant-title">iFoodMap AI 採購助手</div><div class="ai-sub">上傳菜單或描述需求，立即整理採購清單</div></div><button class="ai-x" aria-label="關閉">×</button></div>' +
     '<div class="ai-body"></div>' +
     '<div class="ai-foot">' +
+      '<label for="ai-assistant-input" class="ai-sr-only">輸入食材需求</label>' +
       '<button class="ai-upload" aria-label="上傳菜單照片" title="上傳菜單照片"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z"/><circle cx="12" cy="13" r="3.2"/></svg></button>' +
       '<input type="file" accept="image/*" class="ai-file" style="display:none">' +
-      '<input type="text" class="ai-text" placeholder="輸入你的食材需求…" />' +
+      '<input id="ai-assistant-input" type="text" class="ai-text" placeholder="輸入你的食材需求…" />' +
       '<button class="ai-send" aria-label="送出"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 2 11 13"/><path d="M22 2 15 22l-4-9-9-4 20-7z"/></svg></button>' +
     '</div>';
 
@@ -2260,6 +2280,10 @@ class Component extends DCLogic {
 
   // 開場
   addMsg('bot', '嗨！我是 iFoodMap AI 採購助手 👋\n你可以：\n📷 上傳一張菜單照片，我幫你整理出採購食材清單\n💬 或直接打字描述你需要的食材');
+  body.setAttribute('role', 'log');
+  body.setAttribute('aria-live', 'polite');
+  body.setAttribute('aria-relevant', 'additions');
+  body.setAttribute('aria-atomic', 'false');
 
   // ---- 文字對談 ----
   function sendText() {

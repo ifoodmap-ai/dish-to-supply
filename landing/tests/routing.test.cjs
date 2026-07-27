@@ -174,14 +174,41 @@ test('history controller starts, navigates, reacts to popstate, and stops', () =
 
   controller.navigate('restaurants', { preventDefault() {} });
   assert.deepEqual(fakeWindow.pushes, ['/restaurants']);
-  assert.deepEqual(pages, ['restaurants', 'restaurants']);
+  assert.deepEqual(pages, ['restaurants']);
 
   fakeWindow.location.pathname = '/suppliers';
   fakeWindow.dispatch('popstate');
-  assert.deepEqual(pages, ['restaurants', 'restaurants', 'suppliers']);
+  assert.deepEqual(pages, ['restaurants', 'suppliers']);
 
   controller.stop();
   assert.equal(fakeWindow.listeners.has('popstate'), false);
+});
+
+test('history controller focuses once after real navigation and popstate but not same-route or modified clicks', () => {
+  const fakeWindow = createFakeWindow('/');
+  fakeWindow.history.window = fakeWindow;
+  const pages = [];
+  const focusedPages = [];
+  const controller = createHistoryController({
+    window: fakeWindow,
+    onPage: (page) => pages.push(page),
+    focusPage: (page) => focusedPages.push(page),
+  });
+
+  controller.start();
+  controller.navigate('restaurants', { preventDefault() {} });
+  assert.deepEqual(pages, ['restaurants']);
+  assert.deepEqual(focusedPages, ['restaurants']);
+
+  controller.navigate('restaurants', { preventDefault() {} });
+  controller.navigate('cases', { ctrlKey: true, preventDefault() {} });
+  assert.deepEqual(pages, ['restaurants']);
+  assert.deepEqual(focusedPages, ['restaurants']);
+
+  fakeWindow.location.pathname = '/suppliers';
+  fakeWindow.dispatch('popstate');
+  assert.deepEqual(pages, ['restaurants', 'suppliers']);
+  assert.deepEqual(focusedPages, ['restaurants', 'suppliers']);
 });
 
 test('history controller leaves modified clicks to the browser', () => {
@@ -292,6 +319,11 @@ test('index loads routing before support and wires History API navigation', () =
   assert.ok(routingScriptIndex < supportScriptIndex);
   assert.match(source, /window\.IfmRouting\.pathToPage\(window\.location\.pathname\)/);
   assert.match(source, /window\.IfmRouting\.createHistoryController/);
+  assert.match(source, /focusPage:\s*\(page\)\s*=>\s*this\.focusActivePage\(page\)/);
+  assert.match(source, /focusActivePage\(page\)/);
+  assert.match(source, /querySelectorAll\('h1'\)/);
+  assert.match(source, /target\.setAttribute\('tabindex', '-1'\)/);
+  assert.match(source, /target\.focus\(\{\s*preventScroll:\s*true\s*\}\)/);
   assert.match(source, /this\._routingController\.start\(\)/);
   assert.match(source, /this\._routingController\.stop\(\)/);
   assert.match(source, /this\._routingController\.navigate\(p, event\)/);
@@ -320,8 +352,9 @@ test('public route controls use anchors and navigation exposes accessibility hoo
   assert.match(source, /closeBtn\.setAttribute\('aria-label', '關閉選單'\)/);
   assert.match(source, /window\.IfmRouting\.createDrawerFocusManager/);
   assert.match(source, /focusManager\.handleKeyDown\(e\)/);
-  assert.match(source, /focusManager\.close\(\{ focusTarget: heading \}\)/);
   const mobileNavSource = source.slice(source.indexOf('function navTo(page, event)'));
+  assert.match(mobileNavSource, /focusManager\.close\(\{ restoreFocus: false \}\)/);
+  assert.doesNotMatch(mobileNavSource, /focusManager\.close\(\{ focusTarget:/);
   assert.ok(mobileNavSource.indexOf('if (isModifiedClick(event)) return;') < mobileNavSource.indexOf('event.preventDefault();'));
   assert.ok(mobileNavSource.indexOf('event.preventDefault();') < mobileNavSource.indexOf('hideMenu();'));
 });
