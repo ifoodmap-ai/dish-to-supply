@@ -72,6 +72,13 @@ function assertReducedMotionSkipLink(fragment) {
   assert.match(fragment, /\.skip-link\s*\{[^}]*transition:\s*none[^}]*\}/s);
 }
 
+function assertReducedMotionRevealVisibility(fragment) {
+  assert.match(
+    fragment,
+    /\[data-reveal\]\s*\{[^}]*opacity:\s*1\s*!important[^}]*\}/s,
+  );
+}
+
 function assertRestaurantOverflowRegions(fragment) {
   const labels = [
     '菜單分析示意表，可左右捲動',
@@ -428,6 +435,19 @@ test('skip link disables its transition for reduced-motion users', () => {
     '',
   );
   assert.throws(() => assertReducedMotionSkipLink(withoutSkipRule));
+});
+
+test('reduced-motion users keep reveal content visible without animation', () => {
+  const reducedMotionStart = source.indexOf('@media (prefers-reduced-motion:reduce)');
+  const reducedMotionEnd = source.indexOf('</style>', reducedMotionStart);
+  const reducedMotion = source.slice(reducedMotionStart, reducedMotionEnd);
+  assertReducedMotionRevealVisibility(reducedMotion);
+
+  const withoutVisibleReveal = reducedMotion.replace(
+    /opacity:\s*1\s*!important/,
+    '',
+  );
+  assert.throws(() => assertReducedMotionRevealVisibility(withoutVisibleReveal));
 });
 
 test('only horizontally overflowing restaurant mockups are labelled keyboard regions', () => {
