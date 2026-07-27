@@ -19,6 +19,34 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  # repo 的 migration 有沒有真的套到線上資料庫。
+  # 2026-07-27 發現 restaurant_self_signup 躺在 repo 好幾天沒套,
+  # 前端一直呼叫不存在的 RPC —— 餐廳註冊從頭到尾不可能成功,而且沒人知道。
+  #
+  # 刻意不擋部署:drift 存在時前端可能還有其他該修的東西要出,
+  # 擋住反而綁手綁腳。這裡的目的是「讓你知道」,workflow 變紅 + GitHub 通知就夠了。
+  check-migrations:
+    name: 資料庫 migration 落差檢查
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: 比對 repo migration 與線上已套用紀錄
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          SUPABASE_PROJECT_REF: ${{ secrets.SUPABASE_PROJECT_REF }}
+        run: |
+          if [ -z "$SUPABASE_ACCESS_TOKEN" ]; then
+            echo "::warning::未設定 SUPABASE_ACCESS_TOKEN,跳過 migration 檢查"
+            exit 0
+          fi
+          node scripts/check-migrations.mjs
+
   deploy-main:
     name: 前台 + 餐廳 + 供應商 (dish-to-supply)
     runs-on: ubuntu-latest
