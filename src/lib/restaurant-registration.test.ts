@@ -7,6 +7,7 @@ import {
   RestaurantRegistrationValidationError,
   registerRestaurant,
   validateRestaurantRegistration,
+  REGISTRATION_COMPLETE_PATH,
   type RestaurantRegistrationInput,
 } from "./restaurant-registration";
 
@@ -232,7 +233,17 @@ describe("registerRestaurant", () => {
     expect(signUp).toHaveBeenCalledWith({
       email: "owner@example.com",
       password: VALID_INPUT.password,
-      options: { data: { display_name: "王小明" } },
+      options: {
+        // 確認信要導回 /register/complete,由那一頁完成建檔
+        emailRedirectTo: `${window.location.origin}${REGISTRATION_COMPLETE_PATH}`,
+        data: {
+          display_name: "王小明",
+          // 餐廳資料寄放在 user_metadata,信箱確認後才建檔
+          pending_restaurant_name: "美味餐廳",
+          pending_contact_name: "王小明",
+          pending_contact_phone: "+886 912-345-678",
+        },
+      },
     });
   });
 

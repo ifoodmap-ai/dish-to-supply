@@ -66,8 +66,16 @@ export interface RestaurantRegistrationClient {
       email: string;
       password: string;
       options: {
+        // 點確認信之後要回到哪裡。沒帶的話會用 Supabase 專案的 Site URL,
+        // 那個值曾經是 localhost:3000 —— 信寄到了也是死連結。
+        emailRedirectTo?: string;
         data: {
           display_name: string;
+          // 餐廳資料先寄放在 user_metadata,等信箱確認後由 /register/complete
+          // 讀出來完成 onboarding —— 使用者不用回來重填一次表。
+          pending_restaurant_name?: string;
+          pending_contact_name?: string;
+          pending_contact_phone?: string;
         };
       };
     }): PromiseLike<AuthResult>;
@@ -81,6 +89,14 @@ export interface RestaurantRegistrationClient {
     },
   ): PromiseLike<RpcResult>;
 }
+
+/** 確認信要導回的網址。SSR / 測試環境沒有 window 時回傳相對路徑。 */
+export const REGISTRATION_COMPLETE_PATH = "/register/complete";
+
+export const registrationRedirectUrl = (): string =>
+  typeof window === "undefined"
+    ? REGISTRATION_COMPLETE_PATH
+    : `${window.location.origin}${REGISTRATION_COMPLETE_PATH}`;
 
 const ERROR_MESSAGES: Record<RestaurantRegistrationErrorCode, string> = {
   EMAIL_EXISTS: "請確認你的 Email",
@@ -246,8 +262,12 @@ export const registerRestaurant = async (
       email: input.email.trim().toLowerCase(),
       password: input.password,
       options: {
+        emailRedirectTo: registrationRedirectUrl(),
         data: {
           display_name: input.contactName.trim(),
+          pending_restaurant_name: input.restaurantName.trim(),
+          pending_contact_name: input.contactName.trim(),
+          pending_contact_phone: input.phone.trim(),
         },
       },
     });

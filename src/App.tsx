@@ -16,6 +16,7 @@ import { IS_ADMIN_BUILD } from "@/lib/portal";
 
 import LoginPortal from "./pages/LoginPortal";
 import RestaurantRegisterPage from "./pages/RestaurantRegisterPage";
+import RegisterCompletePage from "./pages/RegisterCompletePage";
 import NotFound from "./pages/NotFound";
 
 // 公開頁(僅前台站)
@@ -132,6 +133,7 @@ const MainRoutes = () => (
 
     {/* 公開頁 */}
     <Route path="/register/restaurant" element={<RestaurantRegisterPage />} />
+    <Route path="/register/complete" element={<RegisterCompletePage />} />
     <Route path="/suppliers" element={<SuppliersPage />} />
     <Route path="/join" element={<JoinSupplierPage />} />
     <Route path="/my" element={<BuyerPortalPage />} />
