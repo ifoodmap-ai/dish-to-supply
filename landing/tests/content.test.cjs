@@ -76,7 +76,7 @@ function assertRestaurantCapabilityOrder(fragment) {
 function assertRestaurantRegistrationCta(fragment) {
   assert.match(
     fragment,
-    /<a[^>]+href="\{\{\s*restaurantRegistrationUrl\s*\}\}"[^>]*>免費建立餐廳帳號<\/a>/,
+    /<a[^>]+href="\{\{\s*restaurantRegistrationUrl\s*\}\}"[^>]*>建立餐廳帳號<\/a>/,
   );
 }
 
@@ -125,7 +125,7 @@ function assertSupplierCapabilityOrder(fragment) {
 
 function assertSupplierApplicationCtas(fragment) {
   const ctas = fragment.match(
-    /<a[^>]+href="\{\{\s*supplierApplicationUrl\s*\}\}"[^>]*>免費申請供應商上架<\/a>/g,
+    /<a[^>]+href="\{\{\s*supplierApplicationUrl\s*\}\}"[^>]*>申請供應商上架<\/a>/g,
   ) || [];
   assert.equal(ctas.length, 2);
 }
@@ -209,10 +209,18 @@ test('homepage presents the approved two-sided platform message and actions', ()
     home,
     /iFoodmap 串接餐廳需求與全台食材供應商，從智慧媒合、報價比較到訂單管理，讓採購與接單都更有效率。/,
   );
-  for (const label of ['餐廳免費註冊', '供應商免費上架']) {
+  for (const label of ['餐廳註冊', '供應商上架']) {
     assert.match(home, new RegExp(label));
   }
   assert.match(header, />登入平台<\/a>/);
+});
+
+test('public copy removes free registration and listing claims but keeps free matching', () => {
+  assert.doesNotMatch(
+    source,
+    /餐廳免費註冊|免費建立餐廳帳號|供應商免費上架|免費申請供應商上架|免費上架申請|不收上架費|零成本/,
+  );
+  assert.match(source, /免費媒合/);
 });
 
 test('product links derive from one canonical product base URL', () => {
@@ -250,8 +258,8 @@ test('homepage gives both roles equal capabilities and real product CTAs', () =>
     assert.match(home, new RegExp(capability));
   }
 
-  assert.match(home, /<a[^>]+href="\{\{\s*restaurantRegistrationUrl\s*\}\}"[^>]*>餐廳免費註冊/);
-  assert.match(home, /<a[^>]+href="\{\{\s*supplierApplicationUrl\s*\}\}"[^>]*>供應商免費上架/);
+  assert.match(home, /<a[^>]+href="\{\{\s*restaurantRegistrationUrl\s*\}\}"[^>]*>餐廳註冊/);
+  assert.match(home, /<a[^>]+href="\{\{\s*supplierApplicationUrl\s*\}\}"[^>]*>供應商上架/);
 });
 
 test('homepage uses semantic labelled product mockups without old scene placeholders', () => {
@@ -352,7 +360,7 @@ test('restaurant solution page follows the approved story and section order', ()
   const workflow = restaurants.indexOf('從菜單與需求，一路走到收貨');
   const capabilities = restaurants.indexOf('id="restaurant-capabilities"');
   const cases = restaurants.indexOf('餐廳採購的實際成果');
-  const finalCta = restaurants.lastIndexOf('免費建立餐廳帳號');
+  const finalCta = restaurants.lastIndexOf('建立餐廳帳號');
   assert.ok(hero >= 0 && pains > hero);
   assert.ok(workflow > pains && capabilities > workflow);
   assert.ok(cases > capabilities && finalCta > cases);
@@ -433,7 +441,7 @@ test('restaurant content guards fail if capabilities or registration CTA are rem
     '',
   );
   const withoutRegistrationCta = restaurants.replace(
-    /<a[^>]+href="\{\{\s*restaurantRegistrationUrl\s*\}\}"[^>]*>免費建立餐廳帳號<\/a>/g,
+    /<a[^>]+href="\{\{\s*restaurantRegistrationUrl\s*\}\}"[^>]*>建立餐廳帳號<\/a>/g,
     '',
   );
   assert.throws(() => assertRestaurantCapabilities(withoutCapabilities));
@@ -521,7 +529,7 @@ test('supplier solution page follows the approved story and uses two canonical j
   const workflow = suppliers.indexOf('從被看見，到報價、接單與持續經營');
   const capabilities = suppliers.indexOf('id="supplier-capabilities"');
   const outcomes = suppliers.indexOf('供應商經營的成果參考');
-  const finalCta = suppliers.lastIndexOf('免費申請供應商上架');
+  const finalCta = suppliers.lastIndexOf('申請供應商上架');
   assert.ok(hero >= 0 && pains > hero);
   assert.ok(workflow > pains && capabilities > workflow);
   assert.ok(outcomes > capabilities && finalCta > outcomes);
@@ -605,7 +613,7 @@ test('supplier content guards fail if capabilities or either join action are rem
     '',
   );
   const withoutFirstCta = suppliers.replace(
-    /<a[^>]+href="\{\{\s*supplierApplicationUrl\s*\}\}"[^>]*>免費申請供應商上架<\/a>/,
+    /<a[^>]+href="\{\{\s*supplierApplicationUrl\s*\}\}"[^>]*>申請供應商上架<\/a>/,
     '',
   );
   assert.throws(() => assertSupplierCapabilities(withoutCapabilities));
