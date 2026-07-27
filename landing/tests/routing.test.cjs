@@ -196,12 +196,15 @@ test('history controller focuses once after real navigation and popstate but not
   });
 
   controller.start();
-  controller.navigate('restaurants', { preventDefault() {} });
+  const didNavigate = controller.navigate('restaurants', { preventDefault() {} });
+  assert.equal(didNavigate, true);
   assert.deepEqual(pages, ['restaurants']);
   assert.deepEqual(focusedPages, ['restaurants']);
 
-  controller.navigate('restaurants', { preventDefault() {} });
-  controller.navigate('cases', { ctrlKey: true, preventDefault() {} });
+  const didNavigateSameRoute = controller.navigate('restaurants', { preventDefault() {} });
+  const didNavigateModified = controller.navigate('cases', { ctrlKey: true, preventDefault() {} });
+  assert.equal(didNavigateSameRoute, false);
+  assert.equal(didNavigateModified, false);
   assert.deepEqual(pages, ['restaurants']);
   assert.deepEqual(focusedPages, ['restaurants']);
 
@@ -352,10 +355,14 @@ test('public route controls use anchors and navigation exposes accessibility hoo
   assert.match(source, /closeBtn\.setAttribute\('aria-label', '關閉選單'\)/);
   assert.match(source, /window\.IfmRouting\.createDrawerFocusManager/);
   assert.match(source, /focusManager\.handleKeyDown\(e\)/);
-  const mobileNavSource = source.slice(source.indexOf('function navTo(page, event)'));
-  assert.match(mobileNavSource, /focusManager\.close\(\{ restoreFocus: false \}\)/);
+  const mobileNavStart = source.indexOf('function navTo(page, event)');
+  const mobileNavSource = source.slice(mobileNavStart, source.indexOf('MOBILE_LINKS.forEach', mobileNavStart));
+  assert.match(mobileNavSource, /var isSameRoute = window\.IfmRouting\.pathToPage\(window\.location\.pathname\) === page/);
+  assert.match(mobileNavSource, /focusManager\.close\(\{ restoreFocus: isSameRoute \}\)/);
+  assert.doesNotMatch(mobileNavSource, /focusManager\.close\(\{ restoreFocus: false \}\)/);
   assert.doesNotMatch(mobileNavSource, /focusManager\.close\(\{ focusTarget:/);
   assert.ok(mobileNavSource.indexOf('if (isModifiedClick(event)) return;') < mobileNavSource.indexOf('event.preventDefault();'));
+  assert.ok(mobileNavSource.indexOf('var isSameRoute =') < mobileNavSource.indexOf('if (target) target.click();'));
   assert.ok(mobileNavSource.indexOf('event.preventDefault();') < mobileNavSource.indexOf('hideMenu();'));
 });
 

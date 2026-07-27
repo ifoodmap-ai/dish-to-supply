@@ -2016,12 +2016,13 @@ class Component extends DCLogic {
     if (isModifiedClick(event)) return;
     event.preventDefault();
     var path = window.IfmRouting.pageToPath(page);
+    var isSameRoute = window.IfmRouting.pathToPage(window.location.pathname) === page;
     var header = root.querySelector('.m-header') || root;
     var target = header.querySelector('a[href="' + path + '"]');
     if (target) target.click();
     else window.location.href = path;
     hideMenu();
-    focusManager.close({ restoreFocus: false });
+    focusManager.close({ restoreFocus: isSameRoute });
     window.scrollTo(0, 0);
   }
 

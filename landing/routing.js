@@ -90,7 +90,7 @@
         if (event && typeof event.preventDefault === 'function') event.preventDefault();
 
         var path = pageToPath(page);
-        if (normalizePath(win.location.pathname) === path) return true;
+        if (normalizePath(win.location.pathname) === path) return false;
         win.history.pushState({}, '', path);
         syncMetadata(win);
         renderPage(page, true);
