@@ -61,7 +61,9 @@ const translations = {
     
     // Ingredient Analysis
     'analysis.title': 'Identified Ingredients',
+    'analysis.subtitle': 'AI has identified the following ingredient requirements',
     'analysis.find': 'Find Suppliers',
+    'chat.online': 'Online',
     
     // Supplier Match
     'supplier.title': 'Recommended Suppliers',
@@ -170,6 +172,8 @@ const translations = {
     
     // Ingredient Analysis
     'analysis.title': '已識別食材',
+    'analysis.subtitle': 'AI 從你的菜單推算出這些要採購的食材',
+    'chat.online': '線上',
     'analysis.find': '尋找供應商',
     
     // Supplier Match

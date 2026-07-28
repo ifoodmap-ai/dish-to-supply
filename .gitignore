@@ -27,3 +27,6 @@ supabase/.temp/
 .vercel
 .claude/
 .worktrees/
+
+# demo 影片的中間產物與成片(腳本進 git,產物不進)
+demo-video-out/

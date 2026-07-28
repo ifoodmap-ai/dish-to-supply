@@ -137,7 +137,7 @@ const Chatbot = ({ onRequirementsSubmit }: ChatbotProps) => {
                 </div>
                 <div>
                   <h3 className="font-semibold">{t('chat.title')}</h3>
-                  <p className="text-xs text-muted-foreground">Online</p>
+                  <p className="text-xs text-muted-foreground">{t('chat.online')}</p>
                 </div>
               </div>
             </div>

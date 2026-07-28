@@ -22,7 +22,7 @@ const IngredientAnalysis = ({ ingredients, onFindSuppliers }: IngredientAnalysis
               {t('analysis.title')}
             </h2>
             <p className="text-xl text-muted-foreground">
-              AI has identified the following ingredient requirements
+              {t('analysis.subtitle')}
             </p>
           </div>
 

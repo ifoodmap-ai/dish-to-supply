@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<title>好味小館 菜單(demo 素材)</title>
+<style>
+  /* 給 capture.py 截成 PNG 當作「上傳的菜單照片」。
+     刻意做成貼在牆上的手寫感菜單,而不是漂亮的印刷品 —— 這樣才像真的餐廳菜單,
+     也才看得出 AI 是真的在辨識而不是讀我們自己排好的結構化資料。 */
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    width: 900px; height: 1200px;
+    background: #fdfaf2;
+    font-family: "Noto Sans CJK TC", "PingFang TC", sans-serif;
+    padding: 62px 70px;
+    color: #2b2117;
+  }
+  .head { text-align: center; border-bottom: 4px double #b3803a; padding-bottom: 26px; margin-bottom: 34px; }
+  .head h1 { font-size: 62px; letter-spacing: .18em; font-weight: 700; }
+  .head .sub { margin-top: 12px; font-size: 22px; color: #8a7355; letter-spacing: .3em; }
+
+  .sec { font-size: 27px; color: #fff; background: #7d5a2e; display: inline-block;
+         padding: 6px 22px; border-radius: 3px; margin: 30px 0 16px; letter-spacing: .12em; }
+  ul { list-style: none; }
+  li { display: flex; justify-content: space-between; align-items: baseline;
+       font-size: 31px; padding: 13px 4px; border-bottom: 1px dotted #cdbb9c; }
+  li .n { font-weight: 500; }
+  li .p { font-size: 27px; color: #8a6a3c; }
+  .foot { margin-top: 40px; text-align: center; font-size: 20px; color: #9c8a6c; letter-spacing: .1em; }
+</style>
+</head>
+<body>
+  <div class="head">
+    <h1>好味小館</h1>
+    <div class="sub">民生本店 · 中式熱炒</div>
+  </div>
+
+  <div class="sec">熱炒</div>
+  <ul>
+    <li><span class="n">宮保雞丁</span><span class="p">260</span></li>
+    <li><span class="n">蒜泥白肉</span><span class="p">240</span></li>
+    <li><span class="n">蛤蜊絲瓜</span><span class="p">180</span></li>
+    <li><span class="n">三杯雞</span><span class="p">280</span></li>
+  </ul>
+
+  <div class="sec">飯 · 麵</div>
+  <ul>
+    <li><span class="n">紅燒牛腩飯</span><span class="p">220</span></li>
+    <li><span class="n">滷肉飯</span><span class="p">60</span></li>
+  </ul>
+
+  <div class="sec">青菜 · 湯品</div>
+  <ul>
+    <li><span class="n">清炒高麗菜</span><span class="p">120</span></li>
+    <li><span class="n">酸辣湯</span><span class="p">80</span></li>
+    <li><span class="n">蛤蜊湯</span><span class="p">100</span></li>
+  </ul>
+
+  <div class="foot">— 本日供應 · 售完為止 —</div>
+</body>
+</html>
