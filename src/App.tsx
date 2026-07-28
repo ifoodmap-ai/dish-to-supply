@@ -17,6 +17,7 @@ import { IS_ADMIN_BUILD } from "@/lib/portal";
 import LoginPortal from "./pages/LoginPortal";
 import RestaurantRegisterPage from "./pages/RestaurantRegisterPage";
 import RegisterCompletePage from "./pages/RegisterCompletePage";
+import ResetPasswordPage from "./pages/ResetPasswordPage";
 import NotFound from "./pages/NotFound";
 
 // 公開頁(僅前台站)
@@ -92,6 +93,7 @@ const queryClient = new QueryClient();
 const AdminRoutes = () => (
   <Routes>
     <Route path="/" element={<LoginPortal />} />
+    <Route path="/reset-password" element={<ResetPasswordPage />} />
     <Route path="/admin" element={<AdminRoute><AdminLayout /></AdminRoute>}>
       <Route index element={<AdminDashboard />} />
       <Route path="pipeline" element={<AdminPipelinePage />} />
@@ -128,6 +130,7 @@ const MainRoutes = () => (
   <Routes>
     {/* 登入首頁 —— 登出後看到的第一個畫面 */}
     <Route path="/" element={<LoginPortal />} />
+    <Route path="/reset-password" element={<ResetPasswordPage />} />
     <Route path="/auth" element={<Navigate to="/" replace />} />
     <Route path="/login" element={<Navigate to="/" replace />} />
 

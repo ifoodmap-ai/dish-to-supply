@@ -281,15 +281,20 @@ const LoginPortal = () => {
                   </div>
                 </div>
 
-                <div className="flex items-center gap-2">
-                  <Checkbox
-                    id="remember"
-                    checked={remember}
-                    onCheckedChange={(v) => setRemember(v === true)}
-                  />
-                  <Label htmlFor="remember" className="text-sm font-normal text-slate-600 cursor-pointer">
-                    記住我的帳號
-                  </Label>
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Checkbox
+                      id="remember"
+                      checked={remember}
+                      onCheckedChange={(v) => setRemember(v === true)}
+                    />
+                    <Label htmlFor="remember" className="text-sm font-normal text-slate-600 cursor-pointer">
+                      記住我的帳號
+                    </Label>
+                  </div>
+                  <Link to="/reset-password" className="text-sm text-emerald-600 hover:underline">
+                    忘記密碼?
+                  </Link>
                 </div>
 
                 <Button type="submit" className="w-full" disabled={loading}>

@@ -297,6 +297,10 @@ src/pages/supplier/SupplierShipmentsPage.tsx  (2 處)
 | 3 | 🔴 **高** | `site_url` 還是 `http://localhost:3000` —— 就算信寄到,連結也是死的 | 改成正式站 + redirect 白名單 |
 | 4 | 🟠 **中** | `order_reviews` 匿名可讀,洩漏「哪家餐廳跟哪家供應商買」 | 收斂為當事雙方 + admin |
 | 5 | 🟠 **中** | `price_history` 匿名可讀 459 筆逐項報價 | 收斂為登入後可讀 |
+| 6 | 🔴 **高** | **全站沒有「忘記密碼」** —— 使用者忘記密碼就永久進不去 | 新增 `/reset-password`(申請 + 設定新密碼兩種情境) |
+| 7 | 🟠 **中** | 供應商核准後把明文臨時密碼顯示在 admin 畫面,要人工用 LINE 轉達 | 改為寄邀請信讓供應商自己設密碼;寄信失敗才退回臨時密碼 |
+| 8 | 🟠 **中** | **零業務通知** —— 供應商不知道有新單、餐廳不知道貨到了 | 新增 `notify` Edge Function + `order_events` trigger |
+| 9 | 🟠 **中** | **訂單完全刪不掉** —— append-only 護欄讓 CASCADE 刪除失敗,連 admin 都清不掉誤建資料 | 新增 `admin_delete_order()` RPC(交易內旗標放行,直接 DELETE 仍被擋) |
 
 **另外修復的流程缺陷**:確認信點完之後餐廳資料不會自動建立,
 原設計要求使用者「回註冊頁再填一次表」—— 已改為 `/register/complete` 自動完成。

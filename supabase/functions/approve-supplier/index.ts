@@ -56,17 +56,40 @@ Deno.serve(async (req) => {
   if (appRow.status === "approved") return json({ message: "Application already approved" }, 409);
 
   // --- 1) create (or reuse) the auth user with role=supplier ---
+  //
+  // 優先寄「邀請信」讓供應商自己設密碼 —— 原本是產生臨時密碼顯示在 admin 畫面上,
+  // 要人工用 LINE/電話轉達,既麻煩又不安全(明文密碼在通訊軟體裡飄)。
+  // 寄信失敗時才退回臨時密碼,admin 畫面仍看得到,不會卡住核准流程。
+  const siteUrl = Deno.env.get("SITE_URL") ?? "https://dish-to-supply.vercel.app";
   const tempPassword = genTempPassword();
   let userId: string | null = null;
   let createdNew = false;
-  const created = await supabase.auth.admin.createUser({
-    email: appRow.contact_email,
-    password: tempPassword,
-    email_confirm: true,
-    app_metadata: { role: "supplier" },
-    user_metadata: { display_name: appRow.contact_name ?? appRow.company_name }
+  let invited = false;
+
+  const invite = await supabase.auth.admin.inviteUserByEmail(appRow.contact_email, {
+    redirectTo: `${siteUrl}/reset-password`,
+    data: { display_name: appRow.contact_name ?? appRow.company_name }
   });
+
+  if (!invite.error && invite.data?.user) {
+    userId = invite.data.user.id;
+    createdNew = true;
+    invited = true;
+    // inviteUserByEmail 不接受 app_metadata,角色要另外補上
+    await supabase.auth.admin.updateUserById(userId, { app_metadata: { role: "supplier" } });
+  }
+
+  const created = invited
+    ? { error: null, data: { user: { id: userId! } } }
+    : await supabase.auth.admin.createUser({
+        email: appRow.contact_email,
+        password: tempPassword,
+        email_confirm: true,
+        app_metadata: { role: "supplier" },
+        user_metadata: { display_name: appRow.contact_name ?? appRow.company_name }
+      });
   if (created.error) {
+    // 帳號已存在(例如之前申請過)→ 找出來沿用,不重複建立
     const { data: list } = await supabase.auth.admin.listUsers({ page: 1, perPage: 200 });
     const existing = list?.users?.find(
       (u) => u.email?.toLowerCase() === String(appRow.contact_email).toLowerCase()
@@ -74,7 +97,7 @@ Deno.serve(async (req) => {
     if (!existing) return json({ message: "Failed to create supplier user", details: created.error.message }, 500);
     userId = existing.id;
     await supabase.auth.admin.updateUserById(userId, { app_metadata: { role: "supplier" } });
-  } else {
+  } else if (!invited) {
     userId = created.data.user.id;
     createdNew = true;
   }
@@ -112,7 +135,9 @@ Deno.serve(async (req) => {
       supplier_id: supplier.id,
       supplier_name: supplier.name,
       login_email: appRow.contact_email,
-      temp_password: createdNew ? tempPassword : null
+      // 有寄出邀請信就不回傳密碼 —— admin 不需要、也不該看到
+      invited,
+      temp_password: invited ? null : (createdNew ? tempPassword : null)
     }
   });
 });

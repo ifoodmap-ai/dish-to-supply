@@ -54,6 +54,8 @@ interface ApproveResult {
   supplier_name: string;
   login_email: string;
   temp_password: string | null;
+  /** true = 已寄邀請信,供應商自己設密碼;false = 寄信失敗,退回臨時密碼 */
+  invited?: boolean;
 }
 
 const statusBadgeClass: Record<string, string> = {
@@ -191,7 +193,9 @@ const AdminApplicationsPage = () => {
 
   const copyCredentials = async () => {
     if (!credentials) return;
-    const text = `登入帳號：${credentials.login_email}\n臨時密碼：${credentials.temp_password ?? '（無，此帳號已存在）'}`;
+    const text = credentials.invited
+      ? `登入帳號：${credentials.login_email}\n（已寄出邀請信，請供應商依信中連結自行設定密碼）`
+      : `登入帳號：${credentials.login_email}\n臨時密碼：${credentials.temp_password ?? '（無，此帳號已存在）'}`;
     try {
       await navigator.clipboard.writeText(text);
       setCopied(true);
@@ -410,9 +414,13 @@ const AdminApplicationsPage = () => {
       >
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>供應商帳號已建立</DialogTitle>
+            <DialogTitle>
+              {credentials?.invited ? '已寄出邀請信' : '供應商帳號已建立'}
+            </DialogTitle>
             <DialogDescription>
-              請將帳密轉交供應商；此密碼僅顯示一次，關閉視窗後將無法再次查看。
+              {credentials?.invited
+                ? '供應商會收到一封信，點連結自行設定密碼即可登入 —— 你不需要轉達任何密碼。'
+                : '寄信失敗，改用臨時密碼。此密碼僅顯示一次，關閉視窗後無法再查看，請盡快轉交供應商。'}
             </DialogDescription>
           </DialogHeader>
           <div className="rounded-md border border-slate-200 bg-slate-50 p-4 space-y-2 text-sm">
@@ -428,12 +436,19 @@ const AdminApplicationsPage = () => {
                 {credentials?.login_email}
               </span>
             </div>
-            <div className="flex justify-between gap-4">
-              <span className="text-slate-500 shrink-0">臨時密碼</span>
-              <span className="font-mono font-medium text-slate-800 text-right break-all">
-                {credentials?.temp_password ?? '（無，此帳號已存在）'}
-              </span>
-            </div>
+            {credentials?.invited ? (
+              <div className="flex justify-between gap-4">
+                <span className="text-slate-500 shrink-0">密碼</span>
+                <span className="text-emerald-700 text-right">由供應商自行設定</span>
+              </div>
+            ) : (
+              <div className="flex justify-between gap-4">
+                <span className="text-slate-500 shrink-0">臨時密碼</span>
+                <span className="font-mono font-medium text-slate-800 text-right break-all">
+                  {credentials?.temp_password ?? '（無，此帳號已存在）'}
+                </span>
+              </div>
+            )}
           </div>
           <DialogFooter>
             <Button
@@ -442,13 +457,13 @@ const AdminApplicationsPage = () => {
               className="gap-1.5"
             >
               {copied ? <Check className="h-4 w-4 text-emerald-600" /> : <Copy className="h-4 w-4" />}
-              {copied ? '已複製' : '複製帳密'}
+              {copied ? '已複製' : credentials?.invited ? '複製登入帳號' : '複製帳密'}
             </Button>
             <Button
               className="bg-emerald-600 hover:bg-emerald-700 text-white"
               onClick={() => setCredentials(null)}
             >
-              我已妥善保存
+              {credentials?.invited ? '知道了' : '我已妥善保存'}
             </Button>
           </DialogFooter>
         </DialogContent>
