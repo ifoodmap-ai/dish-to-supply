@@ -27,15 +27,16 @@ rm -f "$WORK"/seg*.mp4
 # 分鏡:frame|秒數|字幕(- 表示不加)|運鏡焦點(center/top)
 SEGMENTS=(
   "card-intro|5.0|-|still"
-  "01-login|5.5|cap1|center"
-  "02-analyze|7.0|cap2|top"
-  "03-menu|6.5|cap3|top"
-  "04-orders|6.5|cap4|center"
-  "05-receive|7.0|cap4b|center"
-  "06-leads|7.0|cap5|top"
-  "07-supplier-dash|5.5|cap5b|top"
-  "08-pipeline|6.5|cap6|top"
-  "09-timeline|6.5|cap6b|top"
+  "01-login|5.0|cap1|center"
+  "02-analyze|5.0|cap2|top"
+  "02b-analyze-result|6.5|cap2b|top"
+  "03-menu|6.0|cap3|top"
+  "04-orders|6.0|cap4|center"
+  "05-receive|6.5|cap4b|center"
+  "06-leads|6.5|cap5|top"
+  "07-supplier-dash|5.0|cap5b|top"
+  "08-pipeline|6.0|cap6|top"
+  "09-timeline|6.0|cap6b|top"
   "card-outro|6.0|-|still"
 )
 

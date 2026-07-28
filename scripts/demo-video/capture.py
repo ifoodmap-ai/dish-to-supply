@@ -253,17 +253,19 @@ def capture_admin(page: Page) -> None:
 
     log("平台:交易全流程看板…")
     goto(page, f"{ADMIN}/admin/pipeline", wait=3.4)
+    # 看板是橫向捲動的,11 個狀態欄比 1920 寬 —— 不縮小的話右半邊(含「待收貨」)
+    # 整個被切掉,而下半頁又是空的。縮到 0.8 剛好整塊進畫面。
+    page.evaluate("() => { document.body.style.zoom = '0.8'; }")
+    time.sleep(1.0)
     shot(page, "08-pipeline")
+    page.evaluate("() => { document.body.style.zoom = ''; }")
 
     log("平台:訂單履歷…")
-    # 點看板上任一張卡就會進履歷頁
-    page.evaluate("""() => {
-      const b = Array.from(document.querySelectorAll('button'))
-        .find(x => /^#[0-9a-f]{8}/i.test(x.innerText.trim()));
-      if (b) b.click();
-    }""")
-    time.sleep(3.2)
-    dismiss_toasts(page)
+    # 刻意指定一張「有完整履歷」的單。
+    # 不要隨便點看板第一張 —— 那是 2026-06 留下的無主舊單(沒有餐廳、沒有金額、
+    # 只有一筆事件、還掛著紅色「停留 49 天」),拿來講「全程可追」剛好相反。
+    order_id = os.environ.get("DEMO_TIMELINE_ORDER", "a1e337b0-de8c-4e65-b22a-ca76edcf4143")
+    goto(page, f"{ADMIN}/admin/orders/{order_id}/timeline", wait=3.4)
     shot(page, "09-timeline")
 
 
