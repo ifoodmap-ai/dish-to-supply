@@ -238,8 +238,13 @@ const getInitialLanguage = (): Language => {
   } catch {
     // ignore
   }
-  // 台灣客群:預設繁中(僅明確英文語系的瀏覽器給英文)
-  return navigator.language?.toLowerCase().startsWith('en') ? 'en' : 'zh';
+  // 一律預設繁中,不看 navigator.language。
+  //
+  // 原本會對 en-* 瀏覽器自動切英文,但三個後台的頁面都是硬寫繁中、只有少數
+  // 沿用自舊行銷頁的元件(MenuUpload / Chatbot / IngredientAnalysis)走 t(),
+  // 結果英文語系筆電打開「AI 菜單分析」會變成中英夾雜 —— 對台灣客戶反而更糟。
+  // 要英文的人自己按切換,選擇會記在 localStorage。
+  return 'zh';
 };
 
 export const LanguageProvider = ({ children }: { children: ReactNode }) => {
