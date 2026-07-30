@@ -101,7 +101,8 @@ const RestaurantLayout = () => {
         </div>
       )}
 
-      <div className="flex-1 md:pl-64 w-full">
+      {/* min-w-0 同 AdminLayout:讓寬表格自己橫向捲,不要撐寬整頁 */}
+      <div className="flex-1 min-w-0 md:pl-64 w-full">
         <header className="md:hidden flex items-center justify-between px-4 py-3 bg-emerald-950 text-white">
           <span className="font-semibold truncate">{account.restaurant_name}</span>
           <Button

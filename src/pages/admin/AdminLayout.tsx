@@ -154,7 +154,11 @@ const AdminLayout = () => {
       </div>
 
       {/* Main content */}
-      <div className="flex flex-col flex-1 md:pl-64">
+      {/* min-w-0 是必要的,不是保險:flex 子元素預設 min-width:auto,會被內容
+          撐開而不是縮到容器寬。少了它,底下那些已經寫了 overflow-x-auto 的
+          寬表格與看板不會自己捲,而是把整頁撐寬(實測 /admin/pipeline 在 390px
+          螢幕上撐到 3376px)。 */}
+      <div className="flex flex-col flex-1 min-w-0 md:pl-64">
         {/* Mobile topbar */}
         <div className="flex items-center gap-3 px-4 py-3 bg-white border-b border-slate-200 md:hidden">
           <Button

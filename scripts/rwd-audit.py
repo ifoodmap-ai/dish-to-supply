@@ -83,8 +83,12 @@ PROBE = """
 }
 """
 
-# 主內容至少要佔視窗這個比例。手機上留 8% 給 padding 已經很寬鬆了,
-# 低於這個數字就是被某個固定寬度的東西擠掉。
+# Tailwind 的 md 斷點。到這個寬度以上,桌機側邊欄「本來就該」佔位,
+# 主內容比視窗窄是正確行為(768 - 256 = 512),不能算壓扁。
+MD_BREAKPOINT = 768
+
+# 低於 md 時,主內容至少要佔視窗這個比例。留 8% 給 padding 已經很寬鬆,
+# 再低就是被某個固定寬度的東西擠掉了。
 MIN_MAIN_RATIO = 0.80
 
 
@@ -165,7 +169,7 @@ def audit(portal: str, widths: list[int]) -> list[dict]:
                     continue
 
                 squeezed = (r["mainRatio"] is not None
-                            and width < 900
+                            and width < MD_BREAKPOINT
                             and r["mainRatio"] < MIN_MAIN_RATIO)
                 rows.append({
                     "portal": portal, "width": width, "route": route or "/",
@@ -189,7 +193,7 @@ def audit(portal: str, widths: list[int]) -> list[dict]:
 def main() -> int:
     args = sys.argv[1:]
     widths = [int(a.split("=", 1)[1] if "=" in a else args[args.index(a) + 1])
-              for a in args if a.startswith("--width")] or [390, 768]
+              for a in args if a.startswith("--width")] or [390, 768, 1024]
     only = next((a.split("=", 1)[1] for a in args if a.startswith("--portal=")), None)
     portals = [only] if only else ["restaurant", "supplier", "admin"]
 
