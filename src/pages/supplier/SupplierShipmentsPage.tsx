@@ -65,10 +65,12 @@ export default function SupplierShipmentsPage() {
             <tbody>
               {shipments.map((s) => (
                 <tr key={s.id} className="border-b border-gray-100 last:border-0 hover:bg-gray-50">
-                  <td className="px-5 py-3 text-gray-700">
+                  {/* 時間與編號不折行 —— 橫向捲的表格欄寬會被壓縮,
+                      折了之後「2026/7/28 下午8:12:03」會變成好幾行 */}
+                  <td className="px-5 py-3 text-gray-700 whitespace-nowrap">
                     {new Date(s.shipped_at).toLocaleString("zh-TW")}
                   </td>
-                  <td className="px-5 py-3 font-mono text-gray-500 text-xs">
+                  <td className="px-5 py-3 font-mono text-gray-500 text-xs whitespace-nowrap">
                     #{s.order_id.slice(0, 8).toUpperCase()}
                   </td>
                   <td className="px-5 py-3 text-gray-500 text-xs">

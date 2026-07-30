@@ -208,8 +208,10 @@ export default function SupplierCatalogPage() {
                     <p className="font-medium text-gray-800">{s.name}</p>
                     {s.description && <p className="text-xs text-gray-400 truncate max-w-xs">{s.description}</p>}
                   </td>
-                  <td className="px-5 py-3 text-gray-600">{s.category ?? '—'}</td>
-                  <td className="px-5 py-3 text-gray-600">
+                  {/* whitespace-nowrap:橫向捲的表格裡欄寬會被壓縮,
+                      「乾貨」「海鮮」這種短詞會被折成一個字一行 */}
+                  <td className="px-5 py-3 text-gray-600 whitespace-nowrap">{s.category ?? '—'}</td>
+                  <td className="px-5 py-3 text-gray-600 whitespace-nowrap">
                     {s.pack_size ?? '—'}
                     {s.sku && <span className="text-gray-400 ml-1">· {s.sku}</span>}
                   </td>
