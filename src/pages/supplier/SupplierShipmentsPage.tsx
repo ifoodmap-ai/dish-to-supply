@@ -51,8 +51,9 @@ export default function SupplierShipmentsPage() {
           <p>暫無出貨紀錄</p>
         </div>
       ) : (
-        <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
-          <table className="w-full text-sm">
+        <div className="bg-white rounded-xl border border-gray-200 overflow-hidden overflow-x-auto">
+          {/* 同 SupplierCatalogPage:表格自己橫向捲,不要撐寬整頁 */}
+          <table className="w-full text-sm min-w-[640px]">
             <thead className="bg-gray-50 border-b border-gray-200">
               <tr>
                 <th className="text-left px-5 py-3 font-medium text-gray-600">出貨時間</th>
