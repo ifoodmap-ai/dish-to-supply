@@ -12,7 +12,12 @@ const TabsList = React.forwardRef<
   <TabsPrimitive.List
     ref={ref}
     className={cn(
-      "inline-flex h-10 items-center justify-center rounded-md bg-muted p-1 text-muted-foreground",
+      // max-w-full + overflow-x-auto:籤太多時自己橫向捲,不要把整頁撐寬。
+      // TabsList 是 inline-flex 又不換行,原本只要籤的總寬超過視窗
+      // (實測 /admin/disputes 五個籤在 390px 上是 397px)整個頁面就跟著溢出。
+      // 放在元件層而不是各頁包一層 —— 現在 10 個頁面用到 Tabs,
+      // 而且以後多加一個籤不會又踩同一個雷。
+      "inline-flex h-10 max-w-full items-center justify-center overflow-x-auto rounded-md bg-muted p-1 text-muted-foreground",
       className,
     )}
     {...props}
