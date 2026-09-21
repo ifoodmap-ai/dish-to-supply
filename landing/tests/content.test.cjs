@@ -39,16 +39,12 @@ const approvedCases = [
 ];
 
 function assertHomeMetricsAndWorkflow(fragment) {
-  for (const metric of ['3,000+', '2,500+', '28 類', '24hr']) {
-    assert.match(fragment, new RegExp(metric.replace('+', '\\+')));
+  // 首頁的統計數字與六步流程是資料陣列(渲染時才變成文字),所以對照元件原始碼
+  for (const metric of ["target: 3000, suffix: '+'", "target: 12000, suffix: '+'", "target: 28", "text: '全台'"]) {
+    assert.ok(fragment.includes(metric), `missing metric ${metric}`);
   }
-  for (const step of [
-    '餐廳提出需求',
-    'AI 標準化與媒合',
-    '供應商線上報價',
-    '完成採購與履歷',
-  ]) {
-    assert.match(fragment, new RegExp(`<h3[^>]*>${step}<\\/h3>`));
+  for (const step of ['填需求', '系統媒合', '收到報價', '比較洽談', '下單進貨', '雙邊評價']) {
+    assert.match(fragment, new RegExp(`title: '${step}'`));
   }
 }
 
@@ -149,8 +145,8 @@ function assertSupplierOverflowRegions(fragment) {
 }
 
 function assertMobileLogin(fragment) {
-  assert.match(fragment, /login\.href = window\.IFM_PRODUCT_BASE_URL \+ '\/'/);
-  assert.match(fragment, /login\.textContent = '登入平台'/);
+  // 登入平台不再放 header,改在 footer;手機選單則帶主要 CTA
+  assert.match(fragment, /href="\{\{\s*loginUrl\s*\}\}"[^>]*>登入平台<\/a>/);
 }
 
 function assertAiDialogLifecycle(fragment) {
@@ -201,18 +197,31 @@ function contrastRatio(foreground, background) {
   return (lighter + 0.05) / (darker + 0.05);
 }
 
-test('homepage presents the approved two-sided platform message and actions', () => {
+const componentStart = source.indexOf('<script type="text/x-dc" data-dc-script>');
+const componentEnd = source.indexOf('</script>', componentStart);
+const component = source.slice(componentStart, componentEnd);
+const mobileMenuStart = header.indexOf('<sc-if value="{{ menuOpen }}">');
+const mobileMenu = header.slice(mobileMenuStart, header.indexOf('</sc-if>', mobileMenuStart));
+
+test('homepage presents the design-approved hero: rotating headline, subtitle, search and promises', () => {
   assert.ok(homeStart >= 0 && homeEnd > homeStart);
-  assert.match(home, />AI 驅動的 B2B 食材採購平台</);
-  assert.match(home, /<h1[^>]*>讓每一筆食材採購，都更快找到對的人<\/h1>/);
-  assert.match(
-    home,
-    /iFoodmap 串接餐廳需求與全台食材供應商，從智慧媒合、報價比較到訂單管理，讓採購與接單都更有效率。/,
-  );
-  for (const label of ['餐廳註冊', '供應商上架']) {
-    assert.match(home, new RegExp(label));
-  }
-  assert.match(header, />登入平台<\/a>/);
+  assert.match(home, /B2B MATCHING ENGINE/);
+  assert.match(home, /<h1[^>]*>\s*免費找到<span[^>]*>\{\{\s*rotating\s*\}\}<\/span>\s*<\/h1>/);
+  assert.match(component, /const phrases = \['所有食材', '對的供應商', '第二家報價', '產地直送的好貨'\]/);
+  assert.match(home, /餐廳、團膳、學校、團購主都適用。<br>填一次需求，供應商主動來找你。/);
+  assert.match(home, /placeholder="搜尋食材，例如：有機葉菜、火鍋肉片"/);
+  assert.match(component, /heroPromises: \['完全免費', '成交不抽成', '平均 4 小時有回覆'\]/);
+  assert.match(component, /hotTags: \['蔬菜', '水果', '豬肉', '牛肉', '火鍋料', '米麵'\]/);
+  assert.match(header, /<a[^>]+href="\/contact"[^>]*>填寫食材需求<\/a>/);
+});
+
+test('homepage hero draws the world map with d3 centred on Taiwan', () => {
+  assert.match(source, /<script src="https:\/\/unpkg\.com\/d3@7\.9\.0\/dist\/d3\.min\.js"[^>]*integrity="sha384-[^"]+"/);
+  assert.match(source, /<script src="https:\/\/unpkg\.com\/topojson-client@3\.1\.0\/dist\/topojson-client\.min\.js"[^>]*integrity="sha384-[^"]+"/);
+  assert.match(home, /<div ref="\{\{\s*mapRef\s*\}\}" aria-hidden="true"/);
+  assert.match(component, /world-atlas@2\.0\.2\/countries-110m\.json/);
+  assert.match(component, /geoNaturalEarth1\(\)\.rotate\(\[-121, 0\]\)/);
+  assert.match(component, /catch \(e\) \{/); // 地圖載不到不能讓頁面掛掉
 });
 
 test('public copy removes free registration and listing claims but keeps free matching', () => {
@@ -220,7 +229,7 @@ test('public copy removes free registration and listing claims but keeps free ma
     source,
     /餐廳免費註冊|免費建立餐廳帳號|供應商免費上架|免費申請供應商上架|免費上架申請|不收上架費|零成本/,
   );
-  assert.match(source, /免費媒合/);
+  assert.match(source, /免費媒合|免費找到/);
 });
 
 test('product links derive from one canonical product base URL', () => {
@@ -230,116 +239,95 @@ test('product links derive from one canonical product base URL', () => {
   assert.match(source, /restaurantRegistrationUrl:\s*productBaseUrl \+ '\/register\/restaurant'/);
   assert.match(source, /supplierApplicationUrl:\s*productBaseUrl \+ '\/join'/);
   assert.match(source, /loginUrl:\s*productBaseUrl \+ '\/'/);
-  assert.match(home, /href="\{\{\s*restaurantRegistrationUrl\s*\}\}"/);
-  assert.match(home, /href="\{\{\s*supplierApplicationUrl\s*\}\}"/);
-  assert.match(header, /href="\{\{\s*loginUrl\s*\}\}"[^>]*>登入平台<\/a>/);
-  assertMobileLogin(drawer);
+  assert.match(home, /<a[^>]+href="\{\{\s*restaurantRegistrationUrl\s*\}\}"[^>]*>免費註冊會員<\/a>/);
+  assertMobileLogin(footer);
 });
 
-test('homepage retains approved metrics and explains the four-step workflow', () => {
-  assertHomeMetricsAndWorkflow(home);
+test('homepage retains design metrics and explains the six-step workflow', () => {
+  assertHomeMetricsAndWorkflow(component);
+  assert.match(home, /<sc-for list="\{\{\s*flowA\s*\}\}"/);
+  assert.match(home, /<sc-for list="\{\{\s*flowB\s*\}\}"/);
+  assert.match(home, /從需求到進貨，<span[^>]*>一條龍<\/span>/);
 });
 
-test('homepage gives both roles equal capabilities and real product CTAs', () => {
-  for (const capability of [
-    '菜單成本',
-    '比價採購',
-    '訂單收貨',
-    '商機媒合',
-    '線上報價',
-    '出貨管理',
-    '菜單分析',
-    '成本管理',
-    '訂單與收貨',
-    '商機雷達',
-    '接單出貨',
-    '定價與需求預測',
+test('homepage names four audiences, twelve categories and three trust features from the design', () => {
+  for (const audience of ['餐廳・餐酒館', '團膳・學校', '團購主・電商', '加工廠・通路']) {
+    assert.match(component, new RegExp(`title: '${audience}'`));
+  }
+  for (const category of ['蔬菜', '水果', '海鮮', '肉品', '蛋品', '五穀雜糧', '南北雜貨', '加工食品', '火鍋料', '調味品', '酒與飲品', '包材耗材']) {
+    assert.match(component, new RegExp(`name: '${category}', img: 'assets\\/cat-[a-z]+\\.svg'`));
+  }
+  for (const feature of ['雙邊評價機制', '標章與檢驗連動', 'LINE 即時通知']) {
+    assert.match(component, new RegExp(`title: '${feature}'`));
+  }
+  assert.match(home, /任何有食材需求的人，<br>都適用/);
+  assert.match(home, /過去找食材，<br>永遠是那幾家/);
+});
+
+test('homepage illustrations are real files and no design placeholder text leaks through', () => {
+  const referenced = new Set(
+    Array.from(component.matchAll(/img: '(assets\/[^']+)'/g)).map((m) => m[1]),
+  );
+  assert.ok(referenced.size >= 21, `expected 21 illustrations, found ${referenced.size}`);
+  for (const rel of referenced) {
+    assert.ok(fs.existsSync(path.resolve(__dirname, '..', rel)), `missing illustration ${rel}`);
+  }
+  for (const placeholder of ['插圖：', '文章封面', '[ 餐廳採購情境照 ]', '[ 供應商出貨情境照 ]', '截圖']) {
+    assert.ok(!home.includes(placeholder), `placeholder leaked: ${placeholder}`);
+  }
+  // 圖片都是裝飾,交給旁邊的文字說明
+  assert.equal((home.match(/<img /g) || []).length, (home.match(/<img [^>]*alt=""/g) || []).length);
+});
+
+test('homepage shows three testimonials and three articles, then the closing CTA', () => {
+  for (const who of ['林老闆', '陳主任', '王小姐']) assert.match(component, new RegExp(`who: '${who}'`));
+  for (const title of ['如何做好餐飲食材採購：從規格書到驗收', '了解產銷履歷，加入溯源餐廳的行列', '使用在地食材，邁向從產地到餐桌']) {
+    assert.match(component, new RegExp(title));
+  }
+  const news = home.indexOf('id="news"');
+  const closing = home.indexOf('免費找到所有食材，<br>從填一張需求單開始');
+  assert.ok(news >= 0 && closing > news);
+  assert.match(home, /<section[^>]+id="how-it-works"[^>]*scroll-margin-top/);
+  assert.match(home, /<section[^>]+id="news"[^>]*scroll-margin-top/);
+});
+
+test('mobile menu mirrors desktop destinations and the legacy drawer is no longer mounted', () => {
+  const desktopLinks = Array.from(header.slice(0, mobileMenuStart).matchAll(/<a href="([^"{}]+)"[^>]*>([^<]+)<\/a>/g))
+    .filter((m) => m[2] !== '食材地圖');
+  const mobileLinks = Array.from(mobileMenu.matchAll(/<a href="([^"{}]+)"[^>]*>([^<]+)<\/a>/g));
+  assert.equal(desktopLinks.length, 8); // 7 nav + CTA
+  assert.equal(mobileLinks.length, 8);
+  assert.deepEqual(desktopLinks.map((m) => m[1] + m[2]), mobileLinks.map((m) => m[1] + m[2]));
+  assert.match(header, /aria-expanded="\{\{\s*menuOpen\s*\}\}"/);
+  assert.match(header, /aria-controls="ifm-mobile-menu"/);
+  // 舊的注入式漢堡選單保留程式碼但不再掛到 body
+  assert.doesNotMatch(drawer, /document\.body\.appendChild\(btn\);/);
+  assert.doesNotMatch(drawer, /document\.body\.appendChild\(menu\);/);
+});
+
+test('content guards fail when home metrics or home workflow are removed', () => {
+  assert.throws(() => assertHomeMetricsAndWorkflow(component.replace("target: 12000, suffix: '+'", '')));
+  assert.throws(() => assertHomeMetricsAndWorkflow(component.replace("title: '系統媒合'", "title: '媒合'")));
+  assert.throws(() => assertMobileLogin(footer.replace(/href="\{\{\s*loginUrl\s*\}\}"/, 'href="/"')));
+});
+
+test('small homepage labels meet WCAG AA contrast on the design palette', () => {
+  // 設計稿用到的小字配色,全部量一次
+  for (const [fg, bg] of [
+    ['#5E6E65', '#FFFFFF'], // hero 標籤、卡片小字
+    ['#4B5A52', '#FFFFFF'], // 內文
+    ['#4B5A52', '#F7F9F8'], // 內文 on 灰底
+    ['#0B6B40', '#F7F9F8'], // kicker
+    ['#AFC0B6', '#0E1A14'], // 深色段內文
+    ['#7FA490', '#0E1A14'], // 深色段 kicker
+    ['#4E7460', '#EFF6F2'], // 流程卡文字
+    ['#8A6118', '#FBF3E5'], // 流程卡文字(琥珀)
   ]) {
-    assert.match(home, new RegExp(capability));
+    assert.ok(contrastRatio(fg, bg) >= 4.5, `${fg} on ${bg} = ${contrastRatio(fg, bg).toFixed(2)}`);
   }
-
-  assert.match(home, /<a[^>]+href="\{\{\s*restaurantRegistrationUrl\s*\}\}"[^>]*>餐廳註冊/);
-  assert.match(home, /<a[^>]+href="\{\{\s*supplierApplicationUrl\s*\}\}"[^>]*>供應商上架/);
-});
-
-test('homepage uses semantic labelled product mockups without old scene placeholders', () => {
-  assert.match(home, /<h2 id="product-demo-heading"[^>]*>產品功能示意畫面<\/h2>/);
-  assert.match(home, /<section class="platform-mock-grid" aria-labelledby="product-demo-heading">/);
-  assert.match(home, /<article class="platform-mock"[^>]+aria-labelledby="restaurant-demo-title"/);
-  assert.match(home, /<h3 id="restaurant-demo-title"[^>]*>餐廳採購總覽<\/h3>/);
-  assert.match(home, /<article class="platform-mock"[^>]+aria-labelledby="supplier-demo-title"/);
-  assert.match(home, /<h3 id="supplier-demo-title"[^>]*>供應商營運總覽<\/h3>/);
-  assert.match(home, /(?:示例|示範)/);
-  for (const restaurantItem of ['成本 KPI', '待處理訂單', '供應商比較']) {
-    assert.match(home, new RegExp(restaurantItem));
-  }
-  for (const supplierItem of ['新商機', '報價狀態', '需求預測']) {
-    assert.match(home, new RegExp(supplierItem));
-  }
-  assert.doesNotMatch(home, /\[ 餐廳採購情境照 \]/);
-  assert.doesNotMatch(home, /\[ 供應商出貨情境照 \]/);
-  assert.doesNotMatch(home, /截圖/);
-});
-
-test('homepage renders all three approved outcome cases before the final dual CTA', () => {
-  const casesHeading = home.indexOf('案例成果');
-  const finalCta = home.indexOf('現在就從適合你的入口開始');
-  assert.ok(casesHeading >= 0 && finalCta > casesHeading);
-  assert.match(home, /成果依業態、採購規模與執行期間而異。/);
-  assert.match(home, /平台現有公開數據/);
-
-  assertApprovedCases(home);
-});
-
-test('mobile drawer mirrors desktop destinations and uses the shared external login', () => {
-  const expectedLinks = [
-    ["平台介紹", "home"],
-    ["餐廳方案", "restaurants"],
-    ["供應商方案", "suppliers"],
-    ["成功案例", "cases"],
-    ["關於我們", "about"],
-  ];
-  for (const [label, page] of expectedLinks) {
-    assert.match(drawer, new RegExp(`\\{ label: '${label}', page: '${page}' \\}`));
-  }
-  assert.doesNotMatch(drawer, /label: '聯絡我們'/);
-  assert.doesNotMatch(drawer, /免費媒合需求/);
-  assert.doesNotMatch(drawer, /cta\.href = '\/contact'/);
-  assert.match(drawer, /login\.addEventListener\('click'/);
-  assert.match(drawer, /if \(isModifiedClick\(event\)\) return;/);
-});
-
-test('content guards fail when home stats, home cases, or mobile login are removed', () => {
-  const homeWithoutStats = home.replace(/<section aria-label="平台服務數據"[\s\S]*?<\/section>/, '');
-  const caseMarker = home.indexOf('案例成果');
-  const caseStart = home.lastIndexOf('<section', caseMarker);
-  const caseEnd = home.indexOf('</section>', caseMarker) + '</section>'.length;
-  const homeWithoutCases = home.slice(0, caseStart) + home.slice(caseEnd);
-  const drawerWithoutLogin = drawer.replace(/var login = document\.createElement\('a'\);[\s\S]*?menu\.appendChild\(login\);/, '');
-
-  assert.throws(() => assertHomeMetricsAndWorkflow(homeWithoutStats));
-  assert.throws(() => assertApprovedCases(homeWithoutCases));
-  assert.throws(() => assertMobileLogin(drawerWithoutLogin));
-});
-
-test('small homepage labels and outcome captions meet WCAG AA contrast', () => {
-  for (const background of ['#ffffff', '#f8faf8', '#f3f7f3']) {
-    assert.ok(contrastRatio('#166534', background) >= 4.5);
-  }
-  assert.ok(contrastRatio('#5b6b62', '#ffffff') >= 4.5);
-  assert.doesNotMatch(home, /style="(?=[^"]*font-size:1[23]px)(?=[^"]*color:#1f9e4e)[^"]*"/);
-  assert.doesNotMatch(home, /font-size:12px;color:#748278/);
-  assert.match(home, /style="(?=[^"]*font-size:13px)(?=[^"]*color:#166534)[^"]*"/);
-  for (const caption of [
-    '完成供應商比較',
-    '食材採購成本',
-    '穩定合作供應商',
-    '斷貨次數',
-    '回購率提升',
-    '顧客評價',
-  ]) {
-    assert.match(home, new RegExp(`font-size:12px;color:#5b6b62[^"]*">${caption}`));
-  }
+  // 品牌綠 #128A54 在白底只有 ~4.3,不能當 13px 以下的文字色;只允許用在 aria-hidden 的裝飾符號(例如箭頭)
+  const smallBrandGreen = Array.from(home.matchAll(/<[a-z]+[^>]*style="(?=[^"]*font-size:1[0-3](?:\.5)?px)(?=[^"]*color:#128A54)[^"]*"[^>]*>/g)).map((m) => m[0]);
+  for (const tag of smallBrandGreen) assert.match(tag, /aria-hidden="true"/, `small brand-green text must be decorative: ${tag}`);
 });
 
 test('homepage CTAs expose stable focus, touch, responsive and reduced-motion rules', () => {
@@ -347,6 +335,7 @@ test('homepage CTAs expose stable focus, touch, responsive and reduced-motion ru
   assert.match(source, /min-height:\s*44px/);
   assert.match(source, /@media\s*\(max-width:\s*768px\)/);
   assert.match(source, /@media\s*\(prefers-reduced-motion:\s*reduce\)/);
+  assert.match(header, /min-height:48px/); // 手機選單項目的觸控高度
 });
 
 test('restaurant solution page follows the approved story and section order', () => {
@@ -713,24 +702,27 @@ test('metadata consistently describes the approved two-sided platform', () => {
 
 test('small contact and footer copy meets deterministic WCAG AA contrast', () => {
   assert.ok(contrastRatio('#5b6b62', '#ffffff') >= 4.5);
-  assert.ok(contrastRatio('#748779', '#081109') >= 4.5);
   assert.doesNotMatch(contact, /font-size:13px;color:#8a9a8f/);
   assert.match(contact, /font-size:13px;color:#5b6b62/);
-  assert.doesNotMatch(footer, /font-size:13px;\s*color:#5e7464/);
-  assert.match(footer, /font-size:13px;\s*color:#748779/);
+  // footer:連結 13.5px 與版權/標籤 10.5–12px 兩種小字都要過 AA
+  assert.ok(contrastRatio('#9FB0A6', '#0E1A14') >= 4.5);
+  assert.ok(contrastRatio('#71867A', '#0E1A14') >= 4.5);
+  assert.doesNotMatch(footer, /color:#6D8276/); // 設計稿原色 4.34,差一點不到 AA
+  assert.match(footer, /font-size:13\.5px;text-decoration:none;font-weight:300/);
+  assert.match(footer, /font-size:12px;color:#71867A/);
 });
 
-test('footer has four useful audiences with real internal and product destinations', () => {
-  for (const group of ['餐廳', '供應商', '公司', '客服']) {
-    assert.match(footer, new RegExp(`<div[^>]+class="footer-group-title"[^>]*>${group}<\\/div>`));
+test('footer has three design columns with real internal and product destinations', () => {
+  for (const group of ['SERVICE', 'COMPANY', 'SUPPORT']) {
+    assert.match(footer, new RegExp(`<div[^>]*>${group}<\\/div>`));
   }
   for (const route of ['/restaurants', '/suppliers', '/cases', '/about', '/contact']) {
-    assert.match(footer, new RegExp(`href="${route}"`));
+    assert.match(footer, new RegExp(`<a href="${route}"`));
   }
-  assert.match(footer, /href="\{\{\s*restaurantRegistrationUrl\s*\}\}"/);
-  assert.match(footer, /href="\{\{\s*supplierApplicationUrl\s*\}\}"/);
-  assert.match(footer, /href="\{\{\s*loginUrl\s*\}\}"/);
-  assert.doesNotMatch(footer, /<span[^>]*>(?:常見問題|使用條款)<\/span>/);
+  assert.match(footer, /href="\{\{\s*loginUrl\s*\}\}"[^>]*>登入平台<\/a>/);
+  assert.doesNotMatch(footer, /<span[^>]*>(?:常見問題|使用條款)<\/span>/); // 不留假連結
+  assert.match(footer, /href="tel:0277045539"/);
+  assert.match(footer, /href="mailto:ifoodmaptw@gmail\.com"/);
 });
 
 test('AI dialog closed and open states are keyboard-safe with mutation-sensitive guards', () => {
