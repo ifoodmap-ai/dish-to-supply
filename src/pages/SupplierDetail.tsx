@@ -681,21 +681,33 @@ const SupplierDetail = () => {
         </div>
       </div>
 
-      {/* Floating Cart Button */}
+      {/* Floating Cart Button —— 做成品牌 logo 的大頭針造型
+          正方形只圓三個角再轉 45°,尖角就朝下;裡面的內容反轉 45° 擺正。
+          漸層取自 icon.png:上方黃綠 #c3d543 → 尖端深綠 #3b8a3b。
+          數字徽章放在外層(沒轉的座標系),不然會跟著歪。 */}
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogTrigger asChild>
-          <Button
-            size="lg"
-            className="fixed bottom-6 right-6 rounded-full shadow-lg h-14 w-14 p-0"
-          >
-            <ShoppingCart className="w-6 h-6" />
-            {cart.length > 0 && (
-              <span className="absolute -top-2 -right-2 bg-primary text-primary-foreground rounded-full w-6 h-6 flex items-center justify-center text-xs font-bold">
-                {cart.length}
+        <div className="fixed bottom-8 right-7 z-40 h-14 w-14">
+          <DialogTrigger asChild>
+            <button
+              type="button"
+              aria-label={`購物車${cart.length > 0 ? `,${cart.length} 項` : ""}`}
+              className="h-14 w-14 rotate-45 rounded-[50%_50%_0_50%]
+                bg-gradient-to-br from-[#c3d543] via-[#8db83c] to-[#3b8a3b]
+                shadow-lg ring-2 ring-white/80 transition-transform
+                hover:scale-105 active:scale-95
+                focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-emerald-400/60"
+            >
+              <span className="flex h-full w-full -rotate-45 items-center justify-center">
+                <ShoppingCart className="h-6 w-6 text-white drop-shadow-sm" />
               </span>
-            )}
-          </Button>
-        </DialogTrigger>
+            </button>
+          </DialogTrigger>
+          {cart.length > 0 && (
+            <span className="pointer-events-none absolute -right-1.5 -top-1.5 flex h-6 min-w-6 items-center justify-center rounded-full bg-white px-1.5 text-xs font-bold text-emerald-700 shadow ring-1 ring-emerald-200">
+              {cart.length}
+            </span>
+          )}
+        </div>
         <DialogContent className="max-w-2xl max-h-[80vh]">
           <DialogHeader>
             <DialogTitle>詢價清單</DialogTitle>
