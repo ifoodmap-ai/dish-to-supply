@@ -370,7 +370,9 @@ test('Vercel rewrites each public route to index without catching API paths', ()
   const config = JSON.parse(fs.readFileSync(path.join(projectRoot, 'vercel.json'), 'utf8'));
   const expectedSources = ['/restaurants', '/suppliers', '/cases', '/about', '/contact'];
   assert.deepEqual(config.rewrites.map(({ source }) => source), expectedSources);
-  assert.deepEqual(config.rewrites.map(({ destination }) => destination), Array(5).fill('/index.html'));
+  // destination 要是 '/',不能是 '/index.html':cleanUrls 會把 index.html 改成 index 提供,
+  // 寫 /index.html 的話 Vercel 檔案系統檢查找不到,深層網址直接 404(2026-09-21 線上實測)
+  assert.deepEqual(config.rewrites.map(({ destination }) => destination), Array(5).fill('/'));
   assert.equal(config.rewrites.some(({ source }) => /[*():]/.test(source)), false);
   assert.equal(config.rewrites.some(({ source }) => source.includes('api')), false);
   assert.equal(config.cleanUrls, true);
