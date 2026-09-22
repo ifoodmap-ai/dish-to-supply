@@ -1,11 +1,17 @@
 <!DOCTYPE html>
-<html>
+<html lang="zh-Hant">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<title>iFoodmap 食材地圖｜餐廳與供應商的 B2B 食材採購平台</title>
+<!-- hreflang:中文是 /xxx、英文是 /en/xxx,x-default 指中文版。href 由 routing.js 依當前頁面更新。 -->
+<link rel="alternate" hreflang="zh-Hant" href="https://ifoodmap-landing.vercel.app/">
+<link rel="alternate" hreflang="en" href="https://ifoodmap-landing.vercel.app/en">
+<link rel="alternate" hreflang="x-default" href="https://ifoodmap-landing.vercel.app/">
+<script src="/i18n.js"></script>
 <script>window.IFM_PRODUCT_BASE_URL = 'https://dish-to-supply.vercel.app';</script>
 <script src="/routing.js"></script>
-<script src="./support.js"></script>
+<script src="/support.js"></script>
 <!-- 首頁 hero 的世界地圖(d3 + world-atlas),見 drawMap() -->
 <script src="https://unpkg.com/d3@7.9.0/dist/d3.min.js" integrity="sha384-CjloA8y00+1SDAUkjs099PVfnY2KmDC2BZnws9kh8D/lX1s46w6EPhpXdqMfjK6i" crossorigin="anonymous"></script>
 <script src="https://unpkg.com/topojson-client@3.1.0/dist/topojson-client.min.js" integrity="sha384-Ukv1p/xTma6P4/2bY5KzWBw+ydSpXmhCMtyciIQVDJ1RmOxtCYNMF1uXT9T63H67" crossorigin="anonymous"></script>
@@ -13,7 +19,6 @@
 <body>
 <x-dc>
 <helmet>
-<title>iFoodmap 食材地圖｜餐廳與供應商的 B2B 食材採購平台</title>
 <meta name="description" content="iFoodmap 以 AI 串接餐廳需求與全台食材供應商，整合智慧媒合、報價比較、訂單、出貨與採購管理。">
 <meta name="keywords" content="食材採購,餐飲供應鏈,供應商媒合,B2B 食材,餐廳進貨,食材地圖,ifoodmap,AI 採購,產地直送">
 <meta name="author" content="iFoodmap 食材地圖">
@@ -382,30 +387,33 @@
 
 <div ref="{{ rootRef }}" style="font-family:'Noto Sans TC',sans-serif; color:#0e1a12; background:#fff;">
 
-  <a class="skip-link" href="#main-content">跳到主要內容</a>
+  <a class="skip-link" href="#main-content">{{ L.nav.skipToContent }}</a>
 
   <!-- ============ HEADER ============ -->
   <!-- 依 Claude Design「食材地圖官網」設計稿(食材供應商平台設計/食材地圖官網.dc.html)。
        連結一律用 <a href onClick> 走 routing.js,保留真實網址與 SEO;不用設計稿的 setState 換頁。 -->
   <header class="ifm-v2" ref="{{ headRef }}" style="position:sticky;top:0;z-index:60;background:rgba(255,255,255,.88);backdrop-filter:blur(14px);border-bottom:1px solid #E6EAE7">
     <div style="max-width:1240px;margin:0 auto;padding:16px 26px;display:flex;align-items:center;gap:26px;flex-wrap:wrap">
-      <a href="/" onClick="{{ goHome }}" aria-current="{{ ariaCurrentHome }}" style="margin-right:auto;display:flex;align-items:center;text-decoration:none;cursor:pointer">
-        <img src="/logo.png" alt="iFoodmap 食材地圖" width="137" height="40" style="height:40px;width:auto;display:block">
+      <a href="{{ hrefHome }}" onClick="{{ goHome }}" aria-current="{{ ariaCurrentHome }}" style="margin-right:auto;display:flex;align-items:center;text-decoration:none;cursor:pointer">
+        <img src="/logo.png" alt="{{ L.nav.logoAlt }}" width="137" height="40" style="height:40px;width:auto;display:block">
       </a>
       <sc-if value="{{ isDesktop }}" hint-placeholder-val="{{ true }}">
-        <nav aria-label="主要導覽" style="display:flex;gap:22px;flex-wrap:wrap;align-items:center">
-          <a href="/restaurants" onClick="{{ goRestaurants }}" aria-current="{{ ariaCurrentRestaurants }}" style="padding:6px 0;font-size:14.5px;color:#4B5A52;text-decoration:none;cursor:pointer" style-hover="color:#0E1A14">找食材</a>
-          <a href="/suppliers" onClick="{{ goSuppliers }}" aria-current="{{ ariaCurrentSuppliers }}" style="padding:6px 0;font-size:14.5px;color:#4B5A52;text-decoration:none;cursor:pointer" style-hover="color:#0E1A14">成為供應商</a>
-          <a href="/#how-it-works" onClick="{{ goHow }}" style="padding:6px 0;font-size:14.5px;color:#4B5A52;text-decoration:none;cursor:pointer" style-hover="color:#0E1A14">平台功能</a>
-          <a href="/contact" onClick="{{ goContact }}" aria-current="{{ ariaCurrentContact }}" style="padding:6px 0;font-size:14.5px;color:#4B5A52;text-decoration:none;cursor:pointer" style-hover="color:#0E1A14">常見問題</a>
-          <a href="/about" onClick="{{ goAbout }}" aria-current="{{ ariaCurrentAbout }}" style="padding:6px 0;font-size:14.5px;color:#4B5A52;text-decoration:none;cursor:pointer" style-hover="color:#0E1A14">關於我們</a>
-          <a href="/#news" onClick="{{ goNews }}" style="padding:6px 0;font-size:14.5px;color:#4B5A52;text-decoration:none;cursor:pointer" style-hover="color:#0E1A14">最新消息</a>
-          <a href="/contact" onClick="{{ goContact }}" aria-current="{{ ariaCurrentContact }}" style="padding:6px 0;font-size:14.5px;color:#4B5A52;text-decoration:none;cursor:pointer" style-hover="color:#0E1A14">聯絡我們</a>
+        <nav aria-label="{{ L.nav.mainNavLabel }}" style="display:flex;gap:22px;flex-wrap:wrap;align-items:center">
+          <a href="{{ hrefRestaurants }}" onClick="{{ goRestaurants }}" aria-current="{{ ariaCurrentRestaurants }}" style="padding:6px 0;font-size:14.5px;color:#4B5A52;text-decoration:none;cursor:pointer" style-hover="color:#0E1A14">{{ L.nav.findIngredients }}</a>
+          <a href="{{ hrefSuppliers }}" onClick="{{ goSuppliers }}" aria-current="{{ ariaCurrentSuppliers }}" style="padding:6px 0;font-size:14.5px;color:#4B5A52;text-decoration:none;cursor:pointer" style-hover="color:#0E1A14">{{ L.nav.becomeSupplier }}</a>
+          <a href="{{ hrefHow }}" onClick="{{ goHow }}" style="padding:6px 0;font-size:14.5px;color:#4B5A52;text-decoration:none;cursor:pointer" style-hover="color:#0E1A14">{{ L.nav.features }}</a>
+          <a href="{{ hrefContact }}" onClick="{{ goContact }}" aria-current="{{ ariaCurrentContact }}" style="padding:6px 0;font-size:14.5px;color:#4B5A52;text-decoration:none;cursor:pointer" style-hover="color:#0E1A14">{{ L.nav.faq }}</a>
+          <a href="{{ hrefAbout }}" onClick="{{ goAbout }}" aria-current="{{ ariaCurrentAbout }}" style="padding:6px 0;font-size:14.5px;color:#4B5A52;text-decoration:none;cursor:pointer" style-hover="color:#0E1A14">{{ L.nav.about }}</a>
+          <a href="{{ hrefNews }}" onClick="{{ goNews }}" style="padding:6px 0;font-size:14.5px;color:#4B5A52;text-decoration:none;cursor:pointer" style-hover="color:#0E1A14">{{ L.nav.news }}</a>
+          <a href="{{ hrefContact }}" onClick="{{ goContact }}" aria-current="{{ ariaCurrentContact }}" style="padding:6px 0;font-size:14.5px;color:#4B5A52;text-decoration:none;cursor:pointer" style-hover="color:#0E1A14">{{ L.nav.contact }}</a>
         </nav>
-        <a href="/contact" onClick="{{ goContact }}" style="background:#0E1A14;color:#fff;padding:11px 20px;border-radius:999px;font-size:14px;font-weight:700;text-decoration:none;cursor:pointer;box-shadow:0 6px 14px rgba(14,26,20,.18)" style-hover="background:#128A54;transform:translateY(-1px)">填寫食材需求</a>
+        <!-- 語言切換:指向同一頁的另一個語系網址(中文 /xxx、英文 /en/xxx),
+             用真的 <a href> 而不是 button —— 右鍵複製連結、新分頁開啟、爬蟲都正常。 -->
+        <a href="{{ langHref }}" onClick="{{ switchLang }}" lang="{{ langTag }}" aria-label="{{ langAria }}" style="padding:7px 14px;border:1px solid #DCE3DE;border-radius:999px;font-size:13px;font-weight:600;color:#4B5A52;text-decoration:none;cursor:pointer;white-space:nowrap" style-hover="border-color:#128A54;color:#0B6B40">{{ langLabel }}</a>
+        <a href="{{ hrefContact }}" onClick="{{ goContact }}" style="background:#0E1A14;color:#fff;padding:11px 20px;border-radius:999px;font-size:14px;font-weight:700;text-decoration:none;cursor:pointer;box-shadow:0 6px 14px rgba(14,26,20,.18)" style-hover="background:#128A54;transform:translateY(-1px)">{{ L.nav.cta }}</a>
       </sc-if>
       <sc-if value="{{ isMobile }}">
-        <button type="button" onClick="{{ toggleMenu }}" aria-label="選單" aria-controls="ifm-mobile-menu" aria-expanded="{{ menuOpen }}" style="width:46px;height:46px;border:1px solid #DCE3DE;background:#fff;border-radius:14px;cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px">
+        <button type="button" onClick="{{ toggleMenu }}" aria-label="{{ L.nav.menuLabel }}" aria-controls="ifm-mobile-menu" aria-expanded="{{ menuOpen }}" style="width:46px;height:46px;border:1px solid #DCE3DE;background:#fff;border-radius:14px;cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px">
           <span style="width:20px;height:2px;background:#0E1A14;border-radius:2px"></span>
           <span style="width:20px;height:2px;background:#0E1A14;border-radius:2px"></span>
           <span style="width:20px;height:2px;background:#0E1A14;border-radius:2px"></span>
@@ -414,14 +422,15 @@
     </div>
     <sc-if value="{{ menuOpen }}">
       <div id="ifm-mobile-menu" style="border-top:1px solid #E6EAE7;background:#fff;padding:14px 20px 20px;display:grid;gap:4px">
-        <a href="/restaurants" onClick="{{ goRestaurantsMobile }}" aria-current="{{ ariaCurrentRestaurants }}" style="display:block;text-align:left;padding:14px 8px;font-size:16px;color:#0E1A14;text-decoration:none;border-radius:12px;min-height:48px;line-height:20px" style-hover="background:#F3FAF6">找食材</a>
-        <a href="/suppliers" onClick="{{ goSuppliersMobile }}" aria-current="{{ ariaCurrentSuppliers }}" style="display:block;text-align:left;padding:14px 8px;font-size:16px;color:#0E1A14;text-decoration:none;border-radius:12px;min-height:48px;line-height:20px" style-hover="background:#F3FAF6">成為供應商</a>
-        <a href="/#how-it-works" onClick="{{ goHowMobile }}" style="display:block;text-align:left;padding:14px 8px;font-size:16px;color:#0E1A14;text-decoration:none;border-radius:12px;min-height:48px;line-height:20px" style-hover="background:#F3FAF6">平台功能</a>
-        <a href="/contact" onClick="{{ goContactMobile }}" aria-current="{{ ariaCurrentContact }}" style="display:block;text-align:left;padding:14px 8px;font-size:16px;color:#0E1A14;text-decoration:none;border-radius:12px;min-height:48px;line-height:20px" style-hover="background:#F3FAF6">常見問題</a>
-        <a href="/about" onClick="{{ goAboutMobile }}" aria-current="{{ ariaCurrentAbout }}" style="display:block;text-align:left;padding:14px 8px;font-size:16px;color:#0E1A14;text-decoration:none;border-radius:12px;min-height:48px;line-height:20px" style-hover="background:#F3FAF6">關於我們</a>
-        <a href="/#news" onClick="{{ goNewsMobile }}" style="display:block;text-align:left;padding:14px 8px;font-size:16px;color:#0E1A14;text-decoration:none;border-radius:12px;min-height:48px;line-height:20px" style-hover="background:#F3FAF6">最新消息</a>
-        <a href="/contact" onClick="{{ goContactMobile }}" aria-current="{{ ariaCurrentContact }}" style="display:block;text-align:left;padding:14px 8px;font-size:16px;color:#0E1A14;text-decoration:none;border-radius:12px;min-height:48px;line-height:20px" style-hover="background:#F3FAF6">聯絡我們</a>
-        <a href="/contact" onClick="{{ openFormMobile }}" style="margin-top:8px;display:block;text-align:center;background:#128A54;color:#fff;padding:16px;border-radius:999px;font-size:16px;font-weight:700;text-decoration:none;box-shadow:0 10px 22px rgba(18,138,84,.26)">填寫食材需求</a>
+        <a href="{{ hrefRestaurants }}" onClick="{{ goRestaurantsMobile }}" aria-current="{{ ariaCurrentRestaurants }}" style="display:block;text-align:left;padding:14px 8px;font-size:16px;color:#0E1A14;text-decoration:none;border-radius:12px;min-height:48px;line-height:20px" style-hover="background:#F3FAF6">{{ L.nav.findIngredients }}</a>
+        <a href="{{ hrefSuppliers }}" onClick="{{ goSuppliersMobile }}" aria-current="{{ ariaCurrentSuppliers }}" style="display:block;text-align:left;padding:14px 8px;font-size:16px;color:#0E1A14;text-decoration:none;border-radius:12px;min-height:48px;line-height:20px" style-hover="background:#F3FAF6">{{ L.nav.becomeSupplier }}</a>
+        <a href="{{ hrefHow }}" onClick="{{ goHowMobile }}" style="display:block;text-align:left;padding:14px 8px;font-size:16px;color:#0E1A14;text-decoration:none;border-radius:12px;min-height:48px;line-height:20px" style-hover="background:#F3FAF6">{{ L.nav.features }}</a>
+        <a href="{{ hrefContact }}" onClick="{{ goContactMobile }}" aria-current="{{ ariaCurrentContact }}" style="display:block;text-align:left;padding:14px 8px;font-size:16px;color:#0E1A14;text-decoration:none;border-radius:12px;min-height:48px;line-height:20px" style-hover="background:#F3FAF6">{{ L.nav.faq }}</a>
+        <a href="{{ hrefAbout }}" onClick="{{ goAboutMobile }}" aria-current="{{ ariaCurrentAbout }}" style="display:block;text-align:left;padding:14px 8px;font-size:16px;color:#0E1A14;text-decoration:none;border-radius:12px;min-height:48px;line-height:20px" style-hover="background:#F3FAF6">{{ L.nav.about }}</a>
+        <a href="{{ hrefNews }}" onClick="{{ goNewsMobile }}" style="display:block;text-align:left;padding:14px 8px;font-size:16px;color:#0E1A14;text-decoration:none;border-radius:12px;min-height:48px;line-height:20px" style-hover="background:#F3FAF6">{{ L.nav.news }}</a>
+        <a href="{{ hrefContact }}" onClick="{{ goContactMobile }}" aria-current="{{ ariaCurrentContact }}" style="display:block;text-align:left;padding:14px 8px;font-size:16px;color:#0E1A14;text-decoration:none;border-radius:12px;min-height:48px;line-height:20px" style-hover="background:#F3FAF6">{{ L.nav.contact }}</a>
+        <a href="{{ langHref }}" onClick="{{ switchLangMobile }}" lang="{{ langTag }}" aria-label="{{ langAria }}" style="display:block;text-align:left;padding:14px 8px;font-size:16px;font-weight:600;color:#0B6B40;text-decoration:none;border-radius:12px;min-height:48px;line-height:20px;border-top:1px solid #E6EAE7;margin-top:6px" style-hover="background:#F3FAF6">{{ langLabel }}</a>
+        <a href="{{ hrefContact }}" onClick="{{ openFormMobile }}" style="margin-top:8px;display:block;text-align:center;background:#128A54;color:#fff;padding:16px;border-radius:999px;font-size:16px;font-weight:700;text-decoration:none;box-shadow:0 10px 22px rgba(18,138,84,.26)">{{ L.nav.cta }}</a>
       </div>
     </sc-if>
   </header>
@@ -441,15 +450,15 @@
           <span style="width:6px;height:6px;border-radius:50%;background:#128A54;animation:pulseDot 2s ease-in-out infinite"></span>B2B MATCHING ENGINE
         </div>
         <h1 style="margin-top:26px;font-size:clamp(34px,5.4vw,58px);line-height:1.22;font-weight:900;letter-spacing:-.02em">
-          免費找到<span style="color:#128A54">{{ rotating }}</span>
+          {{ L.home.heroTitlePre }}<span style="color:#128A54">{{ rotating }}</span>{{ L.home.heroTitlePost }}
         </h1>
-        <p style="margin-top:20px;font-size:17px;line-height:1.9;color:#4B5A52;max-width:520px;font-weight:400">餐廳、團膳、學校、團購主都適用。<br>填一次需求，供應商主動來找你。</p>
+        <p style="margin-top:20px;font-size:17px;line-height:1.9;color:#4B5A52;max-width:520px;font-weight:400">{{ L.home.heroSubA }}<br>{{ L.home.heroSubB }}</p>
 
         <!-- 搜尋不是真的搜尋:送出後把關鍵字帶進右下角的 AI 採購助手,由它接著訪談
              (數量、頻率、配送區域…),最後引導留下聯絡方式。見 askAI() 與 window.IfmAI -->
-        <form onSubmit="{{ askAI }}" role="search" aria-label="搜尋食材" style="margin-top:34px;width:100%;max-width:620px;display:flex;gap:10px;flex-wrap:wrap;background:#fff;border:1px solid #DCE3DE;border-radius:999px;padding:8px 8px 8px 10px;box-shadow:0 14px 34px rgba(14,26,20,.08)">
-          <input name="q" aria-label="搜尋食材" autocomplete="off" placeholder="搜尋食材，例如：有機葉菜、火鍋肉片" style="flex:1;min-width:190px;border:none;outline:none;background:transparent;color:#0E1A14;font-size:15.5px;padding:12px 14px">
-          <button type="submit" style="border:none;background:#128A54;color:#fff;font-size:15px;font-weight:700;padding:13px 30px;border-radius:999px;cursor:pointer;box-shadow:0 8px 18px rgba(18,138,84,.3)" style-hover="background:#0B6B40">搜尋</button>
+        <form onSubmit="{{ askAI }}" role="search" aria-label="{{ L.home.searchAriaLabel }}" style="margin-top:34px;width:100%;max-width:620px;display:flex;gap:10px;flex-wrap:wrap;background:#fff;border:1px solid #DCE3DE;border-radius:999px;padding:8px 8px 8px 10px;box-shadow:0 14px 34px rgba(14,26,20,.08)">
+          <input name="q" aria-label="{{ L.home.searchAriaLabel }}" autocomplete="off" placeholder="{{ L.home.searchPlaceholder }}" style="flex:1;min-width:190px;border:none;outline:none;background:transparent;color:#0E1A14;font-size:15.5px;padding:12px 14px">
+          <button type="submit" style="border:none;background:#128A54;color:#fff;font-size:15px;font-weight:700;padding:13px 30px;border-radius:999px;cursor:pointer;box-shadow:0 8px 18px rgba(18,138,84,.3)" style-hover="background:#0B6B40">{{ L.home.searchButton }}</button>
         </form>
         <div style="margin-top:16px;display:flex;gap:8px;flex-wrap:wrap;justify-content:center">
           <sc-for list="{{ hotTags }}" as="t" hint-placeholder-count="6">
@@ -482,8 +491,8 @@
       <div style="max-width:1240px;margin:0 auto;padding:clamp(52px,8vw,88px) 20px">
         <div style="max-width:560px">
           <div style="font-family:'Space Grotesk',sans-serif;font-size:11.5px;letter-spacing:.2em;color:#5E6E65">WHO IT'S FOR</div>
-          <h2 style="margin-top:16px;font-size:clamp(26px,3.4vw,38px);line-height:1.4">任何有食材需求的人，<br>都適用</h2>
-          <p style="margin-top:16px;font-size:16px;line-height:1.9;color:#4B5A52;font-weight:300">不只是餐廳。只要需要進貨，我們就幫你找到對的供應商。</p>
+          <h2 style="margin-top:16px;font-size:clamp(26px,3.4vw,38px);line-height:1.4">{{ L.home.audienceTitleA }}<br>{{ L.home.audienceTitleB }}</h2>
+          <p style="margin-top:16px;font-size:16px;line-height:1.9;color:#4B5A52;font-weight:300">{{ L.home.audienceSub }}</p>
         </div>
         <div style="margin-top:44px;display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:0;border-top:1px solid #E1E7E3;border-left:1px solid #E1E7E3">
           <sc-for list="{{ audiences }}" as="a" hint-placeholder-count="4">
@@ -501,7 +510,7 @@
       <div style="max-width:1240px;margin:0 auto;padding:clamp(48px,7vw,80px) 20px">
         <div style="text-align:center">
           <div style="font-family:'Space Grotesk',sans-serif;font-size:11.5px;letter-spacing:.2em;color:#5E6E65">HOW IT WORKS</div>
-          <h2 style="margin-top:14px;font-size:clamp(26px,3.4vw,38px)">從需求到進貨，<span style="color:#128A54">一條龍</span></h2>
+          <h2 style="margin-top:14px;font-size:clamp(26px,3.4vw,38px)">{{ L.home.flowTitlePre }}<span style="color:#128A54">{{ L.home.flowTitleHighlight }}</span></h2>
         </div>
         <div style="margin-top:44px;background:#F3FAF6;border-radius:32px;padding:clamp(24px,4vw,48px)">
           <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:24px">
@@ -535,7 +544,7 @@
           </div>
         </div>
         <div style="text-align:center">
-          <a href="/contact" onClick="{{ goContact }}" style="display:inline-block;margin-top:40px;background:#128A54;color:#fff;font-size:16px;font-weight:700;padding:16px 38px;border-radius:999px;text-decoration:none;cursor:pointer;box-shadow:0 10px 22px rgba(18,138,84,.26)" style-hover="background:#0B6B40;transform:translateY(-2px)">立即填寫食材需求</a>
+          <a href="{{ hrefContact }}" onClick="{{ goContact }}" style="display:inline-block;margin-top:40px;background:#128A54;color:#fff;font-size:16px;font-weight:700;padding:16px 38px;border-radius:999px;text-decoration:none;cursor:pointer;box-shadow:0 10px 22px rgba(18,138,84,.26)" style-hover="background:#0B6B40;transform:translateY(-2px)">{{ L.home.flowCta }}</a>
         </div>
       </div>
     </section>
@@ -543,12 +552,12 @@
     <section class="ifm-v2" style="border-bottom:1px solid #E6EAE7">
       <div style="max-width:1240px;margin:0 auto;padding:clamp(52px,8vw,88px) 20px">
         <div style="display:flex;align-items:baseline;justify-content:space-between;gap:18px;flex-wrap:wrap">
-          <h2 style="font-size:clamp(26px,3.4vw,38px)">食材分類</h2>
-          <p style="font-size:14px;color:#4B5A52;font-weight:300">從產地、工廠、大盤到小盤商</p>
+          <h2 style="font-size:clamp(26px,3.4vw,38px)">{{ L.home.categoriesTitle }}</h2>
+          <p style="font-size:14px;color:#4B5A52;font-weight:300">{{ L.home.categoriesSub }}</p>
         </div>
         <div style="margin-top:34px;display:grid;grid-template-columns:repeat(auto-fill,minmax(168px,1fr));gap:0;border-top:1px solid #E1E7E3;border-left:1px solid #E1E7E3;border-radius:12px;overflow:hidden">
           <sc-for list="{{ categories }}" as="c" hint-placeholder-count="12">
-            <a href="/restaurants" onClick="{{ goRestaurants }}" style="display:block;cursor:pointer;background:#fff;border-right:1px solid #E1E7E3;border-bottom:1px solid #E1E7E3;text-align:left;text-decoration:none;color:inherit" style-hover="background:#F7F9F8">
+            <a href="{{ hrefRestaurants }}" onClick="{{ goRestaurants }}" style="display:block;cursor:pointer;background:#fff;border-right:1px solid #E1E7E3;border-bottom:1px solid #E1E7E3;text-align:left;text-decoration:none;color:inherit" style-hover="background:#F7F9F8">
               <div style="height:96px;background:#F7F9F8;border-bottom:1px dashed #E1E7E3;display:flex;align-items:center;justify-content:center;overflow:hidden">
                 <img src="{{ c.img }}" alt="" width="96" height="96" loading="lazy" style="height:76px;width:76px;border-radius:14px;display:block">
               </div>
@@ -566,9 +575,9 @@
       <div style="max-width:1240px;margin:0 auto;padding:clamp(52px,8vw,88px) 20px;display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:56px">
         <div>
           <div style="font-family:'Space Grotesk',sans-serif;font-size:11.5px;letter-spacing:.2em;color:#7FA490">THE PROBLEM</div>
-          <h2 style="margin-top:16px;font-size:clamp(26px,3.4vw,36px);line-height:1.45;color:#fff">過去找食材，<br>永遠是那幾家</h2>
-          <p style="margin-top:20px;font-size:15.5px;line-height:1.95;color:#AFC0B6;font-weight:300;max-width:420px;text-wrap:pretty">同行介紹、上網搜尋，資訊卻不齊全；想詢價、想確認配送區域，留了聯絡方式往往好幾天沒有回覆。食材地圖把需求送到對的供應商手上，讓他們主動聯繫你。</p>
-          <a href="/#how-it-works" onClick="{{ goHow }}" style="display:inline-block;margin-top:26px;border:1px solid rgba(255,255,255,.4);background:transparent;color:#fff;padding:14px 30px;border-radius:999px;font-size:14.5px;font-weight:700;text-decoration:none;cursor:pointer" style-hover="background:#fff;color:#0E1A14">了解運作方式</a>
+          <h2 style="margin-top:16px;font-size:clamp(26px,3.4vw,36px);line-height:1.45;color:#fff">{{ L.home.problemTitleA }}<br>{{ L.home.problemTitleB }}</h2>
+          <p style="margin-top:20px;font-size:15.5px;line-height:1.95;color:#AFC0B6;font-weight:300;max-width:420px;text-wrap:pretty">{{ L.home.problemBody }}</p>
+          <a href="{{ hrefHow }}" onClick="{{ goHow }}" style="display:inline-block;margin-top:26px;border:1px solid rgba(255,255,255,.4);background:transparent;color:#fff;padding:14px 30px;border-radius:999px;font-size:14.5px;font-weight:700;text-decoration:none;cursor:pointer" style-hover="background:#fff;color:#0E1A14">{{ L.home.problemCta }}</a>
         </div>
         <div>
           <sc-for list="{{ pains }}" as="p" hint-placeholder-count="4">
@@ -583,12 +592,12 @@
 
     <section class="ifm-v2" style="border-bottom:1px solid #E6EAE7">
       <div style="max-width:1240px;margin:0 auto;padding:clamp(52px,8vw,88px) 20px">
-        <h2 style="font-size:clamp(26px,3.4vw,38px)">使用者怎麼說</h2>
+        <h2 style="font-size:clamp(26px,3.4vw,38px)">{{ L.home.testimonialsTitle }}</h2>
         <div style="margin-top:44px;display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:20px">
           <sc-for list="{{ testimonials }}" as="t" hint-placeholder-count="3">
             <div style="background:#fff;border:1px solid #E1E7E3;border-radius:20px;padding:28px">
-              <p style="font-size:16px;line-height:1.95;color:#1A2720;font-weight:300;text-wrap:pretty">「{{ t.quote }}」</p>
-              <div style="margin-top:22px;padding-top:16px;border-top:1px solid #EEF1EF;font-size:13px;color:#4B5A52">{{ t.who }}　{{ t.role }}</div>
+              <p style="font-size:16px;line-height:1.95;color:#1A2720;font-weight:300;text-wrap:pretty">{{ L.home.quoteOpen }}{{ t.quote }}{{ L.home.quoteClose }}</p>
+              <div style="margin-top:22px;padding-top:16px;border-top:1px solid #EEF1EF;font-size:13px;color:#4B5A52">{{ t.who }}{{ L.home.bylineSep }}{{ t.role }}</div>
             </div>
           </sc-for>
         </div>
@@ -609,8 +618,8 @@
 
     <section class="ifm-v2" id="news" style="max-width:1240px;margin:0 auto;padding:clamp(52px,8vw,88px) 20px;scroll-margin-top:80px">
       <div style="display:flex;align-items:baseline;justify-content:space-between;gap:16px;flex-wrap:wrap">
-        <h2 style="font-size:clamp(26px,3.4vw,38px)">餐飲相關資訊</h2>
-        <a href="/#news" onClick="{{ goNews }}" style="color:#128A54;font-size:14.5px;text-decoration:none;cursor:pointer">全部文章 →</a>
+        <h2 style="font-size:clamp(26px,3.4vw,38px)">{{ L.home.newsTitle }}</h2>
+        <a href="{{ hrefNews }}" onClick="{{ goNews }}" style="color:#128A54;font-size:14.5px;text-decoration:none;cursor:pointer">{{ L.home.newsAll }}</a>
       </div>
       <div style="margin-top:34px;display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:20px">
         <sc-for list="{{ articlesTop }}" as="a" hint-placeholder-count="3">
@@ -631,10 +640,10 @@
     <!-- 設計稿裡這條 CTA 是全站共用;這裡放在首頁區塊內,其他頁維持各自原有的 CTA -->
     <section class="ifm-v2" style="background:#F7F9F8;border-top:1px solid #E6EAE7">
       <div style="max-width:1240px;margin:0 auto;padding:clamp(48px,7vw,78px) 20px;display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:32px;align-items:center">
-        <h2 style="font-size:clamp(24px,3vw,34px);line-height:1.45">免費找到所有食材，<br>從填一張需求單開始</h2>
+        <h2 style="font-size:clamp(24px,3vw,34px);line-height:1.45">{{ L.home.ctaTitleA }}<br>{{ L.home.ctaTitleB }}</h2>
         <div style="display:flex;gap:12px;flex-wrap:wrap;justify-self:end">
-          <a href="/contact" onClick="{{ goContact }}" style="background:#128A54;color:#fff;padding:16px 34px;border-radius:999px;font-size:15.5px;font-weight:700;text-decoration:none;cursor:pointer;box-shadow:0 10px 22px rgba(18,138,84,.26)" style-hover="background:#0B6B40">填寫食材需求</a>
-          <a href="{{ restaurantRegistrationUrl }}" style="border:1px solid #0E1A14;background:transparent;color:#0E1A14;padding:16px 34px;border-radius:999px;font-size:15.5px;font-weight:700;text-decoration:none;cursor:pointer" style-hover="background:#0E1A14;color:#fff">免費註冊會員</a>
+          <a href="{{ hrefContact }}" onClick="{{ goContact }}" style="background:#128A54;color:#fff;padding:16px 34px;border-radius:999px;font-size:15.5px;font-weight:700;text-decoration:none;cursor:pointer;box-shadow:0 10px 22px rgba(18,138,84,.26)" style-hover="background:#0B6B40">{{ L.home.ctaPrimary }}</a>
+          <a href="{{ restaurantRegistrationUrl }}" style="border:1px solid #0E1A14;background:transparent;color:#0E1A14;padding:16px 34px;border-radius:999px;font-size:15.5px;font-weight:700;text-decoration:none;cursor:pointer" style-hover="background:#0E1A14;color:#fff">{{ L.home.ctaSecondary }}</a>
         </div>
       </div>
     </section>
@@ -649,28 +658,28 @@
       <div class="restaurant-wrap restaurant-hero-grid" style="position:relative;padding-top:84px;padding-bottom:88px;">
         <div data-reveal>
           <div style="font-family:'Space Grotesk','Noto Sans TC',sans-serif;font-size:13px;font-weight:700;color:#8fe681;letter-spacing:.13em;text-transform:uppercase;margin-bottom:18px;">iFoodmap for Restaurants</div>
-          <h1 class="restaurant-hero-title" style="font-family:'Space Grotesk','Noto Sans TC',sans-serif;font-size:52px;font-weight:900;color:#fff;margin:0 0 22px;line-height:1.18;letter-spacing:-.02em;">從菜單分析到完成收貨，都在同一個平台</h1>
-          <p class="restaurant-mobile-copy" style="font-size:18px;line-height:1.75;color:#b4c6b8;margin:0 0 30px;max-width:650px;">把菜單、食材成本、供應商比較、採購訂單與團隊權限放在清楚的工作流程中，讓每天的採購更容易掌握。</p>
+          <h1 class="restaurant-hero-title" style="font-family:'Space Grotesk','Noto Sans TC',sans-serif;font-size:52px;font-weight:900;color:#fff;margin:0 0 22px;line-height:1.18;letter-spacing:-.02em;">{{ L.rest.hero.title }}</h1>
+          <p class="restaurant-mobile-copy" style="font-size:18px;line-height:1.75;color:#b4c6b8;margin:0 0 30px;max-width:650px;">{{ L.rest.hero.sub }}</p>
           <div style="display:flex;flex-wrap:wrap;gap:14px;">
-            <a class="platform-action" href="{{ restaurantRegistrationUrl }}" style="background:#54ce50;color:#07130a;box-shadow:0 12px 30px rgba(74,209,90,.24);">建立餐廳帳號</a>
-            <a class="platform-action" href="#restaurant-capabilities" style="border:1px solid rgba(255,255,255,.34);color:#fff;background:rgba(255,255,255,.06);">查看餐廳功能</a>
+            <a class="platform-action" href="{{ restaurantRegistrationUrl }}" style="background:#54ce50;color:#07130a;box-shadow:0 12px 30px rgba(74,209,90,.24);">{{ L.rest.ctaCreateAccount }}</a>
+            <a class="platform-action" href="#restaurant-capabilities" style="border:1px solid rgba(255,255,255,.34);color:#fff;background:rgba(255,255,255,.06);">{{ L.rest.hero.ctaSecondary }}</a>
           </div>
         </div>
 
-        <div class="restaurant-product-mock" data-reveal aria-label="餐廳營運總覽產品示意畫面">
-          <div class="restaurant-mock-bar"><span>餐廳營運總覽</span><span>示例資料</span></div>
+        <div class="restaurant-product-mock" data-reveal aria-label="{{ L.rest.hero.mockAria }}">
+          <div class="restaurant-mock-bar"><span>{{ L.rest.hero.mockTitle }}</span><span>{{ L.rest.hero.mockTag }}</span></div>
           <div class="restaurant-mock-body">
             <div class="restaurant-kpis">
-              <div style="padding:16px;border-radius:14px;background:#f1f8f1;"><span style="display:block;color:#5b6b62;font-size:13px;">本月採購</span><strong style="display:block;margin-top:6px;font-size:22px;color:#17261c;">$128,640</strong></div>
-              <div style="padding:16px;border-radius:14px;background:#f1f8f1;"><span style="display:block;color:#5b6b62;font-size:13px;">待收貨</span><strong style="display:block;margin-top:6px;font-size:22px;color:#17261c;">6 筆</strong></div>
-              <div style="padding:16px;border-radius:14px;background:#f1f8f1;"><span style="display:block;color:#5b6b62;font-size:13px;">合作供應商</span><strong style="display:block;margin-top:6px;font-size:22px;color:#17261c;">12 家</strong></div>
+              <div style="padding:16px;border-radius:14px;background:#f1f8f1;"><span style="display:block;color:#5b6b62;font-size:13px;">{{ L.rest.hero.kpiSpendLabel }}</span><strong style="display:block;margin-top:6px;font-size:22px;color:#17261c;">$128,640</strong></div>
+              <div style="padding:16px;border-radius:14px;background:#f1f8f1;"><span style="display:block;color:#5b6b62;font-size:13px;">{{ L.rest.hero.kpiPendingLabel }}</span><strong style="display:block;margin-top:6px;font-size:22px;color:#17261c;">{{ L.rest.hero.kpiPendingValue }}</strong></div>
+              <div style="padding:16px;border-radius:14px;background:#f1f8f1;"><span style="display:block;color:#5b6b62;font-size:13px;">{{ L.rest.hero.kpiSuppliersLabel }}</span><strong style="display:block;margin-top:6px;font-size:22px;color:#17261c;">{{ L.rest.hero.kpiSuppliersValue }}</strong></div>
             </div>
             <div style="margin-top:18px;padding:18px;border:1px solid #e1e9e3;border-radius:15px;">
-              <div style="display:flex;justify-content:space-between;gap:12px;margin-bottom:14px;"><strong style="font-size:15px;">今日採購進度</strong><span style="font-size:13px;color:#166534;font-weight:700;">4 / 6 已完成</span></div>
+              <div style="display:flex;justify-content:space-between;gap:12px;margin-bottom:14px;"><strong style="font-size:15px;">{{ L.rest.hero.progressTitle }}</strong><span style="font-size:13px;color:#166534;font-weight:700;">{{ L.rest.hero.progressCount }}</span></div>
               <div style="height:9px;border-radius:99px;background:#e5ece6;overflow:hidden;"><div style="width:67%;height:100%;border-radius:99px;background:#1f9e4e;"></div></div>
               <ul style="list-style:none;padding:0;margin:16px 0 0;display:grid;gap:10px;color:#34473b;font-size:14px;">
-                <li style="display:flex;justify-content:space-between;gap:12px;"><span>確認明日蔬菜需求</span><strong style="color:#166534;">已完成</strong></li>
-                <li style="display:flex;justify-content:space-between;gap:12px;"><span>海鮮訂單收貨</span><strong style="color:#7c4a03;">待處理</strong></li>
+                <li style="display:flex;justify-content:space-between;gap:12px;"><span>{{ L.rest.hero.task1 }}</span><strong style="color:#166534;">{{ L.rest.hero.task1Status }}</strong></li>
+                <li style="display:flex;justify-content:space-between;gap:12px;"><span>{{ L.rest.hero.task2 }}</span><strong style="color:#7c4a03;">{{ L.rest.hero.task2Status }}</strong></li>
               </ul>
             </div>
           </div>
@@ -681,26 +690,26 @@
     <section aria-labelledby="restaurant-pain-title" style="background:#f7faf7;">
       <div class="restaurant-wrap" style="padding-top:88px;padding-bottom:88px;">
         <div data-reveal style="max-width:720px;margin-bottom:40px;">
-          <div style="font-size:13px;font-weight:700;color:#166534;letter-spacing:.08em;margin-bottom:12px;">採購現場</div>
-          <h2 id="restaurant-pain-title" style="font-size:38px;line-height:1.3;color:#17261c;margin:0 0 14px;">餐廳採購，不該靠人脈與零散訊息</h2>
-          <p class="restaurant-mobile-copy" style="font-size:17px;line-height:1.75;color:#5b6b62;margin:0;">當資訊分散在電話、訊息與試算表裡，團隊很難快速做出一致的採購決定。</p>
+          <div style="font-size:13px;font-weight:700;color:#166534;letter-spacing:.08em;margin-bottom:12px;">{{ L.rest.pain.eyebrow }}</div>
+          <h2 id="restaurant-pain-title" style="font-size:38px;line-height:1.3;color:#17261c;margin:0 0 14px;">{{ L.rest.pain.title }}</h2>
+          <p class="restaurant-mobile-copy" style="font-size:17px;line-height:1.75;color:#5b6b62;margin:0;">{{ L.rest.pain.sub }}</p>
         </div>
         <div class="restaurant-pain-grid">
           <article data-reveal style="padding:25px;border:1px solid #dce6de;border-radius:20px;background:#fff;">
-            <h3 style="font-size:19px;line-height:1.45;margin:0 0 9px;color:#17261c;">仰賴人工與同行詢問</h3>
-            <p style="font-size:15px;line-height:1.7;color:#5b6b62;margin:0;">找新食材或供應商時，常得逐一打電話、問同行。</p>
+            <h3 style="font-size:19px;line-height:1.45;margin:0 0 9px;color:#17261c;">{{ L.rest.pain.manual.title }}</h3>
+            <p style="font-size:15px;line-height:1.7;color:#5b6b62;margin:0;">{{ L.rest.pain.manual.body }}</p>
           </article>
           <article data-reveal style="padding:25px;border:1px solid #dce6de;border-radius:20px;background:#fff;">
-            <h3 style="font-size:19px;line-height:1.45;margin:0 0 9px;color:#17261c;">規格與價格資訊不完整</h3>
-            <p style="font-size:15px;line-height:1.7;color:#5b6b62;margin:0;">品項、單位與報價格式不同，難以直接判斷差異。</p>
+            <h3 style="font-size:19px;line-height:1.45;margin:0 0 9px;color:#17261c;">{{ L.rest.pain.specs.title }}</h3>
+            <p style="font-size:15px;line-height:1.7;color:#5b6b62;margin:0;">{{ L.rest.pain.specs.body }}</p>
           </article>
           <article data-reveal style="padding:25px;border:1px solid #dce6de;border-radius:20px;background:#fff;">
-            <h3 style="font-size:19px;line-height:1.45;margin:0 0 9px;color:#17261c;">比價耗費大量時間</h3>
-            <p style="font-size:15px;line-height:1.7;color:#5b6b62;margin:0;">詢價結果散落各處，整理與確認往往占去採購時間。</p>
+            <h3 style="font-size:19px;line-height:1.45;margin:0 0 9px;color:#17261c;">{{ L.rest.pain.compare.title }}</h3>
+            <p style="font-size:15px;line-height:1.7;color:#5b6b62;margin:0;">{{ L.rest.pain.compare.body }}</p>
           </article>
           <article data-reveal style="padding:25px;border:1px solid #dce6de;border-radius:20px;background:#fff;">
-            <h3 style="font-size:19px;line-height:1.45;margin:0 0 9px;color:#17261c;">訂單與收貨難追蹤</h3>
-            <p style="font-size:15px;line-height:1.7;color:#5b6b62;margin:0;">下單、到貨與異動缺少共同紀錄，交接容易遺漏。</p>
+            <h3 style="font-size:19px;line-height:1.45;margin:0 0 9px;color:#17261c;">{{ L.rest.pain.track.title }}</h3>
+            <p style="font-size:15px;line-height:1.7;color:#5b6b62;margin:0;">{{ L.rest.pain.track.body }}</p>
           </article>
         </div>
       </div>
@@ -709,43 +718,43 @@
     <section aria-labelledby="restaurant-workflow-title">
       <div class="restaurant-wrap" style="padding-top:88px;padding-bottom:40px;">
         <div data-reveal style="max-width:720px;margin-bottom:42px;">
-          <div style="font-size:13px;font-weight:700;color:#166534;letter-spacing:.08em;margin-bottom:12px;">日常工作流程</div>
-          <h2 id="restaurant-workflow-title" style="font-size:38px;line-height:1.3;color:#17261c;margin:0 0 14px;">從菜單與需求，一路走到收貨</h2>
-          <p class="restaurant-mobile-copy" style="font-size:17px;line-height:1.75;color:#5b6b62;margin:0;">每一步都由團隊確認，保留清楚的採購依據與進度。</p>
+          <div style="font-size:13px;font-weight:700;color:#166534;letter-spacing:.08em;margin-bottom:12px;">{{ L.rest.flow.eyebrow }}</div>
+          <h2 id="restaurant-workflow-title" style="font-size:38px;line-height:1.3;color:#17261c;margin:0 0 14px;">{{ L.rest.flow.title }}</h2>
+          <p class="restaurant-mobile-copy" style="font-size:17px;line-height:1.75;color:#5b6b62;margin:0;">{{ L.rest.flow.sub }}</p>
         </div>
         <div class="restaurant-flow">
-          <article data-reveal style="padding:24px;border-radius:18px;background:#f3f7f3;"><h3 style="font-size:18px;margin:0 0 8px;">整理菜單與需求</h3><p style="font-size:15px;line-height:1.65;color:#5b6b62;margin:0;">上傳菜單，或直接整理要採購的食材。</p></article>
-          <article data-reveal style="padding:24px;border-radius:18px;background:#f3f7f3;"><h3 style="font-size:18px;margin:0 0 8px;">確認食材與規格</h3><p style="font-size:15px;line-height:1.65;color:#5b6b62;margin:0;">檢查品項、用量與單位，再交由團隊使用。</p></article>
-          <article data-reveal style="padding:24px;border-radius:18px;background:#f3f7f3;"><h3 style="font-size:18px;margin:0 0 8px;">比較供應商與價格</h3><p style="font-size:15px;line-height:1.65;color:#5b6b62;margin:0;">集中查看合作供應商與品項報價。</p></article>
-          <article data-reveal style="padding:24px;border-radius:18px;background:#f3f7f3;"><h3 style="font-size:18px;margin:0 0 8px;">建立訂單並確認收貨</h3><p style="font-size:15px;line-height:1.65;color:#5b6b62;margin:0;">追蹤進度，到貨後由團隊完成確認。</p></article>
+          <article data-reveal style="padding:24px;border-radius:18px;background:#f3f7f3;"><h3 style="font-size:18px;margin:0 0 8px;">{{ L.rest.flow.s1.title }}</h3><p style="font-size:15px;line-height:1.65;color:#5b6b62;margin:0;">{{ L.rest.flow.s1.body }}</p></article>
+          <article data-reveal style="padding:24px;border-radius:18px;background:#f3f7f3;"><h3 style="font-size:18px;margin:0 0 8px;">{{ L.rest.flow.s2.title }}</h3><p style="font-size:15px;line-height:1.65;color:#5b6b62;margin:0;">{{ L.rest.flow.s2.body }}</p></article>
+          <article data-reveal style="padding:24px;border-radius:18px;background:#f3f7f3;"><h3 style="font-size:18px;margin:0 0 8px;">{{ L.rest.flow.s3.title }}</h3><p style="font-size:15px;line-height:1.65;color:#5b6b62;margin:0;">{{ L.rest.flow.s3.body }}</p></article>
+          <article data-reveal style="padding:24px;border-radius:18px;background:#f3f7f3;"><h3 style="font-size:18px;margin:0 0 8px;">{{ L.rest.flow.s4.title }}</h3><p style="font-size:15px;line-height:1.65;color:#5b6b62;margin:0;">{{ L.rest.flow.s4.body }}</p></article>
         </div>
       </div>
     </section>
 
-    <section id="restaurant-capabilities" aria-label="餐廳產品功能">
+    <section id="restaurant-capabilities" aria-label="{{ L.rest.caps.sectionAria }}">
       <div class="restaurant-wrap">
         <article class="restaurant-capability" aria-labelledby="restaurant-analyze-title">
           <div class="restaurant-copy" data-reveal>
             <div style="font-size:13px;font-weight:700;color:#166534;letter-spacing:.08em;margin-bottom:12px;">01 · MENU ANALYSIS</div>
-            <h2 id="restaurant-analyze-title" style="font-size:34px;line-height:1.3;margin:0 0 16px;color:#17261c;">AI 菜單分析</h2>
-            <p class="restaurant-mobile-copy" style="font-size:17px;line-height:1.75;color:#5b6b62;margin:0;">上傳菜單後整理菜色與食材，先由系統協助辨識，再由使用者確認內容。</p>
+            <h2 id="restaurant-analyze-title" style="font-size:34px;line-height:1.3;margin:0 0 16px;color:#17261c;">{{ L.rest.caps.menuAi.title }}</h2>
+            <p class="restaurant-mobile-copy" style="font-size:17px;line-height:1.75;color:#5b6b62;margin:0;">{{ L.rest.caps.menuAi.sub }}</p>
             <ul class="restaurant-detail-list">
-              <li>辨識菜色與食材，建立可編輯的菜單結構</li>
-              <li>確認或編輯分析結果，補上用量與單位</li>
-              <li>從菜色回到實際採購需求</li>
+              <li>{{ L.rest.caps.menuAi.li1 }}</li>
+              <li>{{ L.rest.caps.menuAi.li2 }}</li>
+              <li>{{ L.rest.caps.menuAi.li3 }}</li>
             </ul>
           </div>
           <div class="restaurant-product-mock" data-reveal>
-            <div class="restaurant-mock-bar"><span>產品功能示意畫面 · 示例資料</span><span>菜單分析</span></div>
+            <div class="restaurant-mock-bar"><span>{{ L.rest.caps.mockLabel }}</span><span>{{ L.rest.caps.menuAi.mockTag }}</span></div>
             <div class="restaurant-mock-body">
               <div style="display:flex;align-items:center;justify-content:space-between;gap:16px;padding:14px 16px;border:1px dashed #9ab6a0;border-radius:14px;background:#f7faf7;">
-                <div><strong style="display:block;font-size:15px;">夏季午餐菜單.pdf</strong><span style="display:block;margin-top:4px;color:#5b6b62;font-size:13px;">已完成辨識 · 等待確認</span></div>
-                <span style="padding:7px 10px;border-radius:999px;background:#e4f4e3;color:#166534;font-size:13px;font-weight:700;">檢視結果</span>
+                <div><strong style="display:block;font-size:15px;">{{ L.rest.caps.menuAi.fileName }}</strong><span style="display:block;margin-top:4px;color:#5b6b62;font-size:13px;">{{ L.rest.caps.menuAi.fileStatus }}</span></div>
+                <span style="padding:7px 10px;border-radius:999px;background:#e4f4e3;color:#166534;font-size:13px;font-weight:700;">{{ L.rest.caps.menuAi.fileAction }}</span>
               </div>
-              <div class="restaurant-mock-scroll" tabindex="0" role="region" aria-label="菜單分析示意表，可左右捲動" style="margin-top:14px;">
-                <table class="restaurant-mock-table" aria-label="菜單分析示例">
-                  <thead><tr><th>菜色</th><th>辨識食材</th><th>用量</th><th>狀態</th></tr></thead>
-                  <tbody><tr><td>季節時蔬</td><td>青花菜、紅蘿蔔</td><td>180 g</td><td style="color:#166534;font-weight:700;">已確認</td></tr><tr><td>香煎雞腿</td><td>去骨雞腿</td><td>220 g</td><td style="color:#7c4a03;font-weight:700;">待編輯</td></tr></tbody>
+              <div class="restaurant-mock-scroll" tabindex="0" role="region" aria-label="{{ L.rest.caps.menuAi.scrollAria }}" style="margin-top:14px;">
+                <table class="restaurant-mock-table" aria-label="{{ L.rest.caps.menuAi.tableAria }}">
+                  <thead><tr><th>{{ L.rest.caps.menuAi.th1 }}</th><th>{{ L.rest.caps.menuAi.th2 }}</th><th>{{ L.rest.caps.menuAi.th3 }}</th><th>{{ L.rest.caps.thStatus }}</th></tr></thead>
+                  <tbody><tr><td>{{ L.rest.caps.menuAi.r1Dish }}</td><td>{{ L.rest.caps.menuAi.r1Ing }}</td><td>180 g</td><td style="color:#166534;font-weight:700;">{{ L.rest.caps.menuAi.r1Status }}</td></tr><tr><td>{{ L.rest.caps.menuAi.r2Dish }}</td><td>{{ L.rest.caps.menuAi.r2Ing }}</td><td>220 g</td><td style="color:#7c4a03;font-weight:700;">{{ L.rest.caps.menuAi.r2Status }}</td></tr></tbody>
                 </table>
               </div>
             </div>
@@ -755,25 +764,25 @@
         <article class="restaurant-capability restaurant-capability--reverse" aria-labelledby="restaurant-cost-title">
           <div class="restaurant-copy" data-reveal>
             <div style="font-size:13px;font-weight:700;color:#166534;letter-spacing:.08em;margin-bottom:12px;">02 · COST &amp; PURCHASE</div>
-            <h2 id="restaurant-cost-title" style="font-size:34px;line-height:1.3;margin:0 0 16px;color:#17261c;">成本與採購</h2>
-            <p class="restaurant-mobile-copy" style="font-size:17px;line-height:1.75;color:#5b6b62;margin:0;">把菜色食材成本與供應商報價放在相同脈絡中，讓採購決策有清楚依據。</p>
+            <h2 id="restaurant-cost-title" style="font-size:34px;line-height:1.3;margin:0 0 16px;color:#17261c;">{{ L.rest.caps.cost.title }}</h2>
+            <p class="restaurant-mobile-copy" style="font-size:17px;line-height:1.75;color:#5b6b62;margin:0;">{{ L.rest.caps.cost.sub }}</p>
             <ul class="restaurant-detail-list">
-              <li>查看菜色食材成本與成本占比</li>
-              <li>進行供應商價格比較，掌握報價差異</li>
-              <li>需要調整時，查看替代食材與當季參考</li>
+              <li>{{ L.rest.caps.cost.li1 }}</li>
+              <li>{{ L.rest.caps.cost.li2 }}</li>
+              <li>{{ L.rest.caps.cost.li3 }}</li>
             </ul>
           </div>
           <div class="restaurant-product-mock" data-reveal>
-            <div class="restaurant-mock-bar"><span>產品功能示意畫面 · 示例資料</span><span>成本比較</span></div>
+            <div class="restaurant-mock-bar"><span>{{ L.rest.caps.mockLabel }}</span><span>{{ L.rest.caps.cost.mockTag }}</span></div>
             <div class="restaurant-mock-body">
               <div style="display:flex;justify-content:space-between;gap:18px;align-items:flex-end;margin-bottom:18px;">
-                <div><span style="display:block;font-size:13px;color:#5b6b62;">香煎雞腿食材成本</span><strong style="display:block;margin-top:5px;font-size:25px;color:#17261c;">$76.40</strong></div>
-                <span style="color:#166534;font-size:13px;font-weight:700;">成本占比 31.8%</span>
+                <div><span style="display:block;font-size:13px;color:#5b6b62;">{{ L.rest.caps.cost.costLabel }}</span><strong style="display:block;margin-top:5px;font-size:25px;color:#17261c;">$76.40</strong></div>
+                <span style="color:#166534;font-size:13px;font-weight:700;">{{ L.rest.caps.cost.costRatio }}</span>
               </div>
-              <div class="restaurant-mock-scroll" tabindex="0" role="region" aria-label="成本比較示意表，可左右捲動">
-                <table class="restaurant-mock-table" aria-label="供應商價格比較示例">
-                  <thead><tr><th>供應商</th><th>品項規格</th><th>單價</th><th>更新日</th></tr></thead>
-                  <tbody><tr><td>安心食材</td><td>去骨雞腿 2 kg</td><td>$185 / kg</td><td>07/25</td></tr><tr><td>產地鮮配</td><td>去骨雞腿 2 kg</td><td>$192 / kg</td><td>07/24</td></tr></tbody>
+              <div class="restaurant-mock-scroll" tabindex="0" role="region" aria-label="{{ L.rest.caps.cost.scrollAria }}">
+                <table class="restaurant-mock-table" aria-label="{{ L.rest.caps.cost.tableAria }}">
+                  <thead><tr><th>{{ L.rest.caps.cost.th1 }}</th><th>{{ L.rest.caps.cost.th2 }}</th><th>{{ L.rest.caps.cost.th3 }}</th><th>{{ L.rest.caps.cost.th4 }}</th></tr></thead>
+                  <tbody><tr><td>{{ L.rest.caps.cost.r1Supplier }}</td><td>{{ L.rest.caps.cost.itemSpec }}</td><td>$185 / kg</td><td>07/25</td></tr><tr><td>{{ L.rest.caps.cost.r2Supplier }}</td><td>{{ L.rest.caps.cost.itemSpec }}</td><td>$192 / kg</td><td>07/24</td></tr></tbody>
                 </table>
               </div>
             </div>
@@ -783,21 +792,21 @@
         <article class="restaurant-capability" aria-labelledby="restaurant-orders-title">
           <div class="restaurant-copy" data-reveal>
             <div style="font-size:13px;font-weight:700;color:#166534;letter-spacing:.08em;margin-bottom:12px;">03 · ORDER &amp; RECEIVING</div>
-            <h2 id="restaurant-orders-title" style="font-size:34px;line-height:1.3;margin:0 0 16px;color:#17261c;">訂單與收貨</h2>
-            <p class="restaurant-mobile-copy" style="font-size:17px;line-height:1.75;color:#5b6b62;margin:0;">從採購到到貨保留一致狀態，讓負責下單與現場收貨的人都看得到最新進度。</p>
+            <h2 id="restaurant-orders-title" style="font-size:34px;line-height:1.3;margin:0 0 16px;color:#17261c;">{{ L.rest.caps.orders.title }}</h2>
+            <p class="restaurant-mobile-copy" style="font-size:17px;line-height:1.75;color:#5b6b62;margin:0;">{{ L.rest.caps.orders.sub }}</p>
             <ul class="restaurant-detail-list">
-              <li>集中查看採購與訂單狀態</li>
-              <li>到貨後由團隊確認收貨</li>
-              <li>保留不可覆寫的事件履歷，釐清每次狀態異動</li>
+              <li>{{ L.rest.caps.orders.li1 }}</li>
+              <li>{{ L.rest.caps.orders.li2 }}</li>
+              <li>{{ L.rest.caps.orders.li3 }}</li>
             </ul>
           </div>
           <div class="restaurant-product-mock" data-reveal>
-            <div class="restaurant-mock-bar"><span>產品功能示意畫面 · 示例資料</span><span>訂單詳情</span></div>
+            <div class="restaurant-mock-bar"><span>{{ L.rest.caps.mockLabel }}</span><span>{{ L.rest.caps.orders.mockTag }}</span></div>
             <div class="restaurant-mock-body">
-              <div style="display:flex;justify-content:space-between;gap:16px;align-items:center;padding-bottom:17px;border-bottom:1px solid #e5ece6;"><div><strong style="display:block;font-size:16px;">訂單 #R-0726-018</strong><span style="display:block;margin-top:4px;font-size:13px;color:#5b6b62;">預計 07/27 上午送達</span></div><span style="padding:7px 10px;border-radius:999px;background:#fff4d9;color:#7c4a03;font-size:13px;font-weight:700;">配送中</span></div>
+              <div style="display:flex;justify-content:space-between;gap:16px;align-items:center;padding-bottom:17px;border-bottom:1px solid #e5ece6;"><div><strong style="display:block;font-size:16px;">{{ L.rest.caps.orders.orderNo }}</strong><span style="display:block;margin-top:4px;font-size:13px;color:#5b6b62;">{{ L.rest.caps.orders.eta }}</span></div><span style="padding:7px 10px;border-radius:999px;background:#fff4d9;color:#7c4a03;font-size:13px;font-weight:700;">{{ L.rest.caps.orders.badge }}</span></div>
               <ol style="list-style:none;padding:0;margin:18px 0 0;display:grid;gap:13px;">
-                <li style="display:grid;grid-template-columns:12px 1fr auto;gap:11px;align-items:start;"><span style="width:10px;height:10px;border-radius:50%;background:#1f9e4e;margin-top:5px;"></span><div><strong style="display:block;font-size:14px;">供應商已出貨</strong><span style="font-size:13px;color:#5b6b62;">準備送往總店收貨區</span></div><time style="font-size:13px;color:#5b6b62;">16:20</time></li>
-                <li style="display:grid;grid-template-columns:12px 1fr auto;gap:11px;align-items:start;"><span style="width:10px;height:10px;border-radius:50%;background:#9ab6a0;margin-top:5px;"></span><div><strong style="display:block;font-size:14px;">餐廳已確認訂單</strong><span style="font-size:13px;color:#5b6b62;">共 8 個品項</span></div><time style="font-size:13px;color:#5b6b62;">10:05</time></li>
+                <li style="display:grid;grid-template-columns:12px 1fr auto;gap:11px;align-items:start;"><span style="width:10px;height:10px;border-radius:50%;background:#1f9e4e;margin-top:5px;"></span><div><strong style="display:block;font-size:14px;">{{ L.rest.caps.orders.ev1Title }}</strong><span style="font-size:13px;color:#5b6b62;">{{ L.rest.caps.orders.ev1Sub }}</span></div><time style="font-size:13px;color:#5b6b62;">16:20</time></li>
+                <li style="display:grid;grid-template-columns:12px 1fr auto;gap:11px;align-items:start;"><span style="width:10px;height:10px;border-radius:50%;background:#9ab6a0;margin-top:5px;"></span><div><strong style="display:block;font-size:14px;">{{ L.rest.caps.orders.ev2Title }}</strong><span style="font-size:13px;color:#5b6b62;">{{ L.rest.caps.orders.ev2Sub }}</span></div><time style="font-size:13px;color:#5b6b62;">10:05</time></li>
               </ol>
             </div>
           </div>
@@ -806,26 +815,26 @@
         <article class="restaurant-capability restaurant-capability--reverse" aria-labelledby="restaurant-team-title">
           <div class="restaurant-copy" data-reveal>
             <div style="font-size:13px;font-weight:700;color:#166534;letter-spacing:.08em;margin-bottom:12px;">04 · TEAM</div>
-            <h2 id="restaurant-team-title" style="font-size:34px;line-height:1.3;margin:0 0 16px;color:#17261c;">團隊管理</h2>
-            <p class="restaurant-mobile-copy" style="font-size:17px;line-height:1.75;color:#5b6b62;margin:0;">依分店與職責安排帳號角色，讓採購、管理與收貨的人取得適合的操作範圍。</p>
+            <h2 id="restaurant-team-title" style="font-size:34px;line-height:1.3;margin:0 0 16px;color:#17261c;">{{ L.rest.caps.team.title }}</h2>
+            <p class="restaurant-mobile-copy" style="font-size:17px;line-height:1.75;color:#5b6b62;margin:0;">{{ L.rest.caps.team.sub }}</p>
             <ul class="restaurant-detail-list">
-              <li>管理分店與團隊成員</li>
-              <li>設定 owner、manager、purchaser 角色</li>
-              <li>維護各分店收貨地點與時段</li>
+              <li>{{ L.rest.caps.team.li1 }}</li>
+              <li>{{ L.rest.caps.team.li2 }}</li>
+              <li>{{ L.rest.caps.team.li3 }}</li>
             </ul>
           </div>
           <div class="restaurant-product-mock" data-reveal>
-            <div class="restaurant-mock-bar"><span>產品功能示意畫面 · 示例資料</span><span>團隊與分店</span></div>
+            <div class="restaurant-mock-bar"><span>{{ L.rest.caps.mockLabel }}</span><span>{{ L.rest.caps.team.mockTag }}</span></div>
             <div class="restaurant-mock-body">
-              <div class="restaurant-mock-scroll" tabindex="0" role="region" aria-label="團隊權限示意表，可左右捲動">
-                <table class="restaurant-mock-table" aria-label="團隊權限示例">
-                  <thead><tr><th>成員</th><th>分店</th><th>角色</th><th>狀態</th></tr></thead>
-                  <tbody><tr><td>王店長</td><td>總店</td><td>manager</td><td style="color:#166534;font-weight:700;">啟用</td></tr><tr><td>陳採購</td><td>總店、東區店</td><td>purchaser</td><td style="color:#166534;font-weight:700;">啟用</td></tr></tbody>
+              <div class="restaurant-mock-scroll" tabindex="0" role="region" aria-label="{{ L.rest.caps.team.scrollAria }}">
+                <table class="restaurant-mock-table" aria-label="{{ L.rest.caps.team.tableAria }}">
+                  <thead><tr><th>{{ L.rest.caps.team.th1 }}</th><th>{{ L.rest.caps.team.th2 }}</th><th>{{ L.rest.caps.team.th3 }}</th><th>{{ L.rest.caps.thStatus }}</th></tr></thead>
+                  <tbody><tr><td>{{ L.rest.caps.team.r1Member }}</td><td>{{ L.rest.caps.team.r1Location }}</td><td>manager</td><td style="color:#166534;font-weight:700;">{{ L.rest.caps.team.statusActive }}</td></tr><tr><td>{{ L.rest.caps.team.r2Member }}</td><td>{{ L.rest.caps.team.r2Location }}</td><td>purchaser</td><td style="color:#166534;font-weight:700;">{{ L.rest.caps.team.statusActive }}</td></tr></tbody>
                 </table>
               </div>
               <div style="margin-top:15px;padding:15px;border-radius:14px;background:#f3f7f3;">
-                <strong style="display:block;font-size:14px;">總店收貨設定</strong>
-                <span style="display:block;margin-top:6px;font-size:13px;line-height:1.6;color:#5b6b62;">台北市中山區 · 週一至週六 08:00–11:00</span>
+                <strong style="display:block;font-size:14px;">{{ L.rest.caps.team.recvTitle }}</strong>
+                <span style="display:block;margin-top:6px;font-size:13px;line-height:1.6;color:#5b6b62;">{{ L.rest.caps.team.recvDetail }}</span>
               </div>
             </div>
           </div>
@@ -836,27 +845,27 @@
     <section aria-labelledby="restaurant-cases-title" style="background:#f7faf7;">
       <div class="restaurant-wrap" style="padding-top:88px;padding-bottom:88px;">
         <div data-reveal style="max-width:720px;margin-bottom:38px;">
-          <div style="font-size:13px;font-weight:700;color:#166534;letter-spacing:.08em;margin-bottom:12px;">成果案例</div>
-          <h2 id="restaurant-cases-title" style="font-size:38px;line-height:1.3;color:#17261c;margin:0 0 14px;">餐廳採購的實際成果</h2>
-          <p style="font-size:14px;line-height:1.65;color:#5b6b62;margin:0;">成果依業態、採購規模與執行期間而異。</p>
+          <div style="font-size:13px;font-weight:700;color:#166534;letter-spacing:.08em;margin-bottom:12px;">{{ L.rest.cases.eyebrow }}</div>
+          <h2 id="restaurant-cases-title" style="font-size:38px;line-height:1.3;color:#17261c;margin:0 0 14px;">{{ L.rest.cases.title }}</h2>
+          <p style="font-size:14px;line-height:1.65;color:#5b6b62;margin:0;">{{ L.rest.cases.sub }}</p>
         </div>
         <div class="restaurant-case-grid">
           <article data-reveal style="display:flex;flex-direction:column;padding:30px;border:1px solid #dce6de;border-radius:22px;background:#fff;">
-            <div style="font-size:13px;font-weight:700;color:#166534;margin-bottom:12px;">餐廳業者</div>
-            <h3 style="font-size:22px;line-height:1.45;color:#17261c;margin:0 0 12px;">單店餐廳，告別到處問價的日子</h3>
-            <p style="font-size:15px;line-height:1.75;color:#5b6b62;margin:0 0 24px;">透過一次需求媒合，快速對接三家蔬果供應商，穩定取得當季食材。</p>
+            <div style="font-size:13px;font-weight:700;color:#166534;margin-bottom:12px;">{{ L.rest.cases.c1.tag }}</div>
+            <h3 style="font-size:22px;line-height:1.45;color:#17261c;margin:0 0 12px;">{{ L.rest.cases.c1.title }}</h3>
+            <p style="font-size:15px;line-height:1.75;color:#5b6b62;margin:0 0 24px;">{{ L.rest.cases.c1.body }}</p>
             <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:16px;margin-top:auto;padding-top:20px;border-top:1px solid #e5ece6;">
-              <div><strong style="display:block;font-size:25px;color:#1f9e4e;">3 天</strong><span style="font-size:12px;color:#5b6b62;">完成供應商比較</span></div>
-              <div><strong style="display:block;font-size:25px;color:#1f9e4e;">−15%</strong><span style="font-size:12px;color:#5b6b62;">食材採購成本</span></div>
+              <div><strong style="display:block;font-size:25px;color:#1f9e4e;">{{ L.rest.cases.c1.stat1Value }}</strong><span style="font-size:12px;color:#5b6b62;">{{ L.rest.cases.c1.stat1Label }}</span></div>
+              <div><strong style="display:block;font-size:25px;color:#1f9e4e;">−15%</strong><span style="font-size:12px;color:#5b6b62;">{{ L.rest.cases.c1.stat2Label }}</span></div>
             </div>
           </article>
           <article data-reveal style="display:flex;flex-direction:column;padding:30px;border:1px solid #dce6de;border-radius:22px;background:#fff;">
-            <div style="font-size:13px;font-weight:700;color:#166534;margin-bottom:12px;">團膳業者</div>
-            <h3 style="font-size:22px;line-height:1.45;color:#17261c;margin:0 0 12px;">大量供餐，採購來源更穩定</h3>
-            <p style="font-size:15px;line-height:1.75;color:#5b6b62;margin:0 0 24px;">同時對接多家供應商，降低單一來源斷貨風險，供餐更有保障。</p>
+            <div style="font-size:13px;font-weight:700;color:#166534;margin-bottom:12px;">{{ L.rest.cases.c2.tag }}</div>
+            <h3 style="font-size:22px;line-height:1.45;color:#17261c;margin:0 0 12px;">{{ L.rest.cases.c2.title }}</h3>
+            <p style="font-size:15px;line-height:1.75;color:#5b6b62;margin:0 0 24px;">{{ L.rest.cases.c2.body }}</p>
             <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:16px;margin-top:auto;padding-top:20px;border-top:1px solid #e5ece6;">
-              <div><strong style="display:block;font-size:25px;color:#1f9e4e;">5+</strong><span style="font-size:12px;color:#5b6b62;">穩定合作供應商</span></div>
-              <div><strong style="display:block;font-size:25px;color:#1f9e4e;">0</strong><span style="font-size:12px;color:#5b6b62;">斷貨次數</span></div>
+              <div><strong style="display:block;font-size:25px;color:#1f9e4e;">5+</strong><span style="font-size:12px;color:#5b6b62;">{{ L.rest.cases.c2.stat1Label }}</span></div>
+              <div><strong style="display:block;font-size:25px;color:#1f9e4e;">0</strong><span style="font-size:12px;color:#5b6b62;">{{ L.rest.cases.c2.stat2Label }}</span></div>
             </div>
           </article>
         </div>
@@ -865,9 +874,9 @@
 
     <section class="restaurant-wrap" style="padding-top:88px;padding-bottom:92px;">
       <div data-reveal style="padding:58px 48px;border-radius:28px;background:radial-gradient(560px 260px at 82% -25%,rgba(124,240,107,.22),transparent 65%),#102419;text-align:center;color:#fff;">
-        <h2 style="font-size:36px;line-height:1.35;margin:0 0 12px;">讓下一次採購，從清楚的流程開始</h2>
-        <p class="restaurant-mobile-copy" style="font-size:17px;line-height:1.7;color:#b4c6b8;margin:0 auto 28px;max-width:620px;">建立餐廳帳號，開始整理菜單、供應商與採購訂單。</p>
-        <a class="platform-action" href="{{ restaurantRegistrationUrl }}" style="background:#54ce50;color:#07130a;box-shadow:0 12px 30px rgba(74,209,90,.24);">建立餐廳帳號</a>
+        <h2 style="font-size:36px;line-height:1.35;margin:0 0 12px;">{{ L.rest.cta.title }}</h2>
+        <p class="restaurant-mobile-copy" style="font-size:17px;line-height:1.7;color:#b4c6b8;margin:0 auto 28px;max-width:620px;">{{ L.rest.cta.sub }}</p>
+        <a class="platform-action" href="{{ restaurantRegistrationUrl }}" style="background:#54ce50;color:#07130a;box-shadow:0 12px 30px rgba(74,209,90,.24);">{{ L.rest.ctaCreateAccount }}</a>
       </div>
     </section>
   </div>
@@ -880,29 +889,29 @@
       <div class="supplier-wrap supplier-hero-grid" style="position:relative;padding-top:84px;padding-bottom:88px;">
         <div data-reveal>
           <div style="font-family:'Space Grotesk','Noto Sans TC',sans-serif;font-size:13px;font-weight:700;color:#8fe681;letter-spacing:.14em;text-transform:uppercase;margin-bottom:16px;">iFoodmap for Suppliers</div>
-          <h1 class="supplier-hero-title" style="font-family:'Space Grotesk','Noto Sans TC',sans-serif;font-size:52px;line-height:1.18;letter-spacing:-.02em;margin:0 0 22px;">從商品上架到商機、報價與出貨</h1>
-          <p class="supplier-mobile-copy" style="max-width:650px;font-size:18px;line-height:1.8;color:#b4c6b8;margin:0 0 30px;">把商品目錄、餐廳需求、報價、訂單與客戶經營放進同一套工作流程。你保留每一次判斷，平台協助整理資訊與追蹤進度。</p>
+          <h1 class="supplier-hero-title" style="font-family:'Space Grotesk','Noto Sans TC',sans-serif;font-size:52px;line-height:1.18;letter-spacing:-.02em;margin:0 0 22px;">{{ L.sup.heroTitle }}</h1>
+          <p class="supplier-mobile-copy" style="max-width:650px;font-size:18px;line-height:1.8;color:#b4c6b8;margin:0 0 30px;">{{ L.sup.heroSub }}</p>
           <div style="display:flex;flex-wrap:wrap;gap:12px;">
-            <a class="platform-action" href="{{ supplierApplicationUrl }}" style="background:#54ce50;color:#07130a;box-shadow:0 12px 30px rgba(74,209,90,.24);">申請供應商上架</a>
-            <a class="platform-action" href="#supplier-capabilities" style="border:1px solid #6e8976;color:#fff;background:transparent;">查看供應商功能</a>
+            <a class="platform-action" href="{{ supplierApplicationUrl }}" style="background:#54ce50;color:#07130a;box-shadow:0 12px 30px rgba(74,209,90,.24);">{{ L.sup.applyCta }}</a>
+            <a class="platform-action" href="#supplier-capabilities" style="border:1px solid #6e8976;color:#fff;background:transparent;">{{ L.sup.heroCtaSecondary }}</a>
           </div>
         </div>
 
         <article data-reveal aria-labelledby="supplier-hero-demo-title" style="min-width:0;border:1px solid rgba(255,255,255,.14);border-radius:24px;background:#fff;color:#17261c;overflow:hidden;box-shadow:0 24px 70px rgba(0,0,0,.28);">
           <div style="display:flex;align-items:center;justify-content:space-between;gap:14px;padding:16px 18px;background:#f7faf7;border-bottom:1px solid #e5ece6;">
-            <div><h2 id="supplier-hero-demo-title" style="font-size:16px;margin:0;">今日營運摘要</h2><div style="font-size:12px;color:#5b6b62;margin-top:3px;">示例資料</div></div>
-            <span style="font-size:12px;font-weight:700;color:#166534;padding:6px 9px;border-radius:999px;background:#e8f6e7;">供應商工作台</span>
+            <div><h2 id="supplier-hero-demo-title" style="font-size:16px;margin:0;">{{ L.sup.demoTitle }}</h2><div style="font-size:12px;color:#5b6b62;margin-top:3px;">{{ L.sup.demoSample }}</div></div>
+            <span style="font-size:12px;font-weight:700;color:#166534;padding:6px 9px;border-radius:999px;background:#e8f6e7;">{{ L.sup.demoBadge }}</span>
           </div>
           <div class="supplier-mock-body">
             <div class="supplier-kpis">
-              <div style="padding:15px;border-radius:14px;background:#f1f8f1;"><span style="display:block;color:#5b6b62;font-size:13px;">新商機</span><strong style="display:block;margin-top:6px;font-size:23px;">8 筆</strong></div>
-              <div style="padding:15px;border-radius:14px;background:#fff7e6;"><span style="display:block;color:#675a3d;font-size:13px;">待報價</span><strong style="display:block;margin-top:6px;font-size:23px;">3 筆</strong></div>
-              <div style="padding:15px;border-radius:14px;background:#eef5ff;"><span style="display:block;color:#495d72;font-size:13px;">待確認訂單</span><strong style="display:block;margin-top:6px;font-size:23px;">2 筆</strong></div>
+              <div style="padding:15px;border-radius:14px;background:#f1f8f1;"><span style="display:block;color:#5b6b62;font-size:13px;">{{ L.sup.demoKpiLeadsLabel }}</span><strong style="display:block;margin-top:6px;font-size:23px;">{{ L.sup.demoKpiLeadsValue }}</strong></div>
+              <div style="padding:15px;border-radius:14px;background:#fff7e6;"><span style="display:block;color:#675a3d;font-size:13px;">{{ L.sup.demoKpiQuotesLabel }}</span><strong style="display:block;margin-top:6px;font-size:23px;">{{ L.sup.demoKpiQuotesValue }}</strong></div>
+              <div style="padding:15px;border-radius:14px;background:#eef5ff;"><span style="display:block;color:#495d72;font-size:13px;">{{ L.sup.demoKpiOrdersLabel }}</span><strong style="display:block;margin-top:6px;font-size:23px;">{{ L.sup.demoKpiOrdersValue }}</strong></div>
             </div>
             <div style="margin-top:16px;padding:16px;border:1px solid #e2eae4;border-radius:14px;">
-              <div style="display:flex;justify-content:space-between;gap:12px;align-items:center;"><strong style="font-size:14px;">最新匹配需求</strong><span style="font-size:12px;color:#166534;">新商機</span></div>
-              <p style="font-size:14px;color:#34473b;margin:10px 0 4px;">葉菜類 120 kg · 台北市</p>
-              <p style="font-size:13px;color:#5b6b62;margin:0;">每週配送 3 次 · 希望 08:00 前送達</p>
+              <div style="display:flex;justify-content:space-between;gap:12px;align-items:center;"><strong style="font-size:14px;">{{ L.sup.demoMatchTitle }}</strong><span style="font-size:12px;color:#166534;">{{ L.sup.demoMatchBadge }}</span></div>
+              <p style="font-size:14px;color:#34473b;margin:10px 0 4px;">{{ L.sup.demoMatchItem }}</p>
+              <p style="font-size:13px;color:#5b6b62;margin:0;">{{ L.sup.demoMatchDetail }}</p>
             </div>
           </div>
         </article>
@@ -912,30 +921,30 @@
     <section style="background:#f6faf6;border-bottom:1px solid #e5ece6;">
       <div class="supplier-wrap" style="padding-top:72px;padding-bottom:72px;">
         <div data-reveal style="max-width:720px;margin-bottom:34px;">
-          <div style="font-size:13px;font-weight:700;color:#166534;letter-spacing:.1em;margin-bottom:10px;">供應商常見挑戰</div>
-          <h2 style="font-size:38px;line-height:1.3;color:#17261c;margin:0 0 14px;">好商品，不該埋沒在零散詢價裡</h2>
-          <p class="supplier-mobile-copy" style="font-size:17px;line-height:1.75;color:#5b6b62;margin:0;">當需求、報價與合作紀錄散落在不同對話裡，回覆速度和後續經營都更難掌握。</p>
+          <div style="font-size:13px;font-weight:700;color:#166534;letter-spacing:.1em;margin-bottom:10px;">{{ L.sup.painEyebrow }}</div>
+          <h2 style="font-size:38px;line-height:1.3;color:#17261c;margin:0 0 14px;">{{ L.sup.painTitle }}</h2>
+          <p class="supplier-mobile-copy" style="font-size:17px;line-height:1.75;color:#5b6b62;margin:0;">{{ L.sup.painSub }}</p>
         </div>
         <div class="supplier-pain-grid">
-          <article data-reveal style="padding:24px;border-radius:18px;background:#fff;border:1px solid #e0e9e2;"><h3 style="font-size:17px;margin:0 0 8px;">需求分散，難以及時發現</h3><p style="font-size:14px;line-height:1.65;color:#5b6b62;margin:0;">商機可能來自多個管道，品項與服務區域也得逐一確認。</p></article>
-          <article data-reveal style="padding:24px;border-radius:18px;background:#fff;border:1px solid #e0e9e2;"><h3 style="font-size:17px;margin:0 0 8px;">報價與交期反覆確認</h3><p style="font-size:14px;line-height:1.65;color:#5b6b62;margin:0;">價格、付款條件和替代品項容易在訊息往返中遺漏。</p></article>
-          <article data-reveal style="padding:24px;border-radius:18px;background:#fff;border:1px solid #e0e9e2;"><h3 style="font-size:17px;margin:0 0 8px;">定價缺少市場依據</h3><p style="font-size:14px;line-height:1.65;color:#5b6b62;margin:0;">不容易看見同區同品項行情與近期需求變化。</p></article>
-          <article data-reveal style="padding:24px;border-radius:18px;background:#fff;border:1px solid #e0e9e2;"><h3 style="font-size:17px;margin:0 0 8px;">客戶回購狀況難掌握</h3><p style="font-size:14px;line-height:1.65;color:#5b6b62;margin:0;">完成交易後，還需要持續整理下單頻率與合作狀況。</p></article>
+          <article data-reveal style="padding:24px;border-radius:18px;background:#fff;border:1px solid #e0e9e2;"><h3 style="font-size:17px;margin:0 0 8px;">{{ L.sup.painScatteredTitle }}</h3><p style="font-size:14px;line-height:1.65;color:#5b6b62;margin:0;">{{ L.sup.painScatteredDesc }}</p></article>
+          <article data-reveal style="padding:24px;border-radius:18px;background:#fff;border:1px solid #e0e9e2;"><h3 style="font-size:17px;margin:0 0 8px;">{{ L.sup.painQuotesTitle }}</h3><p style="font-size:14px;line-height:1.65;color:#5b6b62;margin:0;">{{ L.sup.painQuotesDesc }}</p></article>
+          <article data-reveal style="padding:24px;border-radius:18px;background:#fff;border:1px solid #e0e9e2;"><h3 style="font-size:17px;margin:0 0 8px;">{{ L.sup.painPricingTitle }}</h3><p style="font-size:14px;line-height:1.65;color:#5b6b62;margin:0;">{{ L.sup.painPricingDesc }}</p></article>
+          <article data-reveal style="padding:24px;border-radius:18px;background:#fff;border:1px solid #e0e9e2;"><h3 style="font-size:17px;margin:0 0 8px;">{{ L.sup.painRetentionTitle }}</h3><p style="font-size:14px;line-height:1.65;color:#5b6b62;margin:0;">{{ L.sup.painRetentionDesc }}</p></article>
         </div>
       </div>
     </section>
 
     <section class="supplier-wrap" style="padding-top:76px;padding-bottom:76px;">
       <div data-reveal style="max-width:740px;margin-bottom:34px;">
-        <div style="font-size:13px;font-weight:700;color:#166534;letter-spacing:.1em;margin-bottom:10px;">一條清楚的接單流程</div>
-        <h2 style="font-size:38px;line-height:1.3;color:#17261c;margin:0 0 14px;">從被看見，到報價、接單與持續經營</h2>
-        <p class="supplier-mobile-copy" style="font-size:17px;line-height:1.75;color:#5b6b62;margin:0;">先建立可媒合的商品資料，再逐步處理商機、訂單與客戶關係。</p>
+        <div style="font-size:13px;font-weight:700;color:#166534;letter-spacing:.1em;margin-bottom:10px;">{{ L.sup.flowEyebrow }}</div>
+        <h2 style="font-size:38px;line-height:1.3;color:#17261c;margin:0 0 14px;">{{ L.sup.flowTitle }}</h2>
+        <p class="supplier-mobile-copy" style="font-size:17px;line-height:1.75;color:#5b6b62;margin:0;">{{ L.sup.flowSub }}</p>
       </div>
       <div class="supplier-flow">
-        <article data-reveal style="padding:24px;border-radius:18px;background:#f3f7f3;"><h3 style="font-size:18px;margin:0 0 8px;">建立商品目錄</h3><p style="font-size:15px;line-height:1.65;color:#5b6b62;margin:0;">整理供應品項、價格與服務範圍。</p></article>
-        <article data-reveal style="padding:24px;border-radius:18px;background:#f3f7f3;"><h3 style="font-size:18px;margin:0 0 8px;">接收匹配商機</h3><p style="font-size:15px;line-height:1.65;color:#5b6b62;margin:0;">查看與商品目錄相符的餐廳需求。</p></article>
-        <article data-reveal style="padding:24px;border-radius:18px;background:#f3f7f3;"><h3 style="font-size:18px;margin:0 0 8px;">回覆報價並確認訂單</h3><p style="font-size:15px;line-height:1.65;color:#5b6b62;margin:0;">填寫報價條件，追蹤已接受與待確認項目。</p></article>
-        <article data-reveal style="padding:24px;border-radius:18px;background:#f3f7f3;"><h3 style="font-size:18px;margin:0 0 8px;">出貨並累積客戶關係</h3><p style="font-size:15px;line-height:1.65;color:#5b6b62;margin:0;">確認出貨，回看訂單、客戶與評價紀錄。</p></article>
+        <article data-reveal style="padding:24px;border-radius:18px;background:#f3f7f3;"><h3 style="font-size:18px;margin:0 0 8px;">{{ L.sup.flowCatalogTitle }}</h3><p style="font-size:15px;line-height:1.65;color:#5b6b62;margin:0;">{{ L.sup.flowCatalogDesc }}</p></article>
+        <article data-reveal style="padding:24px;border-radius:18px;background:#f3f7f3;"><h3 style="font-size:18px;margin:0 0 8px;">{{ L.sup.flowLeadsTitle }}</h3><p style="font-size:15px;line-height:1.65;color:#5b6b62;margin:0;">{{ L.sup.flowLeadsDesc }}</p></article>
+        <article data-reveal style="padding:24px;border-radius:18px;background:#f3f7f3;"><h3 style="font-size:18px;margin:0 0 8px;">{{ L.sup.flowQuoteTitle }}</h3><p style="font-size:15px;line-height:1.65;color:#5b6b62;margin:0;">{{ L.sup.flowQuoteDesc }}</p></article>
+        <article data-reveal style="padding:24px;border-radius:18px;background:#f3f7f3;"><h3 style="font-size:18px;margin:0 0 8px;">{{ L.sup.flowShipTitle }}</h3><p style="font-size:15px;line-height:1.65;color:#5b6b62;margin:0;">{{ L.sup.flowShipDesc }}</p></article>
       </div>
     </section>
 
@@ -943,25 +952,25 @@
       <div class="supplier-wrap">
         <article class="supplier-capability" data-reveal aria-labelledby="supplier-leads-title">
           <div class="supplier-copy">
-            <div style="font-size:13px;font-weight:700;color:#166534;letter-spacing:.1em;margin-bottom:10px;">01 · 找到合適需求</div>
-            <h2 id="supplier-leads-title" style="font-size:38px;line-height:1.3;color:#17261c;margin:0 0 14px;">商機雷達</h2>
-            <p class="supplier-mobile-copy" style="font-size:17px;line-height:1.75;color:#5b6b62;margin:0;">平台依餐廳需求、商品目錄與服務區域整理潛在商機，你可以查看狀態並自行決定下一步。</p>
+            <div style="font-size:13px;font-weight:700;color:#166534;letter-spacing:.1em;margin-bottom:10px;">{{ L.sup.cap1Eyebrow }}</div>
+            <h2 id="supplier-leads-title" style="font-size:38px;line-height:1.3;color:#17261c;margin:0 0 14px;">{{ L.sup.cap1Title }}</h2>
+            <p class="supplier-mobile-copy" style="font-size:17px;line-height:1.75;color:#5b6b62;margin:0;">{{ L.sup.cap1Sub }}</p>
             <ul class="supplier-detail-list">
-              <li>依商品目錄進行需求單自動媒合</li>
-              <li>查看新商機與不同處理狀態</li>
-              <li>用近 90 天需求做品項缺口分析</li>
+              <li>{{ L.sup.cap1Li1 }}</li>
+              <li>{{ L.sup.cap1Li2 }}</li>
+              <li>{{ L.sup.cap1Li3 }}</li>
             </ul>
           </div>
           <div class="supplier-product-mock">
-            <div class="supplier-mock-bar"><span>產品功能示意畫面 · 示例資料</span><span>商機雷達</span></div>
+            <div class="supplier-mock-bar"><span>{{ L.sup.mockCaption }}</span><span>{{ L.sup.cap1MockTag }}</span></div>
             <div class="supplier-mock-body">
-              <div class="supplier-mock-scroll" tabindex="0" role="region" aria-label="商機與品項缺口示意表，可左右捲動">
-                <table class="supplier-mock-table" aria-label="商機與品項缺口示例">
-                  <thead><tr><th>需求品項</th><th>配送區域</th><th>頻率</th><th>狀態</th></tr></thead>
+              <div class="supplier-mock-scroll" tabindex="0" role="region" aria-label="{{ L.sup.cap1ScrollAria }}">
+                <table class="supplier-mock-table" aria-label="{{ L.sup.cap1TableAria }}">
+                  <thead><tr><th>{{ L.sup.cap1ThItem }}</th><th>{{ L.sup.cap1ThArea }}</th><th>{{ L.sup.cap1ThFreq }}</th><th>{{ L.sup.cap1ThStatus }}</th></tr></thead>
                   <tbody>
-                    <tr><td>青江菜 120 kg</td><td>台北市</td><td>每週 3 次</td><td><span style="color:#166534;font-weight:700;">新商機</span></td></tr>
-                    <tr><td>去骨雞腿 80 kg</td><td>新北市</td><td>每週 2 次</td><td>已查看</td></tr>
-                    <tr><td>品項缺口：甜椒</td><td>服務區域內</td><td>近 90 天 16 次需求</td><td>尚未上架</td></tr>
+                    <tr><td>{{ L.sup.cap1Row1Item }}</td><td>{{ L.sup.cap1Row1Area }}</td><td>{{ L.sup.cap1Row1Freq }}</td><td><span style="color:#166534;font-weight:700;">{{ L.sup.cap1Row1Status }}</span></td></tr>
+                    <tr><td>{{ L.sup.cap1Row2Item }}</td><td>{{ L.sup.cap1Row2Area }}</td><td>{{ L.sup.cap1Row2Freq }}</td><td>{{ L.sup.cap1Row2Status }}</td></tr>
+                    <tr><td>{{ L.sup.cap1Row3Item }}</td><td>{{ L.sup.cap1Row3Area }}</td><td>{{ L.sup.cap1Row3Freq }}</td><td>{{ L.sup.cap1Row3Status }}</td></tr>
                   </tbody>
                 </table>
               </div>
@@ -971,89 +980,89 @@
 
         <article class="supplier-capability supplier-capability--reverse" data-reveal aria-labelledby="supplier-quotes-title">
           <div class="supplier-copy">
-            <div style="font-size:13px;font-weight:700;color:#166534;letter-spacing:.1em;margin-bottom:10px;">02 · 報價到出貨</div>
-            <h2 id="supplier-quotes-title" style="font-size:38px;line-height:1.3;color:#17261c;margin:0 0 14px;">報價與接單</h2>
-            <p class="supplier-mobile-copy" style="font-size:17px;line-height:1.75;color:#5b6b62;margin:0;">集中檢視需求、回覆報價並追蹤採購訂單；每個確認動作仍由供應商操作。</p>
+            <div style="font-size:13px;font-weight:700;color:#166534;letter-spacing:.1em;margin-bottom:10px;">{{ L.sup.cap2Eyebrow }}</div>
+            <h2 id="supplier-quotes-title" style="font-size:38px;line-height:1.3;color:#17261c;margin:0 0 14px;">{{ L.sup.cap2Title }}</h2>
+            <p class="supplier-mobile-copy" style="font-size:17px;line-height:1.75;color:#5b6b62;margin:0;">{{ L.sup.cap2Sub }}</p>
             <ul class="supplier-detail-list">
-              <li>回覆報價金額、交期、付款條件與替代品項</li>
-              <li>查看待報價、已報價與已接受狀態</li>
-              <li>追蹤待確認訂單，完成後確認出貨</li>
+              <li>{{ L.sup.cap2Li1 }}</li>
+              <li>{{ L.sup.cap2Li2 }}</li>
+              <li>{{ L.sup.cap2Li3 }}</li>
             </ul>
           </div>
           <div class="supplier-product-mock">
-            <div class="supplier-mock-bar"><span>產品功能示意畫面 · 示例資料</span><span>報價與訂單</span></div>
+            <div class="supplier-mock-bar"><span>{{ L.sup.mockCaption }}</span><span>{{ L.sup.cap2MockTag }}</span></div>
             <div class="supplier-mock-body">
-              <div class="supplier-mock-scroll" tabindex="0" role="region" aria-label="報價與訂單狀態示意表，可左右捲動">
-                <table class="supplier-mock-table" aria-label="報價與訂單狀態示例">
-                  <thead><tr><th>需求摘要</th><th>總報價</th><th>交期</th><th>狀態</th></tr></thead>
+              <div class="supplier-mock-scroll" tabindex="0" role="region" aria-label="{{ L.sup.cap2ScrollAria }}">
+                <table class="supplier-mock-table" aria-label="{{ L.sup.cap2TableAria }}">
+                  <thead><tr><th>{{ L.sup.cap2ThSummary }}</th><th>{{ L.sup.cap2ThTotal }}</th><th>{{ L.sup.cap2ThLeadTime }}</th><th>{{ L.sup.cap2ThStatus }}</th></tr></thead>
                   <tbody>
-                    <tr><td>葉菜類 3 品項</td><td>NT$ 12,600</td><td>2 個工作天</td><td><span style="color:#166534;font-weight:700;">已接受</span></td></tr>
-                    <tr><td>冷凍肉品 2 品項</td><td>待回覆</td><td>—</td><td>待報價</td></tr>
-                    <tr><td>訂單 #8F21A0</td><td>NT$ 8,450</td><td>07/29</td><td>待確認</td></tr>
+                    <tr><td>{{ L.sup.cap2Row1Summary }}</td><td>NT$ 12,600</td><td>{{ L.sup.cap2Row1LeadTime }}</td><td><span style="color:#166534;font-weight:700;">{{ L.sup.cap2Row1Status }}</span></td></tr>
+                    <tr><td>{{ L.sup.cap2Row2Summary }}</td><td>{{ L.sup.cap2Row2Total }}</td><td>—</td><td>{{ L.sup.cap2Row2Status }}</td></tr>
+                    <tr><td>{{ L.sup.cap2Row3Summary }}</td><td>NT$ 8,450</td><td>07/29</td><td>{{ L.sup.cap2Row3Status }}</td></tr>
                   </tbody>
                 </table>
               </div>
-              <div style="margin-top:14px;padding:12px 14px;border-radius:12px;background:#edf7ed;font-size:13px;line-height:1.6;color:#294331;">訂單確認備妥後，可由供應商按下「確認出貨」，並保留出貨紀錄。</div>
+              <div style="margin-top:14px;padding:12px 14px;border-radius:12px;background:#edf7ed;font-size:13px;line-height:1.6;color:#294331;">{{ L.sup.cap2Note }}</div>
             </div>
           </div>
         </article>
 
         <article class="supplier-capability" data-reveal aria-labelledby="supplier-pricing-title">
           <div class="supplier-copy">
-            <div style="font-size:13px;font-weight:700;color:#166534;letter-spacing:.1em;margin-bottom:10px;">03 · 看懂行情與需求</div>
-            <h2 id="supplier-pricing-title" style="font-size:38px;line-height:1.3;color:#17261c;margin:0 0 14px;">定價與預測</h2>
-            <p class="supplier-mobile-copy" style="font-size:17px;line-height:1.75;color:#5b6b62;margin:0;">用平台既有報價與需求資料作為參考，檢視價格競爭力和近期備貨方向。</p>
+            <div style="font-size:13px;font-weight:700;color:#166534;letter-spacing:.1em;margin-bottom:10px;">{{ L.sup.cap3Eyebrow }}</div>
+            <h2 id="supplier-pricing-title" style="font-size:38px;line-height:1.3;color:#17261c;margin:0 0 14px;">{{ L.sup.cap3Title }}</h2>
+            <p class="supplier-mobile-copy" style="font-size:17px;line-height:1.75;color:#5b6b62;margin:0;">{{ L.sup.cap3Sub }}</p>
             <ul class="supplier-detail-list">
-              <li>比對同區同品項行情與價格名次</li>
-              <li>查看近 13 週需求量趨勢</li>
-              <li>依近 90 天資料取得下週備貨建議與產季提示</li>
+              <li>{{ L.sup.cap3Li1 }}</li>
+              <li>{{ L.sup.cap3Li2 }}</li>
+              <li>{{ L.sup.cap3Li3 }}</li>
             </ul>
           </div>
           <div class="supplier-product-mock">
-            <div class="supplier-mock-bar"><span>產品功能示意畫面 · 示例資料</span><span>定價助手 · 需求預測</span></div>
+            <div class="supplier-mock-bar"><span>{{ L.sup.mockCaption }}</span><span>{{ L.sup.cap3MockTag }}</span></div>
             <div class="supplier-mock-body">
-              <div class="supplier-mock-scroll" tabindex="0" role="region" aria-label="定價與需求預測示意表，可左右捲動">
-                <table class="supplier-mock-table" aria-label="定價與需求預測示例">
-                  <thead><tr><th>品項</th><th>我的價格</th><th>同區行情</th><th>下週備貨建議</th></tr></thead>
+              <div class="supplier-mock-scroll" tabindex="0" role="region" aria-label="{{ L.sup.cap3ScrollAria }}">
+                <table class="supplier-mock-table" aria-label="{{ L.sup.cap3TableAria }}">
+                  <thead><tr><th>{{ L.sup.cap3ThItem }}</th><th>{{ L.sup.cap3ThMyPrice }}</th><th>{{ L.sup.cap3ThMarket }}</th><th>{{ L.sup.cap3ThRestock }}</th></tr></thead>
                   <tbody>
-                    <tr><td>青江菜</td><td>NT$ 52 / kg</td><td>NT$ 48–56</td><td>136 kg</td></tr>
-                    <tr><td>小白菜</td><td>NT$ 63 / kg</td><td>NT$ 50–58</td><td>94 kg</td></tr>
-                    <tr><td>甜椒</td><td>尚未上架</td><td>NT$ 82–96</td><td>需求成長 +12%</td></tr>
+                    <tr><td>{{ L.sup.cap3Row1Item }}</td><td>NT$ 52 / kg</td><td>NT$ 48–56</td><td>136 kg</td></tr>
+                    <tr><td>{{ L.sup.cap3Row2Item }}</td><td>NT$ 63 / kg</td><td>NT$ 50–58</td><td>94 kg</td></tr>
+                    <tr><td>{{ L.sup.cap3Row3Item }}</td><td>{{ L.sup.cap3Row3MyPrice }}</td><td>NT$ 82–96</td><td>{{ L.sup.cap3Row3Restock }}</td></tr>
                   </tbody>
                 </table>
               </div>
-              <p style="font-size:12px;line-height:1.6;color:#5b6b62;margin:13px 2px 0;">預測依平台需求紀錄推估，實際備貨仍需依供應能力與市場狀況判斷。</p>
+              <p style="font-size:12px;line-height:1.6;color:#5b6b62;margin:13px 2px 0;">{{ L.sup.cap3Note }}</p>
             </div>
           </div>
         </article>
 
         <article class="supplier-capability supplier-capability--reverse" data-reveal aria-labelledby="supplier-customers-title">
           <div class="supplier-copy">
-            <div style="font-size:13px;font-weight:700;color:#166534;letter-spacing:.1em;margin-bottom:10px;">04 · 延續合作關係</div>
-            <h2 id="supplier-customers-title" style="font-size:38px;line-height:1.3;color:#17261c;margin:0 0 14px;">客戶經營</h2>
-            <p class="supplier-mobile-copy" style="font-size:17px;line-height:1.75;color:#5b6b62;margin:0;">完成訂單後，系統依合作紀錄整理客戶輪廓，並集中呈現評價與服務指標。</p>
+            <div style="font-size:13px;font-weight:700;color:#166534;letter-spacing:.1em;margin-bottom:10px;">{{ L.sup.cap4Eyebrow }}</div>
+            <h2 id="supplier-customers-title" style="font-size:38px;line-height:1.3;color:#17261c;margin:0 0 14px;">{{ L.sup.cap4Title }}</h2>
+            <p class="supplier-mobile-copy" style="font-size:17px;line-height:1.75;color:#5b6b62;margin:0;">{{ L.sup.cap4Sub }}</p>
             <ul class="supplier-detail-list">
-              <li>查看餐廳下單頻率、累計金額與回購狀況</li>
-              <li>辨識可能流失客戶，作為主動聯繫參考</li>
-              <li>整理交易評價、商店評價與星等分布</li>
+              <li>{{ L.sup.cap4Li1 }}</li>
+              <li>{{ L.sup.cap4Li2 }}</li>
+              <li>{{ L.sup.cap4Li3 }}</li>
             </ul>
           </div>
           <div class="supplier-product-mock">
-            <div class="supplier-mock-bar"><span>產品功能示意畫面 · 示例資料</span><span>客戶與評價</span></div>
+            <div class="supplier-mock-bar"><span>{{ L.sup.mockCaption }}</span><span>{{ L.sup.cap4MockTag }}</span></div>
             <div class="supplier-mock-body">
-              <div class="supplier-mock-scroll" tabindex="0" role="region" aria-label="客戶與評價示意表，可左右捲動">
-                <table class="supplier-mock-table" aria-label="客戶與評價示例">
-                  <thead><tr><th>客戶</th><th>下單頻率</th><th>最近訂單</th><th>合作狀況</th></tr></thead>
+              <div class="supplier-mock-scroll" tabindex="0" role="region" aria-label="{{ L.sup.cap4ScrollAria }}">
+                <table class="supplier-mock-table" aria-label="{{ L.sup.cap4TableAria }}">
+                  <thead><tr><th>{{ L.sup.cap4ThCustomer }}</th><th>{{ L.sup.cap4ThFreq }}</th><th>{{ L.sup.cap4ThLastOrder }}</th><th>{{ L.sup.cap4ThStatus }}</th></tr></thead>
                   <tbody>
-                    <tr><td>禾日餐飲</td><td>每週</td><td>3 天前</td><td><span style="color:#166534;font-weight:700;">穩定回購</span></td></tr>
-                    <tr><td>好食團膳</td><td>每兩週</td><td>26 天前</td><td>可能流失</td></tr>
-                    <tr><td>山海小館</td><td>首次合作</td><td>7 天前</td><td>新客戶</td></tr>
+                    <tr><td>{{ L.sup.cap4Row1Customer }}</td><td>{{ L.sup.cap4Row1Freq }}</td><td>{{ L.sup.cap4Row1LastOrder }}</td><td><span style="color:#166534;font-weight:700;">{{ L.sup.cap4Row1Status }}</span></td></tr>
+                    <tr><td>{{ L.sup.cap4Row2Customer }}</td><td>{{ L.sup.cap4Row2Freq }}</td><td>{{ L.sup.cap4Row2LastOrder }}</td><td>{{ L.sup.cap4Row2Status }}</td></tr>
+                    <tr><td>{{ L.sup.cap4Row3Customer }}</td><td>{{ L.sup.cap4Row3Freq }}</td><td>{{ L.sup.cap4Row3LastOrder }}</td><td>{{ L.sup.cap4Row3Status }}</td></tr>
                   </tbody>
                 </table>
               </div>
               <div style="display:flex;flex-wrap:wrap;gap:10px;margin-top:14px;">
-                <span style="padding:8px 10px;border-radius:999px;background:#edf7ed;color:#294331;font-size:13px;">交易評價 4.8 / 5</span>
-                <span style="padding:8px 10px;border-radius:999px;background:#f1f4f2;color:#34473b;font-size:13px;">商店評價 12 則</span>
+                <span style="padding:8px 10px;border-radius:999px;background:#edf7ed;color:#294331;font-size:13px;">{{ L.sup.cap4PillRating }}</span>
+                <span style="padding:8px 10px;border-radius:999px;background:#f1f4f2;color:#34473b;font-size:13px;">{{ L.sup.cap4PillReviews }}</span>
               </div>
             </div>
           </div>
@@ -1064,40 +1073,40 @@
     <section aria-labelledby="supplier-outcomes-title" style="background:#fff;">
       <div class="supplier-wrap" style="padding-top:80px;padding-bottom:80px;">
         <div data-reveal style="max-width:760px;margin-bottom:34px;">
-          <div style="font-size:13px;font-weight:700;color:#166534;letter-spacing:.1em;margin-bottom:10px;">平台規模與使用情境</div>
-          <h2 id="supplier-outcomes-title" style="font-size:38px;line-height:1.3;color:#17261c;margin:0 0 14px;">供應商經營的成果參考</h2>
-          <p class="supplier-mobile-copy" style="font-size:17px;line-height:1.75;color:#5b6b62;margin:0;">以下分開呈現平台現有公開數據與產品示例，避免把操作畫面誤認為特定客戶實績。</p>
+          <div style="font-size:13px;font-weight:700;color:#166534;letter-spacing:.1em;margin-bottom:10px;">{{ L.sup.outcomesEyebrow }}</div>
+          <h2 id="supplier-outcomes-title" style="font-size:38px;line-height:1.3;color:#17261c;margin:0 0 14px;">{{ L.sup.outcomesTitle }}</h2>
+          <p class="supplier-mobile-copy" style="font-size:17px;line-height:1.75;color:#5b6b62;margin:0;">{{ L.sup.outcomesSub }}</p>
         </div>
         <div class="supplier-case-grid">
           <article data-reveal style="padding:28px;border-radius:20px;background:#0f2418;color:#fff;">
-            <div style="font-size:13px;color:#8fe681;font-weight:700;margin-bottom:14px;">平台現有公開數據</div>
+            <div style="font-size:13px;color:#8fe681;font-weight:700;margin-bottom:14px;">{{ L.sup.statLabel }}</div>
             <strong style="display:block;font-size:34px;margin-bottom:6px;">2,500+</strong>
-            <p style="font-size:14px;line-height:1.65;color:#b4c6b8;margin:0;">在地供應商</p>
+            <p style="font-size:14px;line-height:1.65;color:#b4c6b8;margin:0;">{{ L.sup.stat1Desc }}</p>
           </article>
           <article data-reveal style="padding:28px;border-radius:20px;background:#f3f7f3;">
-            <div style="font-size:13px;color:#166534;font-weight:700;margin-bottom:14px;">平台現有公開數據</div>
-            <strong style="display:block;font-size:34px;color:#17261c;margin-bottom:6px;">28 類</strong>
-            <p style="font-size:14px;line-height:1.65;color:#5b6b62;margin:0;">食材品項分類</p>
+            <div style="font-size:13px;color:#166534;font-weight:700;margin-bottom:14px;">{{ L.sup.statLabel }}</div>
+            <strong style="display:block;font-size:34px;color:#17261c;margin-bottom:6px;">{{ L.sup.stat2Value }}</strong>
+            <p style="font-size:14px;line-height:1.65;color:#5b6b62;margin:0;">{{ L.sup.stat2Desc }}</p>
           </article>
           <article data-reveal style="padding:28px;border-radius:20px;background:#edf7ed;">
-            <div style="font-size:13px;color:#166534;font-weight:700;margin-bottom:14px;">平台現有公開數據</div>
+            <div style="font-size:13px;color:#166534;font-weight:700;margin-bottom:14px;">{{ L.sup.statLabel }}</div>
             <strong style="display:block;font-size:34px;color:#17261c;margin-bottom:6px;">24hr</strong>
-            <p style="font-size:14px;line-height:1.65;color:#5b6b62;margin:0;">平均媒合回應</p>
+            <p style="font-size:14px;line-height:1.65;color:#5b6b62;margin:0;">{{ L.sup.stat3Desc }}</p>
           </article>
         </div>
         <div data-reveal style="margin-top:24px;padding:24px;border:1px solid #dfe8e1;border-radius:18px;background:#fbfcfb;">
-          <div style="font-size:13px;font-weight:700;color:#166534;margin-bottom:8px;">示例資料，非特定客戶實績</div>
-          <p style="font-size:15px;line-height:1.75;color:#34473b;margin:0;">一個完整工作日可依序查看新商機、回覆待報價需求、確認訂單與出貨，再用客戶與評價紀錄安排後續聯繫。</p>
+          <div style="font-size:13px;font-weight:700;color:#166534;margin-bottom:8px;">{{ L.sup.outcomesNoteLabel }}</div>
+          <p style="font-size:15px;line-height:1.75;color:#34473b;margin:0;">{{ L.sup.outcomesNoteBody }}</p>
         </div>
-        <p style="font-size:13px;line-height:1.65;color:#5b6b62;margin:18px 0 0;">成果依品項、服務區域、供應能力與執行期間而異。</p>
+        <p style="font-size:13px;line-height:1.65;color:#5b6b62;margin:18px 0 0;">{{ L.sup.outcomesDisclaimer }}</p>
       </div>
     </section>
 
     <section class="supplier-wrap" style="padding-top:8px;padding-bottom:92px;">
       <div data-reveal style="padding:58px 48px;border-radius:28px;background:radial-gradient(560px 260px at 82% -25%,rgba(124,240,107,.22),transparent 65%),#102419;text-align:center;color:#fff;">
-        <h2 style="font-size:36px;line-height:1.35;margin:0 0 12px;">讓下一個合適商機，更容易看見你</h2>
-        <p class="supplier-mobile-copy" style="font-size:17px;line-height:1.7;color:#b4c6b8;margin:0 auto 28px;max-width:650px;">申請供應商上架，開始建立商品目錄與服務範圍。</p>
-        <a class="platform-action" href="{{ supplierApplicationUrl }}" style="background:#54ce50;color:#07130a;box-shadow:0 12px 30px rgba(74,209,90,.24);">申請供應商上架</a>
+        <h2 style="font-size:36px;line-height:1.35;margin:0 0 12px;">{{ L.sup.ctaTitle }}</h2>
+        <p class="supplier-mobile-copy" style="font-size:17px;line-height:1.7;color:#b4c6b8;margin:0 auto 28px;max-width:650px;">{{ L.sup.ctaSub }}</p>
+        <a class="platform-action" href="{{ supplierApplicationUrl }}" style="background:#54ce50;color:#07130a;box-shadow:0 12px 30px rgba(74,209,90,.24);">{{ L.sup.applyCta }}</a>
       </div>
     </section>
   </div>
@@ -1110,76 +1119,76 @@
       <div style="position:absolute; inset:0; background-image:linear-gradient(rgba(255,255,255,.04) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,.04) 1px, transparent 1px); background-size:54px 54px; -webkit-mask-image:radial-gradient(700px 400px at 50% 20%, #000, transparent 75%); mask-image:radial-gradient(700px 400px at 50% 20%, #000, transparent 75%);"></div>
       <div class="support-wrap" style="position:relative;padding-top:84px;padding-bottom:84px;">
         <div data-reveal style="font-family:'Space Grotesk','Noto Sans TC',sans-serif;font-size:13px;font-weight:700;color:#8fe681;letter-spacing:.14em;text-transform:uppercase;margin-bottom:16px;">Platform outcomes</div>
-        <h1 class="support-title" data-reveal style="font-family:'Space Grotesk','Noto Sans TC',sans-serif;font-size:48px;font-weight:900;color:#fff;margin:0 0 20px;line-height:1.18;letter-spacing:-.01em;">餐廳與供應商，如何一起改善採購成果</h1>
-        <p data-reveal style="font-size:18px;line-height:1.75;color:#b4c6b8;margin:0;max-width:720px;">從需求媒合、供應來源到食材履歷，以下案例呈現不同業態在各自採購情境中的改善層級。</p>
+        <h1 class="support-title" data-reveal style="font-family:'Space Grotesk','Noto Sans TC',sans-serif;font-size:48px;font-weight:900;color:#fff;margin:0 0 20px;line-height:1.18;letter-spacing:-.01em;">{{ L.cases.heroTitle }}</h1>
+        <p data-reveal style="font-size:18px;line-height:1.75;color:#b4c6b8;margin:0;max-width:720px;">{{ L.cases.heroSub }}</p>
       </div>
     </div>
 
     <section class="support-wrap" aria-labelledby="case-results-title" style="padding-top:72px;padding-bottom:88px;">
       <div data-reveal style="display:flex;align-items:end;justify-content:space-between;gap:24px;margin-bottom:32px;">
         <div>
-          <div style="font-size:13px;font-weight:700;color:#166534;margin-bottom:10px;">已核准案例成果</div>
-          <h2 id="case-results-title" style="font-size:34px;line-height:1.35;color:#17261c;margin:0;">依角色與改善層級比較</h2>
+          <div style="font-size:13px;font-weight:700;color:#166534;margin-bottom:10px;">{{ L.cases.resultsEyebrow }}</div>
+          <h2 id="case-results-title" style="font-size:34px;line-height:1.35;color:#17261c;margin:0;">{{ L.cases.resultsTitle }}</h2>
         </div>
-        <p style="font-size:14px;line-height:1.7;color:#5b6b62;margin:0;max-width:420px;">數據為個別案例結果，用來說明採購情境，不代表所有使用者都會得到相同成果。</p>
+        <p style="font-size:14px;line-height:1.7;color:#5b6b62;margin:0;max-width:420px;">{{ L.cases.resultsNote }}</p>
       </div>
 
       <div class="cases-grid">
         <article class="case-card" data-reveal>
-          <div class="case-visual" aria-label="供應商比較流程示意">
-            <div class="case-visual-row"><span>提出需求</span><span class="case-visual-track"><span class="case-visual-fill" style="width:38%;"></span></span></div>
-            <div class="case-visual-row"><span>取得報價</span><span class="case-visual-track"><span class="case-visual-fill" style="width:68%;"></span></span></div>
-            <div class="case-visual-row"><span>完成比較</span><span class="case-visual-track"><span class="case-visual-fill" style="width:100%;"></span></span></div>
+          <div class="case-visual" aria-label="{{ L.cases.case1.visualAlt }}">
+            <div class="case-visual-row"><span>{{ L.cases.case1.step1 }}</span><span class="case-visual-track"><span class="case-visual-fill" style="width:38%;"></span></span></div>
+            <div class="case-visual-row"><span>{{ L.cases.case1.step2 }}</span><span class="case-visual-track"><span class="case-visual-fill" style="width:68%;"></span></span></div>
+            <div class="case-visual-row"><span>{{ L.cases.case1.step3 }}</span><span class="case-visual-track"><span class="case-visual-fill" style="width:100%;"></span></span></div>
           </div>
           <div style="padding:28px;">
-            <div style="font-size:13px;font-weight:700;color:#166534;margin-bottom:10px;">餐廳端成果 · 採購效率與成本</div>
-            <h3 style="font-size:20px;line-height:1.45;color:#17261c;margin:0 0 12px;">單店餐廳，告別到處問價的日子</h3>
-            <p style="font-size:15px;line-height:1.75;color:#5b6b62;margin:0 0 22px;">透過一次需求媒合，快速對接三家蔬果供應商，穩定取得當季食材。</p>
+            <div style="font-size:13px;font-weight:700;color:#166534;margin-bottom:10px;">{{ L.cases.case1.eyebrow }}</div>
+            <h3 style="font-size:20px;line-height:1.45;color:#17261c;margin:0 0 12px;">{{ L.cases.case1.title }}</h3>
+            <p style="font-size:15px;line-height:1.75;color:#5b6b62;margin:0 0 22px;">{{ L.cases.case1.body }}</p>
             <div class="case-stats">
-              <div><strong style="display:block;font-size:26px;color:#166534;">3 天</strong><span style="font-size:13px;color:#5b6b62;">完成供應商比較</span></div>
-              <div><strong style="display:block;font-size:26px;color:#166534;">−15%</strong><span style="font-size:13px;color:#5b6b62;">食材採購成本</span></div>
+              <div><strong style="display:block;font-size:26px;color:#166534;">{{ L.cases.case1.stat1Value }}</strong><span style="font-size:13px;color:#5b6b62;">{{ L.cases.case1.stat1Label }}</span></div>
+              <div><strong style="display:block;font-size:26px;color:#166534;">−15%</strong><span style="font-size:13px;color:#5b6b62;">{{ L.cases.case1.stat2Label }}</span></div>
             </div>
           </div>
         </article>
 
         <article class="case-card" data-reveal>
-          <div class="case-visual" aria-label="多來源供應狀態示意">
-            <div class="case-visual-row"><span>蔬果供應</span><span class="case-visual-track"><span class="case-visual-fill" style="width:92%;"></span></span></div>
-            <div class="case-visual-row"><span>肉品供應</span><span class="case-visual-track"><span class="case-visual-fill" style="width:78%;"></span></span></div>
-            <div class="case-visual-row"><span>備援來源</span><span class="case-visual-track"><span class="case-visual-fill" style="width:84%;"></span></span></div>
+          <div class="case-visual" aria-label="{{ L.cases.case2.visualAlt }}">
+            <div class="case-visual-row"><span>{{ L.cases.case2.step1 }}</span><span class="case-visual-track"><span class="case-visual-fill" style="width:92%;"></span></span></div>
+            <div class="case-visual-row"><span>{{ L.cases.case2.step2 }}</span><span class="case-visual-track"><span class="case-visual-fill" style="width:78%;"></span></span></div>
+            <div class="case-visual-row"><span>{{ L.cases.case2.step3 }}</span><span class="case-visual-track"><span class="case-visual-fill" style="width:84%;"></span></span></div>
           </div>
           <div style="padding:28px;">
-            <div style="font-size:13px;font-weight:700;color:#166534;margin-bottom:10px;">餐廳端成果 · 供應穩定度</div>
-            <h3 style="font-size:20px;line-height:1.45;color:#17261c;margin:0 0 12px;">大量供餐，採購來源更穩定</h3>
-            <p style="font-size:15px;line-height:1.75;color:#5b6b62;margin:0 0 22px;">同時對接多家供應商，降低單一來源斷貨風險，供餐更有保障。</p>
+            <div style="font-size:13px;font-weight:700;color:#166534;margin-bottom:10px;">{{ L.cases.case2.eyebrow }}</div>
+            <h3 style="font-size:20px;line-height:1.45;color:#17261c;margin:0 0 12px;">{{ L.cases.case2.title }}</h3>
+            <p style="font-size:15px;line-height:1.75;color:#5b6b62;margin:0 0 22px;">{{ L.cases.case2.body }}</p>
             <div class="case-stats">
-              <div><strong style="display:block;font-size:26px;color:#166534;">5+</strong><span style="font-size:13px;color:#5b6b62;">穩定合作供應商</span></div>
-              <div><strong style="display:block;font-size:26px;color:#166534;">0</strong><span style="font-size:13px;color:#5b6b62;">斷貨次數</span></div>
+              <div><strong style="display:block;font-size:26px;color:#166534;">5+</strong><span style="font-size:13px;color:#5b6b62;">{{ L.cases.case2.stat1Label }}</span></div>
+              <div><strong style="display:block;font-size:26px;color:#166534;">0</strong><span style="font-size:13px;color:#5b6b62;">{{ L.cases.case2.stat2Label }}</span></div>
             </div>
           </div>
         </article>
 
         <article class="case-card" data-reveal>
-          <div class="case-visual" aria-label="履歷資訊與顧客信任示意">
-            <div class="case-visual-row"><span>產地資訊</span><span class="case-visual-track"><span class="case-visual-fill" style="width:88%;"></span></span></div>
-            <div class="case-visual-row"><span>履歷資料</span><span class="case-visual-track"><span class="case-visual-fill" style="width:100%;"></span></span></div>
-            <div class="case-visual-row"><span>顧客回饋</span><span class="case-visual-track"><span class="case-visual-fill" style="width:94%;"></span></span></div>
+          <div class="case-visual" aria-label="{{ L.cases.case3.visualAlt }}">
+            <div class="case-visual-row"><span>{{ L.cases.case3.step1 }}</span><span class="case-visual-track"><span class="case-visual-fill" style="width:88%;"></span></span></div>
+            <div class="case-visual-row"><span>{{ L.cases.case3.step2 }}</span><span class="case-visual-track"><span class="case-visual-fill" style="width:100%;"></span></span></div>
+            <div class="case-visual-row"><span>{{ L.cases.case3.step3 }}</span><span class="case-visual-track"><span class="case-visual-fill" style="width:94%;"></span></span></div>
           </div>
           <div style="padding:28px;">
-            <div style="font-size:13px;font-weight:700;color:#166534;margin-bottom:10px;">供應商合作成果 · 履歷與信任</div>
-            <h3 style="font-size:20px;line-height:1.45;color:#17261c;margin:0 0 12px;">產地直送，建立消費者信任</h3>
-            <p style="font-size:15px;line-height:1.75;color:#5b6b62;margin:0 0 22px;">對接具產銷履歷的產地供應商，商品故事與品質都更有說服力。</p>
+            <div style="font-size:13px;font-weight:700;color:#166534;margin-bottom:10px;">{{ L.cases.case3.eyebrow }}</div>
+            <h3 style="font-size:20px;line-height:1.45;color:#17261c;margin:0 0 12px;">{{ L.cases.case3.title }}</h3>
+            <p style="font-size:15px;line-height:1.75;color:#5b6b62;margin:0 0 22px;">{{ L.cases.case3.body }}</p>
             <div class="case-stats">
-              <div><strong style="display:block;font-size:26px;color:#166534;">+28%</strong><span style="font-size:13px;color:#5b6b62;">回購率提升</span></div>
-              <div><strong style="display:block;font-size:26px;color:#166534;">4.9★</strong><span style="font-size:13px;color:#5b6b62;">顧客評價</span></div>
+              <div><strong style="display:block;font-size:26px;color:#166534;">+28%</strong><span style="font-size:13px;color:#5b6b62;">{{ L.cases.case3.stat1Label }}</span></div>
+              <div><strong style="display:block;font-size:26px;color:#166534;">4.9★</strong><span style="font-size:13px;color:#5b6b62;">{{ L.cases.case3.stat2Label }}</span></div>
             </div>
           </div>
         </article>
       </div>
-      <p style="font-size:13px;line-height:1.7;color:#5b6b62;margin:20px 0 0;">成果依業態、採購規模與執行期間而異。</p>
+      <p style="font-size:13px;line-height:1.7;color:#5b6b62;margin:20px 0 0;">{{ L.cases.disclaimer }}</p>
       <div data-reveal style="display:flex;flex-wrap:wrap;gap:12px;margin-top:38px;">
-        <a class="platform-action" href="{{ restaurantRegistrationUrl }}" style="background:#166534;color:#fff;">餐廳註冊</a>
-        <a class="platform-action" href="{{ supplierApplicationUrl }}" style="border:1px solid #166534;color:#166534;background:#fff;">供應商上架</a>
+        <a class="platform-action" href="{{ restaurantRegistrationUrl }}" style="background:#166534;color:#fff;">{{ L.cases.ctaRestaurant }}</a>
+        <a class="platform-action" href="{{ supplierApplicationUrl }}" style="border:1px solid #166534;color:#166534;background:#fff;">{{ L.cases.ctaSupplier }}</a>
       </div>
     </section>
   </div>
@@ -1191,28 +1200,28 @@
     <section class="support-wrap" style="padding-top:88px;padding-bottom:76px;">
       <div data-reveal style="max-width:850px;">
         <div style="font-family:'Space Grotesk','Noto Sans TC',sans-serif;font-size:13px;font-weight:700;color:#166534;letter-spacing:.14em;text-transform:uppercase;margin-bottom:16px;">About iFoodmap</div>
-        <h1 class="support-title" style="font-family:'Space Grotesk','Noto Sans TC',sans-serif;font-size:48px;font-weight:900;color:#0e1a12;margin:0 0 24px;line-height:1.22;letter-spacing:-.01em;">讓餐廳需求與供應能力，更有效率地相遇</h1>
-        <p style="font-size:19px;line-height:1.85;color:#5b6b62;margin:0;">iFoodmap 是連結餐廳與食材供應商的雙邊 B2B 食材採購平台。餐廳可以整理需求、比較報價並管理採購；供應商可以呈現商品、回覆商機並持續經營客戶關係。</p>
+        <h1 class="support-title" style="font-family:'Space Grotesk','Noto Sans TC',sans-serif;font-size:48px;font-weight:900;color:#0e1a12;margin:0 0 24px;line-height:1.22;letter-spacing:-.01em;">{{ L.about.heroTitle }}</h1>
+        <p style="font-size:19px;line-height:1.85;color:#5b6b62;margin:0;">{{ L.about.heroBody }}</p>
       </div>
     </section>
 
     <section style="background:#0f2418;color:#fff;">
       <div class="support-wrap" style="padding-top:72px;padding-bottom:72px;">
         <div data-reveal style="margin-bottom:30px;">
-          <div style="font-size:13px;font-weight:700;color:#8fe681;margin-bottom:10px;">雙邊共同價值</div>
-          <h2 style="font-size:34px;line-height:1.35;margin:0 0 12px;">讓資訊沿著採購流程流動</h2>
-          <p style="font-size:16px;line-height:1.75;color:#b4c6b8;margin:0;max-width:720px;">同一個平台承接雙方需要的資訊層級，減少需求、報價、訂單與出貨散落在不同管道。</p>
+          <div style="font-size:13px;font-weight:700;color:#8fe681;margin-bottom:10px;">{{ L.about.valueEyebrow }}</div>
+          <h2 style="font-size:34px;line-height:1.35;margin:0 0 12px;">{{ L.about.valueTitle }}</h2>
+          <p style="font-size:16px;line-height:1.75;color:#b4c6b8;margin:0;max-width:720px;">{{ L.about.valueBody }}</p>
         </div>
         <div class="about-side-grid">
           <article data-reveal style="padding:28px;border:1px solid rgba(255,255,255,.12);border-radius:22px;background:rgba(255,255,255,.05);">
-            <div style="font-size:13px;font-weight:700;color:#8fe681;margin-bottom:12px;">給餐廳</div>
-            <h3 style="font-size:22px;margin:0 0 10px;">更清楚地提出需求與做決策</h3>
-            <p style="font-size:15px;line-height:1.75;color:#b4c6b8;margin:0;">從菜單、品項與規格開始，逐步比較供應來源、價格與訂單狀態。</p>
+            <div style="font-size:13px;font-weight:700;color:#8fe681;margin-bottom:12px;">{{ L.about.forRestaurantsLabel }}</div>
+            <h3 style="font-size:22px;margin:0 0 10px;">{{ L.about.forRestaurantsTitle }}</h3>
+            <p style="font-size:15px;line-height:1.75;color:#b4c6b8;margin:0;">{{ L.about.forRestaurantsBody }}</p>
           </article>
           <article data-reveal style="padding:28px;border:1px solid rgba(255,255,255,.12);border-radius:22px;background:rgba(255,255,255,.05);">
-            <div style="font-size:13px;font-weight:700;color:#8fe681;margin-bottom:12px;">給供應商</div>
-            <h3 style="font-size:22px;margin:0 0 10px;">更有效率地找到商機與服務客戶</h3>
-            <p style="font-size:15px;line-height:1.75;color:#b4c6b8;margin:0;">依商品與服務範圍接收需求，集中處理報價、訂單、出貨與客戶紀錄。</p>
+            <div style="font-size:13px;font-weight:700;color:#8fe681;margin-bottom:12px;">{{ L.about.forSuppliersLabel }}</div>
+            <h3 style="font-size:22px;margin:0 0 10px;">{{ L.about.forSuppliersTitle }}</h3>
+            <p style="font-size:15px;line-height:1.75;color:#b4c6b8;margin:0;">{{ L.about.forSuppliersBody }}</p>
           </article>
         </div>
       </div>
@@ -1220,24 +1229,24 @@
 
     <section class="support-wrap" aria-labelledby="about-values-title" style="padding-top:88px;padding-bottom:88px;">
       <div data-reveal style="max-width:680px;margin-bottom:38px;">
-        <div style="font-size:13px;font-weight:700;color:#166534;margin-bottom:10px;">我們重視的事</div>
-        <h2 id="about-values-title" style="font-size:34px;line-height:1.35;color:#17261c;margin:0;">三個核心價值</h2>
+        <div style="font-size:13px;font-weight:700;color:#166534;margin-bottom:10px;">{{ L.about.valuesEyebrow }}</div>
+        <h2 id="about-values-title" style="font-size:34px;line-height:1.35;color:#17261c;margin:0;">{{ L.about.valuesTitle }}</h2>
       </div>
       <div class="about-value-grid">
         <article class="about-value-card" data-reveal>
           <div style="width:48px;height:4px;border-radius:999px;background:#166534;margin-bottom:24px;"></div>
-          <h3 style="font-size:21px;color:#17261c;margin:0 0 12px;">高效媒合</h3>
-          <p style="font-size:15px;line-height:1.8;color:#5b6b62;margin:0;">用資料與 AI 協助雙方整理條件，讓每一次採購更快找到合適的合作對象。</p>
+          <h3 style="font-size:21px;color:#17261c;margin:0 0 12px;">{{ L.about.value1Title }}</h3>
+          <p style="font-size:15px;line-height:1.8;color:#5b6b62;margin:0;">{{ L.about.value1Body }}</p>
         </article>
         <article class="about-value-card" data-reveal>
           <div style="width:48px;height:4px;border-radius:999px;background:#166534;margin-bottom:24px;"></div>
-          <h3 style="font-size:21px;color:#17261c;margin:0 0 12px;">公平透明</h3>
-          <p style="font-size:15px;line-height:1.8;color:#5b6b62;margin:0;">讓需求、規格、報價與服務紀錄有清楚脈絡，幫助雙方在資訊對等下做決策。</p>
+          <h3 style="font-size:21px;color:#17261c;margin:0 0 12px;">{{ L.about.value2Title }}</h3>
+          <p style="font-size:15px;line-height:1.8;color:#5b6b62;margin:0;">{{ L.about.value2Body }}</p>
         </article>
         <article class="about-value-card" data-reveal>
           <div style="width:48px;height:4px;border-radius:999px;background:#166534;margin-bottom:24px;"></div>
-          <h3 style="font-size:21px;color:#17261c;margin:0 0 12px;">在地永續</h3>
-          <p style="font-size:15px;line-height:1.8;color:#5b6b62;margin:0;">串接台灣在地供應鏈，縮短產地、供應端與餐桌之間的資訊距離。</p>
+          <h3 style="font-size:21px;color:#17261c;margin:0 0 12px;">{{ L.about.value3Title }}</h3>
+          <p style="font-size:15px;line-height:1.8;color:#5b6b62;margin:0;">{{ L.about.value3Body }}</p>
         </article>
       </div>
     </section>
@@ -1250,66 +1259,66 @@
     <div class="support-wrap contact-grid" style="padding-top:84px;padding-bottom:84px;">
       <div data-reveal>
         <div style="font-family:'Space Grotesk','Noto Sans TC',sans-serif;font-size:13px;font-weight:700;color:#166534;letter-spacing:.14em;text-transform:uppercase;margin-bottom:16px;">Contact us</div>
-        <h1 class="support-title" style="font-family:'Space Grotesk','Noto Sans TC',sans-serif;font-size:44px;font-weight:900;color:#0e1a12;margin:0 0 20px;line-height:1.22;letter-spacing:-.01em;">找到適合你的平台入口或聯絡方式</h1>
-        <p style="font-size:18px;line-height:1.8;color:#5b6b62;margin:0 0 28px;">餐廳可以直接建立帳號，供應商可以申請上架；一般商務諮詢與食材需求也可以由客服協助。</p>
+        <h1 class="support-title" style="font-family:'Space Grotesk','Noto Sans TC',sans-serif;font-size:44px;font-weight:900;color:#0e1a12;margin:0 0 20px;line-height:1.22;letter-spacing:-.01em;">{{ L.contact.heroTitle }}</h1>
+        <p style="font-size:18px;line-height:1.8;color:#5b6b62;margin:0 0 28px;">{{ L.contact.heroBody }}</p>
 
-        <div class="contact-role-grid" aria-label="平台角色入口">
+        <div class="contact-role-grid" aria-label="{{ L.contact.roleGridLabel }}">
           <a href="{{ restaurantRegistrationUrl }}" style="min-height:88px;padding:18px;border:1px solid #d7e3da;border-radius:16px;color:#17261c;text-decoration:none;background:#f7faf7;">
-            <strong style="display:block;margin-bottom:6px;">我是餐廳</strong>
-            <span style="font-size:14px;color:#5b6b62;">建立餐廳帳號 →</span>
+            <strong style="display:block;margin-bottom:6px;">{{ L.contact.roleRestaurantTitle }}</strong>
+            <span style="font-size:14px;color:#5b6b62;">{{ L.contact.roleRestaurantAction }}</span>
           </a>
           <a href="{{ supplierApplicationUrl }}" style="min-height:88px;padding:18px;border:1px solid #d7e3da;border-radius:16px;color:#17261c;text-decoration:none;background:#f7faf7;">
-            <strong style="display:block;margin-bottom:6px;">我是供應商</strong>
-            <span style="font-size:14px;color:#5b6b62;">申請供應商上架 →</span>
+            <strong style="display:block;margin-bottom:6px;">{{ L.contact.roleSupplierTitle }}</strong>
+            <span style="font-size:14px;color:#5b6b62;">{{ L.contact.roleSupplierAction }}</span>
           </a>
         </div>
         <div style="display:flex; flex-direction:column; gap:22px;">
           <div style="display:flex; gap:14px; align-items:center;">
-            <span style="width:46px;height:46px;border-radius:13px;background:#eaf7e4;color:#1f9e4e;font-weight:900;display:flex;align-items:center;justify-content:center;">電</span>
-            <div><div style="font-size:13px;color:#5b6b62;">服務專線</div><div style="font-size:17px;font-weight:700;color:#15231b;">02-7704-5539</div></div>
+            <span style="width:46px;height:46px;border-radius:13px;background:#eaf7e4;color:#1f9e4e;font-weight:900;display:flex;align-items:center;justify-content:center;">{{ L.contact.phoneIcon }}</span>
+            <div><div style="font-size:13px;color:#5b6b62;">{{ L.contact.phoneLabel }}</div><div style="font-size:17px;font-weight:700;color:#15231b;">02-7704-5539</div></div>
           </div>
           <div style="display:flex; gap:14px; align-items:center;">
             <span style="width:46px;height:46px;border-radius:13px;background:#eaf7e4;color:#1f9e4e;font-weight:900;display:flex;align-items:center;justify-content:center;">@</span>
-            <div><div style="font-size:13px;color:#5b6b62;">電子信箱</div><div style="font-size:17px;font-weight:700;color:#15231b;">ifoodmaptw@gmail.com</div></div>
+            <div><div style="font-size:13px;color:#5b6b62;">{{ L.contact.emailLabel }}</div><div style="font-size:17px;font-weight:700;color:#15231b;">ifoodmaptw@gmail.com</div></div>
           </div>
           <div style="display:flex; gap:14px; align-items:center;">
-            <span style="width:46px;height:46px;border-radius:13px;background:#eaf7e4;color:#1f9e4e;font-weight:900;display:flex;align-items:center;justify-content:center;">時</span>
-            <div><div style="font-size:13px;color:#5b6b62;">服務時間</div><div style="font-size:17px;font-weight:700;color:#15231b;">週一至週五 9:00 – 18:00</div></div>
+            <span style="width:46px;height:46px;border-radius:13px;background:#eaf7e4;color:#1f9e4e;font-weight:900;display:flex;align-items:center;justify-content:center;">{{ L.contact.hoursIcon }}</span>
+            <div><div style="font-size:13px;color:#5b6b62;">{{ L.contact.hoursLabel }}</div><div style="font-size:17px;font-weight:700;color:#15231b;">{{ L.contact.hoursValue }}</div></div>
           </div>
           <div style="display:flex; gap:14px; align-items:center;">
             <span style="width:46px;height:46px;border-radius:13px;background:#06C755;color:#fff;font-weight:900;display:flex;align-items:center;justify-content:center;font-size:13px;">LINE</span>
-            <div><div style="font-size:13px;color:#5b6b62;">官方 LINE</div><div style="font-size:17px;font-weight:700;color:#15231b;">加入好友即時諮詢</div></div>
+            <div><div style="font-size:13px;color:#5b6b62;">{{ L.contact.lineLabel }}</div><div style="font-size:17px;font-weight:700;color:#15231b;">{{ L.contact.lineValue }}</div></div>
           </div>
         </div>
       </div>
 
       <form data-reveal aria-labelledby="demand-form-title" novalidate style="background:#fff;border:1px solid #e8efe6;border-radius:24px;padding:42px;box-shadow:0 20px 60px rgba(20,60,30,.08);">
-        <h2 id="demand-form-title" style="font-family:'Space Grotesk','Noto Sans TC',sans-serif;font-size:22px;font-weight:800;color:#15231b;margin:0 0 8px;">填寫食材需求</h2>
-        <p id="demand-form-help" style="font-size:14px;line-height:1.65;color:#5b6b62;margin:0 0 24px;">標示「必填」的欄位需填寫；送出狀態會顯示在按鈕位置。</p>
+        <h2 id="demand-form-title" style="font-family:'Space Grotesk','Noto Sans TC',sans-serif;font-size:22px;font-weight:800;color:#15231b;margin:0 0 8px;">{{ L.contact.formTitle }}</h2>
+        <p id="demand-form-help" style="font-size:14px;line-height:1.65;color:#5b6b62;margin:0 0 24px;">{{ L.contact.formHelp }}</p>
         <div style="display:flex; flex-direction:column; gap:18px;">
           <div>
-            <label for="company-name" style="display:block;font-size:14px;font-weight:600;color:#3c4d42;margin-bottom:8px;">餐廳 / 公司名稱（必填）</label>
-            <input class="contact-field" id="company-name" name="company_name" required autocomplete="organization" aria-describedby="demand-form-help" placeholder="例：好味道餐廳" style="width:100%;padding:14px 16px;border:1.5px solid #dde5dc;border-radius:12px;font-size:16px;font-family:inherit;" />
+            <label for="company-name" style="display:block;font-size:14px;font-weight:600;color:#3c4d42;margin-bottom:8px;">{{ L.contact.labelCompany }}</label>
+            <input class="contact-field" id="company-name" name="company_name" required autocomplete="organization" aria-describedby="demand-form-help" placeholder="{{ L.contact.placeholderCompany }}" style="width:100%;padding:14px 16px;border:1.5px solid #dde5dc;border-radius:12px;font-size:16px;font-family:inherit;" />
           </div>
           <div class="contact-fields-two">
             <div>
-              <label for="contact-phone" style="display:block;font-size:14px;font-weight:600;color:#3c4d42;margin-bottom:8px;">聯絡電話（必填）</label>
+              <label for="contact-phone" style="display:block;font-size:14px;font-weight:600;color:#3c4d42;margin-bottom:8px;">{{ L.contact.labelPhone }}</label>
               <input class="contact-field" id="contact-phone" type="tel" name="contact_phone" required autocomplete="tel" inputmode="tel" placeholder="0900-000-000" style="width:100%;padding:14px 16px;border:1.5px solid #dde5dc;border-radius:12px;font-size:16px;font-family:inherit;" />
             </div>
             <div>
               <label for="contact-line" style="display:block;font-size:14px;font-weight:600;color:#3c4d42;margin-bottom:8px;">LINE ID</label>
-              <input class="contact-field" id="contact-line" name="contact_line" autocomplete="off" placeholder="選填" style="width:100%;padding:14px 16px;border:1.5px solid #dde5dc;border-radius:12px;font-size:16px;font-family:inherit;" />
+              <input class="contact-field" id="contact-line" name="contact_line" autocomplete="off" placeholder="{{ L.contact.placeholderLine }}" style="width:100%;padding:14px 16px;border:1.5px solid #dde5dc;border-radius:12px;font-size:16px;font-family:inherit;" />
             </div>
           </div>
           <div>
-            <label for="needed-items" style="display:block;font-size:14px;font-weight:600;color:#3c4d42;margin-bottom:8px;">需求食材品項</label>
-            <input class="contact-field" id="needed-items" name="items_text" placeholder="例：蔬菜、豬肉、火鍋料" style="width:100%;padding:14px 16px;border:1.5px solid #dde5dc;border-radius:12px;font-size:16px;font-family:inherit;" />
+            <label for="needed-items" style="display:block;font-size:14px;font-weight:600;color:#3c4d42;margin-bottom:8px;">{{ L.contact.labelItems }}</label>
+            <input class="contact-field" id="needed-items" name="items_text" placeholder="{{ L.contact.placeholderItems }}" style="width:100%;padding:14px 16px;border:1.5px solid #dde5dc;border-radius:12px;font-size:16px;font-family:inherit;" />
           </div>
           <div>
-            <label for="need-detail" style="display:block;font-size:14px;font-weight:600;color:#3c4d42;margin-bottom:8px;">需求說明</label>
-            <textarea class="contact-field" id="need-detail" name="detail" placeholder="數量、配送區域、配送頻率等…" rows="4" style="width:100%;padding:14px 16px;border:1.5px solid #dde5dc;border-radius:12px;font-size:16px;font-family:inherit;resize:vertical;"></textarea>
+            <label for="need-detail" style="display:block;font-size:14px;font-weight:600;color:#3c4d42;margin-bottom:8px;">{{ L.contact.labelDetail }}</label>
+            <textarea class="contact-field" id="need-detail" name="detail" placeholder="{{ L.contact.placeholderDetail }}" rows="4" style="width:100%;padding:14px 16px;border:1.5px solid #dde5dc;border-radius:12px;font-size:16px;font-family:inherit;resize:vertical;"></textarea>
           </div>
-          <button class="contact-submit" type="submit" aria-live="polite" style="display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,#46c138,#1f9e4e);color:#fff;font-weight:700;font-size:16px;padding:16px;border-radius:100px;text-align:center;cursor:pointer;box-shadow:0 12px 30px rgba(61,174,43,.24);">送出需求，免費媒合 →</button>
+          <button class="contact-submit" type="submit" aria-live="polite" style="display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,#46c138,#1f9e4e);color:#fff;font-weight:700;font-size:16px;padding:16px;border-radius:100px;text-align:center;cursor:pointer;box-shadow:0 12px 30px rgba(61,174,43,.24);">{{ L.contact.submit }}</button>
         </div>
       </form>
     </div>
@@ -1323,34 +1332,34 @@
       <div>
         <div style="display:flex;align-items:center;gap:10px">
           <img src="/icon.png" alt="" width="34" height="34" style="width:34px;height:34px;display:block">
-          <div style="font-weight:900;font-size:19px;color:#fff">iFoodmap <span style="font-weight:500;color:#9FB0A6;font-size:14px">食材地圖</span></div>
+          <div style="font-weight:900;font-size:19px;color:#fff">iFoodmap <span style="font-weight:500;color:#9FB0A6;font-size:14px">{{ L.footer.brandTagline }}</span></div>
         </div>
-        <p style="margin-top:18px;font-size:13.5px;line-height:2;font-weight:300">服務專線｜<a href="tel:0277045539" style="color:inherit;text-decoration:none">02-7704-5539</a><br>E-MAIL｜<a href="mailto:ifoodmaptw@gmail.com" style="color:inherit;text-decoration:none">ifoodmaptw@gmail.com</a><br>服務時間｜週一至週五 9:00–18:00</p>
+        <p style="margin-top:18px;font-size:13.5px;line-height:2;font-weight:300">{{ L.footer.phoneLabel }}{{ L.footer.sep }}<a href="tel:0277045539" style="color:inherit;text-decoration:none">02-7704-5539</a><br>E-MAIL{{ L.footer.sep }}<a href="mailto:ifoodmaptw@gmail.com" style="color:inherit;text-decoration:none">ifoodmaptw@gmail.com</a><br>{{ L.footer.hoursLabel }}{{ L.footer.sep }}{{ L.footer.hoursValue }}</p>
       </div>
       <div>
         <div style="color:#fff;font-family:'Space Grotesk',sans-serif;font-size:11.5px;letter-spacing:.18em;margin-bottom:16px">SERVICE</div>
         <ul style="display:grid;gap:11px;padding:0;margin:0;list-style:none">
-            <li><a href="/restaurants" onClick="{{ goRestaurants }}" style="color:#9FB0A6;font-size:13.5px;text-decoration:none;font-weight:300;cursor:pointer" style-hover="color:#fff">找食材</a></li>
-            <li><a href="/suppliers" onClick="{{ goSuppliers }}" style="color:#9FB0A6;font-size:13.5px;text-decoration:none;font-weight:300;cursor:pointer" style-hover="color:#fff">成為供應商</a></li>
-            <li><a href="/#how-it-works" onClick="{{ goHow }}" style="color:#9FB0A6;font-size:13.5px;text-decoration:none;font-weight:300;cursor:pointer" style-hover="color:#fff">平台功能</a></li>
-            <li><a href="{{ loginUrl }}" style="color:#9FB0A6;font-size:13.5px;text-decoration:none;font-weight:300;cursor:pointer" style-hover="color:#fff">登入平台</a></li>
+            <li><a href="{{ hrefRestaurants }}" onClick="{{ goRestaurants }}" style="color:#9FB0A6;font-size:13.5px;text-decoration:none;font-weight:300;cursor:pointer" style-hover="color:#fff">{{ L.footer.serviceFindIngredients }}</a></li>
+            <li><a href="{{ hrefSuppliers }}" onClick="{{ goSuppliers }}" style="color:#9FB0A6;font-size:13.5px;text-decoration:none;font-weight:300;cursor:pointer" style-hover="color:#fff">{{ L.footer.serviceBecomeSupplier }}</a></li>
+            <li><a href="{{ hrefHow }}" onClick="{{ goHow }}" style="color:#9FB0A6;font-size:13.5px;text-decoration:none;font-weight:300;cursor:pointer" style-hover="color:#fff">{{ L.footer.servicePlatformFeatures }}</a></li>
+            <li><a href="{{ loginUrl }}" style="color:#9FB0A6;font-size:13.5px;text-decoration:none;font-weight:300;cursor:pointer" style-hover="color:#fff">{{ L.footer.serviceLogin }}</a></li>
         </ul>
       </div>
       <div>
         <div style="color:#fff;font-family:'Space Grotesk',sans-serif;font-size:11.5px;letter-spacing:.18em;margin-bottom:16px">COMPANY</div>
         <ul style="display:grid;gap:11px;padding:0;margin:0;list-style:none">
-            <li><a href="/about" onClick="{{ goAbout }}" style="color:#9FB0A6;font-size:13.5px;text-decoration:none;font-weight:300;cursor:pointer" style-hover="color:#fff">關於我們</a></li>
-            <li><a href="/cases" onClick="{{ goCases }}" style="color:#9FB0A6;font-size:13.5px;text-decoration:none;font-weight:300;cursor:pointer" style-hover="color:#fff">成功案例</a></li>
-            <li><a href="/#news" onClick="{{ goNews }}" style="color:#9FB0A6;font-size:13.5px;text-decoration:none;font-weight:300;cursor:pointer" style-hover="color:#fff">最新消息</a></li>
-            <li><a href="/contact" onClick="{{ goContact }}" style="color:#9FB0A6;font-size:13.5px;text-decoration:none;font-weight:300;cursor:pointer" style-hover="color:#fff">聯絡我們</a></li>
+            <li><a href="{{ hrefAbout }}" onClick="{{ goAbout }}" style="color:#9FB0A6;font-size:13.5px;text-decoration:none;font-weight:300;cursor:pointer" style-hover="color:#fff">{{ L.footer.companyAbout }}</a></li>
+            <li><a href="{{ hrefCases }}" onClick="{{ goCases }}" style="color:#9FB0A6;font-size:13.5px;text-decoration:none;font-weight:300;cursor:pointer" style-hover="color:#fff">{{ L.footer.companyCases }}</a></li>
+            <li><a href="{{ hrefNews }}" onClick="{{ goNews }}" style="color:#9FB0A6;font-size:13.5px;text-decoration:none;font-weight:300;cursor:pointer" style-hover="color:#fff">{{ L.footer.companyNews }}</a></li>
+            <li><a href="{{ hrefContact }}" onClick="{{ goContact }}" style="color:#9FB0A6;font-size:13.5px;text-decoration:none;font-weight:300;cursor:pointer" style-hover="color:#fff">{{ L.footer.companyContact }}</a></li>
         </ul>
       </div>
       <div>
         <div style="color:#fff;font-family:'Space Grotesk',sans-serif;font-size:11.5px;letter-spacing:.18em;margin-bottom:16px">SUPPORT</div>
         <ul style="display:grid;gap:11px;padding:0;margin:0;list-style:none">
-            <li><a href="/contact" onClick="{{ goContact }}" style="color:#9FB0A6;font-size:13.5px;text-decoration:none;font-weight:300;cursor:pointer" style-hover="color:#fff">常見問題</a></li>
-            <li><a href="/about" onClick="{{ goAbout }}" style="color:#9FB0A6;font-size:13.5px;text-decoration:none;font-weight:300;cursor:pointer" style-hover="color:#fff">使用條款</a></li>
-            <li><a href="/about" onClick="{{ goAbout }}" style="color:#9FB0A6;font-size:13.5px;text-decoration:none;font-weight:300;cursor:pointer" style-hover="color:#fff">隱私權政策</a></li>
+            <li><a href="{{ hrefContact }}" onClick="{{ goContact }}" style="color:#9FB0A6;font-size:13.5px;text-decoration:none;font-weight:300;cursor:pointer" style-hover="color:#fff">{{ L.footer.supportFaq }}</a></li>
+            <li><a href="{{ hrefAbout }}" onClick="{{ goAbout }}" style="color:#9FB0A6;font-size:13.5px;text-decoration:none;font-weight:300;cursor:pointer" style-hover="color:#fff">{{ L.footer.supportTerms }}</a></li>
+            <li><a href="{{ hrefAbout }}" onClick="{{ goAbout }}" style="color:#9FB0A6;font-size:13.5px;text-decoration:none;font-weight:300;cursor:pointer" style-hover="color:#fff">{{ L.footer.supportPrivacy }}</a></li>
         </ul>
       </div>
     </div>
@@ -1371,11 +1380,33 @@
 // 首頁的視覺邏輯(世界地圖 / 輪播標題 / 數字跑動 / 響應式選單)移植自
 // Claude Design 的 食材地圖官網.dc.html;換頁仍走 routing.js(真實網址),
 // 其他頁面用到的 reveal / countup / focus 邏輯原封不動。
+/* 首頁資料陣列裡「不是文字」的部分。文案在 i18n.js 的字典,兩邊靠陣列順序對齊 ——
+   改順序要兩邊一起改(tests/content.test.cjs 會擋住長度對不上的情況)。 */
+const NO_LABELS = ['01', '02', '03', '04'];
+const FLOW_IMGS = [
+  '/assets/flow-form.svg', '/assets/flow-match.svg', '/assets/flow-quote.svg',
+  '/assets/flow-compare.svg', '/assets/flow-ship.svg', '/assets/flow-review.svg',
+];
+const CATEGORY_IMGS = [
+  '/assets/cat-vegetable.svg', '/assets/cat-fruit.svg', '/assets/cat-seafood.svg', '/assets/cat-meat.svg',
+  '/assets/cat-egg.svg', '/assets/cat-grain.svg', '/assets/cat-grocery.svg', '/assets/cat-processed.svg',
+  '/assets/cat-hotpot.svg', '/assets/cat-condiment.svg', '/assets/cat-drink.svg', '/assets/cat-packaging.svg',
+];
+const ARTICLE_DATES = ['2026.08.12', '2026.07.30', '2026.07.11'];
+const ARTICLE_IMGS = [
+  '/assets/article-procurement.svg', '/assets/article-traceability.svg', '/assets/article-local.svg',
+];
+
 class Component extends DCLogic {
   state = {
     page: typeof window !== 'undefined' && window.IfmRouting
       ? window.IfmRouting.pathToPage(window.location.pathname)
       : 'home',
+    // 語系的真相是網址(/ 是中文、/en 是英文),不是 localStorage ——
+    // localStorage 只記「使用者按過什麼」,用來決定裸網址 / 該落在哪一版。
+    lang: typeof window !== 'undefined' && window.IfmRouting
+      ? window.IfmRouting.pathToLang(window.location.pathname)
+      : 'zh',
     tick: 0,
     countP: 0,
     cw: typeof window !== 'undefined' ? window.innerWidth : 1200,
@@ -1554,13 +1585,24 @@ class Component extends DCLogic {
     if (typeof window !== 'undefined' && window.IfmRouting) {
       this._routingController = window.IfmRouting.createHistoryController({
         window: window,
-        onPage: (page) => {
-          this.setState({ page: page, menuOpen: false });
+        onRoute: (route) => {
+          this.setState({ page: route.page, lang: route.lang, menuOpen: false });
         },
         focusPage: (page) => this.focusActivePage(page),
       });
       this._routingController.start();
+      // 第一次從裸網址 / 進來時,依「按過的語言 → 瀏覽器語系」自動落到對的版本(replaceState,不留歷史)。
+      // 深層網址一律照網址渲染,理由見 routing.js 的 applyPreferredLang。
+      if (window.IfmI18n) {
+        const preferred = window.IfmI18n.detect(window);
+        // 自動落地跟「按語言鈕」一樣要發事件。右下角 AI 助手在 React 外面、開機時就把字寫死了,
+        // 少了這個事件,英文訪客從 / 進來會看到英文頁面配一個中文的 AI 助手。
+        if (this._routingController.applyPreferredLang(preferred)) {
+          window.IfmI18n.emitChange(window, preferred);
+        }
+      }
     }
+    this.syncSeo();
     requestAnimationFrame(() => this.setupReveal());
     setTimeout(() => this.setupReveal(), 350);
 
@@ -1578,6 +1620,7 @@ class Component extends DCLogic {
     }
   }
   componentDidUpdate() {
+    this.syncSeo();
     requestAnimationFrame(() => this.setupReveal());
     this.drawMap();
     this.watchStats();
@@ -1589,6 +1632,43 @@ class Component extends DCLogic {
     clearInterval(this._tickTimer);
     window.removeEventListener('resize', this._onResize);
     if (this._ro) this._ro.disconnect();
+  }
+
+  // 每頁、每語系各有自己的 title / description。
+  // <title> 已經搬到真正的靜態 <head>(不在 helmet 裡)—— helmet 的 <title> 進的是 live map,
+  // 每次 render 都會被重設回原始碼那行字,設了也會被蓋掉。<meta> 則是掛一次就不管,直接改安全。
+  syncSeo() {
+    if (typeof document === 'undefined' || !window.IfmI18n) return;
+    const meta = window.IfmI18n.dict(this.state.lang).meta || {};
+    const pages = meta.pages || {};
+    const page = pages[this.state.page] || pages.home || {};
+    if (page.title) document.title = page.title;
+    const set = (selector, value) => {
+      if (!value) return;
+      const el = document.querySelector(selector);
+      if (el) el.setAttribute('content', value);
+    };
+    set('meta[name="description"]', page.description);
+    set('meta[name="keywords"]', meta.keywords);
+    set('meta[name="author"]', meta.author);
+    set('meta[property="og:title"]', page.title);
+    set('meta[property="og:description"]', page.description);
+    set('meta[property="og:site_name"]', meta.siteName);
+    set('meta[name="twitter:title"]', page.title);
+    set('meta[name="twitter:description"]', page.description);
+  }
+
+  // 切語系 = 換到同一頁的另一個語系網址。順便把選擇記下來,下次從裸網址 / 進來就直接落在這一版。
+  switchLang(lang) {
+    return (event) => {
+      if (event && typeof event.preventDefault === 'function') event.preventDefault();
+      if (window.IfmI18n) window.IfmI18n.storeLang(window, lang);
+      if (this._routingController) this._routingController.setLang(lang);
+      else this.setState({ lang: lang });
+      this.setState({ menuOpen: false });
+      // React 外面的東西(右下角 AI 助手、表單狀態訊息)沒有 state 可以重繪,靠這個事件自己換字
+      if (window.IfmI18n) window.IfmI18n.emitChange(window, lang);
+    };
   }
 
   go(p) {
@@ -1610,10 +1690,14 @@ class Component extends DCLogic {
     const form = event && event.currentTarget;
     const input = form && typeof form.querySelector === 'function' ? form.querySelector('input') : null;
     const q = input ? input.value.trim() : '';
-    this.handToAI(q ? '我想找食材：' + q : '');
+    this.handToAI(q);
     if (input) input.value = '';
   }
-  handToAI(text) {
+  // 關鍵字交棒給 AI 助手。開場句要跟著語系走,否則英文使用者會看到自己「說」了一句中文。
+  handToAI(keyword) {
+    const value = String(keyword || '').trim();
+    const data = window.IfmI18n ? (window.IfmI18n.dict(this.state.lang).home || {}).data || {} : {};
+    const text = value ? (data.askPrefix || '') + value : '';
     const api = typeof window !== 'undefined' ? window.IfmAI : null;
     if (api && typeof api.ask === 'function') { api.ask(text); return; }
     this.go('contact')();
@@ -1651,8 +1735,24 @@ class Component extends DCLogic {
     const g = (key) => this.go(key);
     const closeMenuThen = (fn) => (event) => { this.setState({ menuOpen: false }); fn(event); };
 
-    const phrases = ['所有食材', '對的供應商', '第二家報價', '產地直送的好貨'];
-    const rotating = phrases[tick % phrases.length];
+    /* i18n:L 是整份字典,markup 直接綁 {{ L.nav.xxx }};D 是首頁那些資料陣列的文案。
+       圖片路徑、編號、日期這類「不是文字」的東西留在程式碼裡,只有文案住字典 ——
+       否則中英兩份會各自帶一套 assets 路徑,改圖要改兩個地方。 */
+    const lang = this.state.lang;
+    const i18n = typeof window !== 'undefined' ? window.IfmI18n : null;
+    const L = i18n ? i18n.dict(lang) : {};
+    const D = (L.home && L.home.data) || {};
+    const otherLang = i18n ? i18n.other(lang) : 'en';
+    const list = (key) => (Array.isArray(D[key]) ? D[key] : []);
+
+    /* 連結的 href 也要帶語系前綴。onClick 走 routing 換頁沒問題,但 href 是「右鍵在新分頁開啟」、
+       cmd+click、以及爬蟲實際會走的路徑 —— 英文頁上的 href="/contact" 會把人帶回中文站。 */
+    const href = (target, targetLang) =>
+      (window.IfmRouting ? window.IfmRouting.pageToPath(target, targetLang || lang) : '/');
+    const anchorHref = (id) => href('home') + '#' + id;
+
+    const phrases = list('rotating');
+    const rotating = phrases.length ? phrases[tick % phrases.length] : '';
 
     return {
       rootRef: (el) => { this.rootEl = el; },
@@ -1696,71 +1796,45 @@ class Component extends DCLogic {
       toggleMenu: () => this.setState(s => ({ menuOpen: !s.menuOpen })),
       openFormMobile: closeMenuThen(g('contact')),
 
-      /* 首頁內容(文案 1:1 取自設計稿) */
+      /* 語言切換:用真的 <a href> 指向同一頁的另一個語系網址,右鍵複製連結、爬蟲都正常 */
+      L,
+      hrefHome: href('home'),
+      hrefRestaurants: href('restaurants'),
+      hrefSuppliers: href('suppliers'),
+      hrefCases: href('cases'),
+      hrefAbout: href('about'),
+      hrefContact: href('contact'),
+      hrefHow: anchorHref('how-it-works'),
+      hrefNews: anchorHref('news'),
+      langHref: href(page, otherLang),
+      langLabel: otherLang === 'en' ? (L.meta && L.meta.langSwitchToEn) : (L.meta && L.meta.langSwitchToZh),
+      langAria: L.meta && L.meta.langSwitchLabel,
+      langTag: otherLang === 'en' ? 'en' : 'zh-Hant',
+      switchLang: this.switchLang(otherLang),
+      switchLangMobile: closeMenuThen(this.switchLang(otherLang)),
+
+      /* 首頁內容(文案 1:1 取自設計稿,文字已抽進字典) */
       rotating,
-      hotTags: ['蔬菜', '水果', '豬肉', '牛肉', '火鍋料', '米麵'].map((label) => ({ label, ask: () => this.handToAI('我想找食材：' + label) })),
+      hotTags: list('hotTags').map((label) => ({ label, ask: () => this.handToAI(label) })),
       askAI: (event) => this.askAI(event),
-      heroPromises: ['完全免費', '成交不抽成', '平均 4 小時有回覆'],
+      heroPromises: list('heroPromises'),
       stats: [
-        { target: 3000, suffix: '+', label: '合作供應商（示意）' },
-        { target: 12000, suffix: '+', label: '累積媒合需求（示意）' },
-        { target: 28, suffix: '', label: '食材分類' },
-        { text: '全台', label: '配送涵蓋' },
-      ].map(s => ({
-        label: s.label,
+        { target: 3000, suffix: '+' },
+        { target: 12000, suffix: '+' },
+        { target: 28, suffix: '' },
+        { text: D.statsNationwide || '' },
+      ].map((s, i) => ({
+        label: list('stats')[i] || '',
         num: s.text ? s.text : Math.round(s.target * p).toLocaleString('en-US') + s.suffix,
       })),
-      audiences: [
-        { no: '01', title: '餐廳・餐酒館', desc: '小量也能問，換供應商不必重新累積人脈。' },
-        { no: '02', title: '團膳・學校', desc: '大量、穩定、需要文件？一次找齊符合資格的供應商。' },
-        { no: '03', title: '團購主・電商', desc: '找源頭貨、找代工，談量談價都從這裡開始。' },
-        { no: '04', title: '加工廠・通路', desc: '原料穩定供應，備援廠商一次備齊。' },
-      ],
-      flowA: [
-        { n: '1', title: '填需求', desc: '品項、數量、配送區域，2 分鐘。', img: 'assets/flow-form.svg' },
-        { n: '2', title: '系統媒合', desc: '只發給供得起、送得到的廠商。', img: 'assets/flow-match.svg' },
-        { n: '3', title: '收到報價', desc: '平均 4 小時開始收到回覆。', img: 'assets/flow-quote.svg' },
-      ],
-      flowB: [
-        { n: '4', title: '比較洽談', desc: '價格、配送、標章一次比。', img: 'assets/flow-compare.svg' },
-        { n: '5', title: '下單進貨', desc: '直接和供應商成交，不抽成。', img: 'assets/flow-ship.svg' },
-        { n: '6', title: '雙邊評價', desc: '好廠商被更多人看見。', img: 'assets/flow-review.svg' },
-      ],
-      categories: [
-        { name: '蔬菜', img: 'assets/cat-vegetable.svg' },
-        { name: '水果', img: 'assets/cat-fruit.svg' },
-        { name: '海鮮', img: 'assets/cat-seafood.svg' },
-        { name: '肉品', img: 'assets/cat-meat.svg' },
-        { name: '蛋品', img: 'assets/cat-egg.svg' },
-        { name: '五穀雜糧', img: 'assets/cat-grain.svg' },
-        { name: '南北雜貨', img: 'assets/cat-grocery.svg' },
-        { name: '加工食品', img: 'assets/cat-processed.svg' },
-        { name: '火鍋料', img: 'assets/cat-hotpot.svg' },
-        { name: '調味品', img: 'assets/cat-condiment.svg' },
-        { name: '酒與飲品', img: 'assets/cat-drink.svg' },
-        { name: '包材耗材', img: 'assets/cat-packaging.svg' },
-      ],
-      pains: [
-        '上網搜尋永遠是那幾家，資訊也不齊全',
-        '留了聯絡方式，好幾天等不到回覆',
-        '不確定對方配不配送我的區域',
-        '想比價，卻沒有第二、第三家可以問',
-      ],
-      testimonials: [
-        { who: '林老闆', role: '日式餐廳・台北', quote: '以前換一家蔬菜商要問三個月，這裡填完需求隔天就有三家報價。' },
-        { who: '陳主任', role: '國小午餐團膳', quote: '需要產銷履歷的供應商很難找，這邊可以直接篩選有標章的廠商。' },
-        { who: '王小姐', role: '生鮮團購主', quote: '終於直接談到產地，不必再透過中間商加價。' },
-      ],
-      trust: [
-        { no: '01', title: '雙邊評價機制', desc: '媒合完成後互相評價，讓優質供應商被更多人看見。' },
-        { no: '02', title: '標章與檢驗連動', desc: '產銷履歷、SGS 檢驗報告附上文件連結，可連至認證機構查核。' },
-        { no: '03', title: 'LINE 即時通知', desc: '新供應商、食材優惠與媒合結果，第一時間通知你。' },
-      ],
-      articlesTop: [
-        { tag: '採購', title: '如何做好餐飲食材採購：從規格書到驗收', date: '2026.08.12', img: 'assets/article-procurement.svg' },
-        { tag: '食安', title: '了解產銷履歷，加入溯源餐廳的行列', date: '2026.07.30', img: 'assets/article-traceability.svg' },
-        { tag: '趨勢', title: '使用在地食材，邁向從產地到餐桌', date: '2026.07.11', img: 'assets/article-local.svg' },
-      ],
+      audiences: list('audiences').map((a, i) => ({ no: NO_LABELS[i], title: a.title, desc: a.desc })),
+      flowA: list('flow').slice(0, 3).map((s, i) => ({ n: String(i + 1), title: s.title, desc: s.desc, img: FLOW_IMGS[i] })),
+      flowB: list('flow').slice(3, 6).map((s, i) => ({ n: String(i + 4), title: s.title, desc: s.desc, img: FLOW_IMGS[i + 3] })),
+      categories: list('categories').map((name, i) => ({ name, img: CATEGORY_IMGS[i] })),
+      pains: list('pains'),
+      testimonials: list('testimonials'),
+      trust: list('trust').map((t, i) => ({ no: NO_LABELS[i], title: t.title, desc: t.desc })),
+      articlesTop: list('articlesTop').map((a, i) => ({ tag: a.tag, title: a.title, date: ARTICLE_DATES[i], img: ARTICLE_IMGS[i] })),
     };
   }
 }
@@ -1773,13 +1847,20 @@ class Component extends DCLogic {
   var SUPA_URL  = 'https://cwvpehqcvbfuynabpqop.supabase.co';
   var SUPA_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImN3dnBlaHFjdmJmdXluYWJwcW9wIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzk5NzQ5NjgsImV4cCI6MjA5NTU1MDk2OH0.QMkcOlGjRTP5XeddI4IAzSkGJoUjaRtcjI_Tjl6rj2k';
 
+  // 每次要用才查字典 —— 存成變數的話,使用者切語系之後訊息會停在舊語言
+  function leadText(key) {
+    var api = window.IfmI18n;
+    var d = api && typeof api.dict === 'function' ? api.dict(api.current(window)) : null;
+    var m = (d && d.lead) || {};
+    return typeof m[key] === 'string' ? m[key] : '';
+  }
+
   function findDemandCard(node) {
     var el = node;
     for (var i = 0; i < 8 && el; i++) {
-      if (el.querySelector) {
-        var h = el.querySelector('h2');
-        if (h && h.textContent.indexOf('填寫食材需求') !== -1) return el;
-      }
+      // 用 id 而不是比對標題文字 —— 標題會隨語系變(中文「填寫食材需求」/ 英文 "Post a Request"),
+      // 比對文字在英文版會靜默失效,表單就不會寫進 landing_leads。
+      if (el.querySelector && el.querySelector('#demand-form-title')) return el;
       el = el.parentElement;
     }
     return null;
@@ -1807,7 +1888,7 @@ class Component extends DCLogic {
     if (!company || !phone) {
       fields[0].setAttribute('aria-invalid', company ? 'false' : 'true');
       fields[1].setAttribute('aria-invalid', phone ? 'false' : 'true');
-      t.textContent = '請填寫公司名稱與聯絡電話';
+      t.textContent = leadText('requireCompanyPhone');
       (company ? fields[1] : fields[0]).focus();
       setTimeout(function () { t.textContent = original; }, 2200);
       return;
@@ -1818,7 +1899,7 @@ class Component extends DCLogic {
     t.setAttribute('data-busy', '1');
     t.setAttribute('aria-disabled', 'true');
     t.disabled = true;
-    t.textContent = '送出中…';
+    t.textContent = leadText('submitting');
 
     fetch(SUPA_URL + '/rest/v1/landing_leads', {
       method: 'POST',
@@ -1841,19 +1922,19 @@ class Component extends DCLogic {
       t.removeAttribute('aria-disabled');
       if (r.status === 201 || r.ok) {
         t.setAttribute('data-done', '1');
-        t.textContent = '✓ 已送出，我們會盡快與您聯繫';
+        t.textContent = leadText('success');
         t.style.opacity = '0.85';
         for (var i = 0; i < 5; i++) fields[i].value = '';
       } else {
         t.disabled = false;
-        t.textContent = '送出失敗，請稍後再試或加 LINE';
+        t.textContent = leadText('failure');
         setTimeout(function () { t.textContent = original; }, 2600);
       }
     }).catch(function () {
       t.removeAttribute('data-busy');
       t.removeAttribute('aria-disabled');
       t.disabled = false;
-      t.textContent = '送出失敗，請稍後再試或加 LINE';
+      t.textContent = leadText('failure');
       setTimeout(function () { t.textContent = original; }, 2600);
     });
   });
@@ -2049,25 +2130,25 @@ class Component extends DCLogic {
 
   // 缺圖佔位框 → on-brand SVG 對照表（精確文字比對）
   var IMG_MAP = {
-    '[ 餐廳採購情境照 ]': 'assets/scene-buyer.svg',
-    '[ 供應商出貨情境照 ]': 'assets/scene-supplier.svg',
-    '[ 餐廳實拍 ]': 'assets/case-restaurant.svg',
-    '[ 團膳廚房實拍 ]': 'assets/case-kitchen.svg',
-    '[ 生鮮團購實拍 ]': 'assets/case-fresh.svg',
-    '[ AI 媒合流程介面 ]': 'assets/ui-match.svg',
-    '[ 採購管理後台介面 ]': 'assets/ui-admin.svg',
-    '[ 評價機制介面 ]': 'assets/ui-rating.svg',
-    '[ 標章與履歷展示 ]': 'assets/ui-cert.svg',
-    '[ LINE 通知示意 ]': 'assets/ui-line.svg',
-    '蔬菜': 'assets/cat-vegetable.svg',
-    '水果': 'assets/cat-fruit.svg',
-    '海鮮': 'assets/cat-seafood.svg',
-    '肉品': 'assets/cat-meat.svg',
-    '穀類': 'assets/cat-grain.svg',
-    '雜貨': 'assets/cat-grocery.svg',
-    '蛋品': 'assets/cat-egg.svg',
-    '加工食品': 'assets/cat-processed.svg',
-    '酒、飲品': 'assets/cat-drink.svg'
+    '[ 餐廳採購情境照 ]': '/assets/scene-buyer.svg',
+    '[ 供應商出貨情境照 ]': '/assets/scene-supplier.svg',
+    '[ 餐廳實拍 ]': '/assets/case-restaurant.svg',
+    '[ 團膳廚房實拍 ]': '/assets/case-kitchen.svg',
+    '[ 生鮮團購實拍 ]': '/assets/case-fresh.svg',
+    '[ AI 媒合流程介面 ]': '/assets/ui-match.svg',
+    '[ 採購管理後台介面 ]': '/assets/ui-admin.svg',
+    '[ 評價機制介面 ]': '/assets/ui-rating.svg',
+    '[ 標章與履歷展示 ]': '/assets/ui-cert.svg',
+    '[ LINE 通知示意 ]': '/assets/ui-line.svg',
+    '蔬菜': '/assets/cat-vegetable.svg',
+    '水果': '/assets/cat-fruit.svg',
+    '海鮮': '/assets/cat-seafood.svg',
+    '肉品': '/assets/cat-meat.svg',
+    '穀類': '/assets/cat-grain.svg',
+    '雜貨': '/assets/cat-grocery.svg',
+    '蛋品': '/assets/cat-egg.svg',
+    '加工食品': '/assets/cat-processed.svg',
+    '酒、飲品': '/assets/cat-drink.svg'
   };
 
   function tag() {
@@ -2395,7 +2476,7 @@ class Component extends DCLogic {
   /* 拖曳圖片進面板時的提示 */
   .ai-panel.ai-drag { outline: 2px dashed #46c138; outline-offset: -8px; }
   .ai-panel.ai-drag::after {
-    content: '放開以上傳菜單 📷'; position: absolute; inset: 0; z-index: 5;
+    content: var(--ai-drop-hint, ""); position: absolute; inset: 0; z-index: 5;
     background: rgba(70,193,56,.12);
     display: flex; align-items: center; justify-content: center;
     color: #1f7a37; font-weight: 800; font-size: 16px; pointer-events: none;
@@ -2462,7 +2543,24 @@ class Component extends DCLogic {
 (function () {
   var SUPA_URL  = 'https://cwvpehqcvbfuynabpqop.supabase.co';
   var SUPA_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImN3dnBlaHFjdmJmdXluYWJwcW9wIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzk5NzQ5NjgsImV4cCI6MjA5NTU1MDk2OH0.QMkcOlGjRTP5XeddI4IAzSkGJoUjaRtcjI_Tjl6rj2k';
-  var ERR_MSG = 'AI 服務暫時忙線，請稍後再試 🙏 你也可以直接留下聯絡方式，由專人為你免費媒合。';
+  // 語系:一律呼叫時才查字典。存成 var 的話,使用者切語系後會停在舊語言。
+  // 「現在是哪個語系」的真相是網址前綴,所以每次都跟 IfmI18n 現拿,不在 boot 時抓一次。
+  function curLang() {
+    var api = window.IfmI18n;
+    return api && typeof api.current === 'function' ? api.current(window) : 'zh';
+  }
+  function txt(key) {
+    var api = window.IfmI18n;
+    var d = api && typeof api.dict === 'function' ? api.dict(curLang()) : null;
+    var m = (d && d.ai) || {};
+    return typeof m[key] === 'string' ? m[key] : '';
+  }
+  function txtf(key, params) {
+    var api = window.IfmI18n;
+    var s = txt(key);
+    return api && typeof api.format === 'function' ? api.format(s, params) : s;
+  }
+  function errMsg() { return txt('errService'); }
 
   var history = [];        // {role:'user'|'bot', text}
   var lastAnalysis = null; // {summary, ingredients}
@@ -2475,7 +2573,7 @@ class Component extends DCLogic {
 
   // ---- DOM ----
   var fab = document.createElement('button');
-  fab.className = 'ai-fab'; fab.setAttribute('aria-label', '開啟 AI 採購助手');
+  fab.className = 'ai-fab';   // aria-label 由 applyStaticStrings() 填(boot + 每次切語系)
   fab.setAttribute('aria-controls', 'ai-assistant-dialog');
   fab.setAttribute('aria-expanded', 'false');
   fab.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.38 8.38 0 0 1-8.5 8.5 8.5 8.5 0 0 1-3.9-.9L3 21l1.9-5.6A8.5 8.5 0 1 1 21 11.5z"/><circle cx="8.5" cy="11.5" r="1"/><circle cx="12" cy="11.5" r="1"/><circle cx="15.5" cy="11.5" r="1"/></svg>';
@@ -2488,15 +2586,17 @@ class Component extends DCLogic {
   panel.setAttribute('aria-labelledby', 'ai-assistant-title');
   panel.setAttribute('aria-hidden', 'true');
   panel.inert = true;
+  // 外框的字一律交給 applyStaticStrings() 填(boot + 每次切語系),這裡只留結構。
+  // 「食」是品牌字標,不翻。
   panel.innerHTML =
-    '<div class="ai-head"><div class="ai-ava">食</div><div><div class="ai-tt" id="ai-assistant-title">iFoodMap AI 採購助手</div><div class="ai-sub">上傳菜單或描述需求，立即整理採購清單</div></div><button class="ai-x" aria-label="關閉">×</button></div>' +
+    '<div class="ai-head"><div class="ai-ava">食</div><div><div class="ai-tt" id="ai-assistant-title"></div><div class="ai-sub"></div></div><button class="ai-x">×</button></div>' +
     '<div class="ai-body"></div>' +
     '<div class="ai-foot">' +
-      '<label for="ai-assistant-input" class="ai-sr-only">輸入食材需求</label>' +
-      '<button class="ai-upload" aria-label="上傳菜單照片" title="上傳菜單照片"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z"/><circle cx="12" cy="13" r="3.2"/></svg></button>' +
+      '<label for="ai-assistant-input" class="ai-sr-only"></label>' +
+      '<button class="ai-upload"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z"/><circle cx="12" cy="13" r="3.2"/></svg></button>' +
       '<input type="file" accept="image/*" class="ai-file" style="display:none">' +
-      '<input id="ai-assistant-input" type="text" class="ai-text" placeholder="輸入你的食材需求…" />' +
-      '<button class="ai-send" aria-label="送出"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 2 11 13"/><path d="M22 2 15 22l-4-9-9-4 20-7z"/></svg></button>' +
+      '<input id="ai-assistant-input" type="text" class="ai-text" />' +
+      '<button class="ai-send"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 2 11 13"/><path d="M22 2 15 22l-4-9-9-4 20-7z"/></svg></button>' +
     '</div>';
 
   document.body.appendChild(backdrop);
@@ -2511,6 +2611,39 @@ class Component extends DCLogic {
   var fileInput = panel.querySelector('.ai-file');
   var textInput = panel.querySelector('.ai-text');
   var sendBtn = panel.querySelector('.ai-send');
+
+  // 輸入框提示會隨「現在問到哪一步」而不同 —— 切語系時要換成當下那一步的字,不能寫死預設值
+  function currentPlaceholder() {
+    if (collect.active && collect.step === 'name')  return txt('placeholderName');
+    if (collect.active && collect.step === 'phone') return txt('placeholderPhone');
+    return txt('inputPlaceholder');
+  }
+
+  // 靜態外框的字:boot 跟每次切語系各跑一次。
+  // 已經送出的對話訊息不在這裡 —— 那是歷史紀錄,回頭翻譯是錯的。
+  function applyStaticStrings() {
+    fab.setAttribute('aria-label', txt('fabLabel'));
+    panel.querySelector('.ai-tt').textContent = txt('title');
+    panel.querySelector('.ai-sub').textContent = txt('subtitle');
+    panel.querySelector('.ai-x').setAttribute('aria-label', txt('closeLabel'));
+    panel.querySelector('label.ai-sr-only').textContent = txt('inputSrLabel');
+    var upload = panel.querySelector('.ai-upload');
+    upload.setAttribute('aria-label', txt('uploadLabel'));
+    upload.setAttribute('title', txt('uploadLabel'));
+    sendBtn.setAttribute('aria-label', txt('sendLabel'));
+    textInput.placeholder = currentPlaceholder();
+    // CSS 讀不到 JS 變數,拖曳提示只能走 custom property;
+    // JSON.stringify 會補上 CSS content 需要的雙引號與跳脫。
+    document.documentElement.style.setProperty('--ai-drop-hint', JSON.stringify(txt('dropHint')));
+    // 還沒被按掉的 CTA 按鈕算外框,跟著換;它上面那句招呼語是對話紀錄,不動。
+    var cta = body.querySelector('.ai-cta');
+    if (cta) cta.textContent = txt('ctaButton');
+    // 例外:畫面上只有開場白那一則(使用者還沒講過話)時才換開場白,
+    // 不然英文使用者一打開看到的會是中文招呼語。
+    if (greetingBub && body.children.length === 1 && body.firstElementChild === greetingBub.parentNode) {
+      greetingBub.textContent = txt('greeting');
+    }
+  }
 
   // ---- helpers ----
   function scrollDown() { body.scrollTop = body.scrollHeight; }
@@ -2533,11 +2666,17 @@ class Component extends DCLogic {
   }
 
   // 開場
-  addMsg('bot', '嗨！我是 iFoodMap AI 採購助手 👋\n你可以：\n📷 上傳一張菜單照片，我幫你整理出採購食材清單\n💬 或直接打字描述你需要的食材');
+  var greetingBub = addMsg('bot', txt('greeting'));
   body.setAttribute('role', 'log');
   body.setAttribute('aria-live', 'polite');
   body.setAttribute('aria-relevant', 'additions');
   body.setAttribute('aria-atomic', 'false');
+
+  // 外框的字先填一次,之後跟著語系走
+  applyStaticStrings();
+  if (window.IfmI18n && typeof window.IfmI18n.onChange === 'function') {
+    window.IfmI18n.onChange(window, applyStaticStrings);
+  }
 
   // ---- 文字對談 ----
   function sendText() {
@@ -2549,18 +2688,18 @@ class Component extends DCLogic {
     addMsg('user', v);
     addTyping();
     var textHistory = history.map(function (m) { return { role: m.role, text: m.text }; }); // 對話回覆不需附圖
-    postJSON('/api/ai-chat', { messages: textHistory }).then(function (r) {
+    postJSON('/api/ai-chat', { messages: textHistory, lang: curLang() }).then(function (r) {
       clearTyping();
       if (r.ok && r.json && r.json.data && r.json.data.reply) {
         var reply = r.json.data.reply;
         history.push({ role: 'bot', text: reply });
         addMsg('bot', reply);
-        setTimeout(function () { showLeadCTA('需要的話，我可以幫你把需求送給專人免費媒合 👇'); }, 500);
+        setTimeout(function () { showLeadCTA(txt('ctaPrefixChat')); }, 500);
       } else {
-        addMsg('bot', ERR_MSG);
+        addMsg('bot', errMsg());
         showLeadCTA();
       }
-    }).catch(function () { clearTyping(); addMsg('bot', ERR_MSG); showLeadCTA(); });
+    }).catch(function () { clearTyping(); addMsg('bot', errMsg()); showLeadCTA(); });
   }
 
   // ---- 菜單圖：前端縮圖 → 分析 ----
@@ -2582,20 +2721,20 @@ class Component extends DCLogic {
 
   function handleImageFile(f) {
     if (!f) return;
-    if (f.type.indexOf('image/') !== 0) { addMsg('bot', '請上傳圖片檔（JPG / PNG）。'); return; }
+    if (f.type.indexOf('image/') !== 0) { addMsg('bot', txt('uploadImageOnly')); return; }
     downscale(f).then(function (dataUrl) {
-      var b = addRow('user'); var im = document.createElement('img'); im.src = dataUrl; im.alt = '菜單'; b.appendChild(im); scrollDown();
+      var b = addRow('user'); var im = document.createElement('img'); im.src = dataUrl; im.alt = txt('menuImageAlt'); b.appendChild(im); scrollDown();
       history.push({ role: 'user', text: '', image: dataUrl });   // 把圖片放進對話序列
       addTyping();
-      return postJSON('/api/ai-menu', { image: dataUrl, mimeType: 'image/jpeg', fileName: f.name || 'menu.jpg' });
+      return postJSON('/api/ai-menu', { image: dataUrl, mimeType: 'image/jpeg', fileName: f.name || 'menu.jpg', lang: curLang() });
     }).then(function (r) {
       clearTyping();
       if (r && r.ok && r.json && r.json.data) {
         renderAnalysis(r.json.data);
       } else {
-        addMsg('bot', ERR_MSG); showLeadCTA();
+        addMsg('bot', errMsg()); showLeadCTA();
       }
-    }).catch(function () { clearTyping(); addMsg('bot', ERR_MSG); showLeadCTA(); });
+    }).catch(function () { clearTyping(); addMsg('bot', errMsg()); showLeadCTA(); });
   }
 
   fileInput.addEventListener('change', function () {
@@ -2616,14 +2755,14 @@ class Component extends DCLogic {
     for (var i = 0; i < files.length; i++) {
       if (files[i].type.indexOf('image/') === 0) { handleImageFile(files[i]); found = true; }
     }
-    if (!found) addMsg('bot', '請拖曳圖片檔（JPG / PNG）。');
+    if (!found) addMsg('bot', txt('dropImageOnly'));
   });
 
   function renderAnalysis(data) {
     lastAnalysis = { summary: data.summary || '', ingredients: data.ingredients || [] };
     if (data.analysisId) lastAnalysisId = data.analysisId;
     var b = addRow('bot');
-    var head = document.createElement('div'); head.textContent = data.summary || 'AI 已分析出你的採購需求：'; b.appendChild(head);
+    var head = document.createElement('div'); head.textContent = data.summary || txt('analysisFallback'); b.appendChild(head);
     if (data.ingredients && data.ingredients.length) {
       var chips = document.createElement('div'); chips.className = 'ai-chips';
       data.ingredients.forEach(function (it) {
@@ -2634,7 +2773,7 @@ class Component extends DCLogic {
       b.appendChild(chips);
     }
     scrollDown();
-    showLeadCTA('採購清單整理好了！要我們幫你免費媒合供應商嗎？');
+    showLeadCTA(txt('ctaPrefixAnalysis'));
   }
 
   // ---- 留名媒合 ----
@@ -2645,7 +2784,7 @@ class Component extends DCLogic {
     lastPersistedLen = conv.length;
     // 串接在上一個請求之後：確保第一次拿到 analysisId 後，後續追加都更新同一筆（不另開）
     extractPromise = Promise.resolve(extractPromise).then(function () {
-      var payload = { messages: conv };
+      var payload = { messages: conv, lang: curLang() };
       if (lastAnalysisId) payload.analysisId = lastAnalysisId;
       return fetch('/api/ai-extract', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) })
         .then(function (r) { return r.json(); })
@@ -2656,7 +2795,7 @@ class Component extends DCLogic {
     if (leadShown || ctaShown) return; ctaShown = true;
     var b = addRow('bot');
     if (prefix) { var p = document.createElement('div'); p.textContent = prefix; p.style.marginBottom = '4px'; b.appendChild(p); }
-    var btn = document.createElement('button'); btn.className = 'ai-cta'; btn.textContent = '送出免費媒合 →';
+    var btn = document.createElement('button'); btn.className = 'ai-cta'; btn.textContent = txt('ctaButton');
     btn.addEventListener('click', function () { if (b.parentNode) b.parentNode.remove(); startCollect(); });
     b.appendChild(btn); scrollDown();
   }
@@ -2666,22 +2805,24 @@ class Component extends DCLogic {
     if (collect.active || collect.step === 'done') return;
     persistConversation();
     collect.active = true; collect.step = 'name';
-    addMsg('bot', '好的！為了幫你免費媒合，請問怎麼稱呼您？😊');
-    textInput.placeholder = '請輸入您的姓名…'; textInput.focus();
+    addMsg('bot', txt('askName'));
+    textInput.placeholder = currentPlaceholder(); textInput.focus();
   }
 
   function handleCollect(v) {
     addMsg('user', v);
     if (collect.step === 'name') {
       collect.name = v; collect.step = 'phone';
-      addMsg('bot', '謝謝 ' + v + '！方便留下您的手機嗎？我們會請專人盡快與您聯繫 📱');
-      textInput.placeholder = '請輸入您的手機…';
+      addMsg('bot', txtf('askPhone', { name: v }));
+      textInput.placeholder = currentPlaceholder();
       return;
     }
     if (collect.step === 'phone') {
+      // 放寬成國際號碼:+ 開頭與各種分隔符號照收,只看數字位數(8–15 碼)。
+      // 對中文版是純放寬 —— 原本收的 8–11 碼一樣照收,不會變嚴。
       var digits = v.replace(/[^0-9]/g, '');
-      if (digits.length < 8 || digits.length > 11) {
-        addMsg('bot', '手機號碼看起來不太完整，可以再給我一次嗎？例如 0912-345-678');
+      if (digits.length < 8 || digits.length > 15) {
+        addMsg('bot', txt('phoneInvalid'));
         return;
       }
       collect.phone = v; saveLead();
@@ -2698,7 +2839,7 @@ class Component extends DCLogic {
     } else if (history.length) {
       detail += '\n對話：' + history.map(function (m) { return (m.role === 'user' ? '客' : 'AI') + '：' + m.text; }).join(' / ');
     }
-    var bub = addMsg('bot', '送出中…');
+    var bub = addMsg('bot', txt('sending'));
     Promise.resolve(extractPromise).then(function () {
       return fetch(SUPA_URL + '/rest/v1/landing_leads', {
         method: 'POST',
@@ -2707,10 +2848,10 @@ class Component extends DCLogic {
       });
     }).then(function (r) {
       if (r.status === 201 || r.ok) {
-        bub.textContent = '✓ 收到了，' + collect.name + '！我們會盡快用手機 ' + collect.phone + ' 與您聯繫，為您免費媒合最合適的供應商 🙌';
-        collect.active = false; collect.step = 'done'; textInput.placeholder = '輸入你的食材需求…';
-      } else { bub.textContent = '送出失敗，請稍後再試一次 🙏'; }
-    }).catch(function () { bub.textContent = '送出失敗，請稍後再試一次 🙏'; });
+        bub.textContent = txtf('leadSuccess', { name: collect.name, phone: collect.phone });
+        collect.active = false; collect.step = 'done'; textInput.placeholder = currentPlaceholder();
+      } else { bub.textContent = txt('leadFailure'); }
+    }).catch(function () { bub.textContent = txt('leadFailure'); });
   }
 
   // ---- open / close ----
@@ -2805,7 +2946,7 @@ class Component extends DCLogic {
     if (!conv.length || conv.length <= lastPersistedLen) return;
     lastPersistedLen = conv.length;
     try {
-      var bp = { messages: conv };
+      var bp = { messages: conv, lang: curLang() };
       if (lastAnalysisId) bp.analysisId = lastAnalysisId;
       var blob = new Blob([JSON.stringify(bp)], { type: 'application/json' });
       navigator.sendBeacon('/api/ai-extract', blob);

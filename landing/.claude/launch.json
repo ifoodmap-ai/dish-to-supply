@@ -1,6 +1,11 @@
 {
   "version": "0.0.1",
   "configurations": [
-    { "name": "ifoodmap-static", "runtimeExecutable": "npx", "runtimeArgs": ["-y", "serve", "-l", "4321", "."], "port": 4321 }
+    {
+      "name": "ifoodmap-static",
+      "runtimeExecutable": "npx",
+      "runtimeArgs": ["-y", "serve", "-s", "-l", "4321", "."],
+      "port": 4321
+    }
   ]
 }

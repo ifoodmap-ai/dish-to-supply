@@ -1,0 +1,258 @@
+const test = require('node:test');
+const assert = require('node:assert/strict');
+
+const i18n = require('../i18n.js');
+const { bindingKeys, rawSource, renderMarkup } = require('./helpers/render.cjs');
+
+const { DEFAULT_LANG, LANGS, STORAGE_KEY, detect, dict, storeLang } = i18n;
+
+const CJK = /[\u4e00-\u9fff]/;
+
+// index.html 的三段:markup(<x-dc>)、元件 script、其餘 script。
+// 綁定只出現在 markup;文案以外的東西(圖片路徑、編號、日期)留在元件 script。
+const markupStart = rawSource.indexOf('<x-dc>');
+const markupEnd = rawSource.indexOf('</x-dc>');
+const markup = rawSource.slice(markupStart, markupEnd);
+const componentStart = rawSource.indexOf('<script type="text/x-dc" data-dc-script>');
+const component = rawSource.slice(componentStart, rawSource.indexOf('</script>', componentStart));
+
+function lookup(values, keyPath) {
+  return keyPath.split('.').reduce((node, key) => (node == null ? undefined : node[key]), values);
+}
+
+// 把字典攤平成「每個節點的形狀」:物件記 key 清單、陣列記長度、葉子記型別。
+// 少一個 key、多一個 key、陣列長度不同、字串變成物件 —— 四種都會讓兩邊的 shape 不一樣。
+function shape(node, prefix, out) {
+  if (Array.isArray(node)) {
+    out.set(prefix, `array(${node.length})`);
+    node.forEach((item, index) => shape(item, `${prefix}[${index}]`, out));
+    return out;
+  }
+  if (node && typeof node === 'object') {
+    out.set(prefix, `object(${Object.keys(node).sort().join('|')})`);
+    for (const key of Object.keys(node)) shape(node[key], prefix ? `${prefix}.${key}` : key, out);
+    return out;
+  }
+  out.set(prefix, typeof node);
+  return out;
+}
+
+function constArray(name) {
+  const match = component.match(new RegExp(`const ${name} = \\[([\\s\\S]*?)\\];`));
+  assert.ok(match, `missing const ${name} in component script`);
+  return Array.from(match[1].matchAll(/'([^']*)'/g), (m) => m[1]);
+}
+
+function fakeWindow(options = {}) {
+  const store = new Map();
+  if (options.stored !== undefined) store.set(STORAGE_KEY, options.stored);
+  const localStorage = options.storageThrows
+    ? {
+      getItem() { throw new Error('SecurityError: localStorage is not available'); },
+      setItem() { throw new Error('SecurityError: localStorage is not available'); },
+    }
+    : {
+      getItem: (key) => (store.has(key) ? store.get(key) : null),
+      setItem: (key, value) => store.set(key, String(value)),
+    };
+  return {
+    localStorage,
+    navigator: { languages: options.languages, language: options.language },
+    _store: store,
+  };
+}
+
+test('zh and en dictionaries have exactly the same key structure', () => {
+  // 少一個 key 的症狀:畫面上那行字直接消失(support.js 只 console.warn),非常難發現
+  const zh = shape(dict('zh'), '', new Map());
+  const en = shape(dict('en'), '', new Map());
+
+  const onlyZh = [...zh.keys()].filter((key) => !en.has(key));
+  const onlyEn = [...en.keys()].filter((key) => !zh.has(key));
+  assert.deepEqual(onlyZh, [], `en 少了這些 key: ${onlyZh.join(', ')}`);
+  assert.deepEqual(onlyEn, [], `zh 少了這些 key: ${onlyEn.join(', ')}`);
+
+  const mismatched = [...zh.keys()].filter((key) => zh.get(key) !== en.get(key));
+  assert.deepEqual(
+    mismatched.map((key) => `${key}: zh=${zh.get(key)} en=${en.get(key)}`),
+    [],
+  );
+});
+
+test('the key-structure guard actually fails when a key is dropped or an array shrinks', () => {
+  const base = { nav: { cta: 'x' }, home: { data: { flow: [{ title: 'a' }, { title: 'b' }] } } };
+  const missingKey = { nav: {}, home: { data: { flow: [{ title: 'a' }, { title: 'b' }] } } };
+  const shortArray = { nav: { cta: 'x' }, home: { data: { flow: [{ title: 'a' }] } } };
+
+  const shapeOf = (node) => shape(node, '', new Map());
+  const diff = (a, b) => {
+    const left = shapeOf(a);
+    const right = shapeOf(b);
+    return [...new Set([...left.keys(), ...right.keys()])]
+      .filter((key) => left.get(key) !== right.get(key));
+  };
+
+  assert.deepEqual(diff(base, base), []);
+  assert.notDeepEqual(diff(base, missingKey), []);
+  assert.notDeepEqual(diff(base, shortArray), []);
+});
+
+test('every {{ L.* }} binding in index.html resolves to a string in both languages', () => {
+  const keys = bindingKeys();
+  assert.ok(keys.length > 300, `expected the markup to be fully bound, found ${keys.length} keys`);
+
+  for (const lang of LANGS) {
+    const values = dict(lang);
+    const broken = keys.filter((key) => typeof lookup(values, key) !== 'string');
+    assert.deepEqual(broken, [], `dict('${lang}') 查不到字串: ${broken.join(', ')}`);
+  }
+
+  // 空字串是允許的,但必須是刻意的:zh 的 heroTitlePost 就是空的(標題結尾沒有字)
+  assert.equal(dict('zh').home.heroTitlePost, '');
+  const emptyInZh = keys.filter((key) => lookup(dict('zh'), key) === '');
+  assert.deepEqual(emptyInZh, ['home.heroTitlePost']);
+});
+
+test('rendering index.html in English leaves no Chinese in the markup', () => {
+  const start = renderMarkup('en').indexOf('<x-dc>');
+  const end = renderMarkup('en').indexOf('</x-dc>');
+  let rendered = renderMarkup('en').slice(start, end);
+
+  // 這些不是使用者看得到的文案,逐一排除(每一條都說明為什麼):
+  // 1. HTML 註解 —— 給維護者看的,故意留中文
+  rendered = rendered.replace(/<!--[\s\S]*?-->/g, '');
+  // 2. CSS 註解 —— 同上(CSS 的 content: 值沒有被排除,真有中文仍然會被抓到)
+  rendered = rendered.replace(/<style\b[^>]*>[\s\S]*?<\/style>/g, (block) => block.replace(/\/\*[\s\S]*?\*\//g, ''));
+  // 3. data-screen-label —— 設計稿工具用的頁面代號,不會渲染成文字
+  rendered = rendered.replace(/ data-screen-label="[^"]*"/g, '');
+  // 4. bundler 縮圖樣板裡的「食」是品牌字標,不翻
+  rendered = rendered.replace(/<template id="__bundler_thumbnail">[\s\S]*?<\/template>/g, '');
+  // 5. <helmet> 裡的 meta 是靜態中文預設值,開頁時由 syncSeo() 依語系換掉。
+  //    只放行「確定會被換掉」的那幾個 —— 新增一個沒被 syncSeo 接手的中文 meta 仍然會紅。
+  const syncSeoStart = component.indexOf('syncSeo() {');
+  const syncSeo = component.slice(syncSeoStart, component.indexOf('\n  }', syncSeoStart));
+  assert.ok(syncSeoStart > 0, 'component must define syncSeo()');
+  rendered = rendered.replace(/<meta (name|property)="([^"]+)" content="[^"]*">/g, (whole, kind, key) => (
+    syncSeo.includes(`meta[${kind}="${key}"]`) ? '' : whole
+  ));
+
+  const leftovers = rendered.split('\n').map((line) => line.trim()).filter((line) => CJK.test(line));
+  assert.deepEqual(leftovers, [], `英文版殘留中文:\n${leftovers.join('\n')}`);
+});
+
+test('English SEO metadata is translated for every page, not just the markup', () => {
+  // <title> 與 description 不在 markup 綁定裡(靜態 head + helmet 的中文預設值),
+  // 全靠 syncSeo() 換。字典裡沒有英文版的話,英文頁的分頁標題會一路是中文。
+  const en = dict('en').meta;
+  assert.ok(en && en.pages, 'en dict must carry meta.pages');
+  for (const page of ['home', 'restaurants', 'suppliers', 'cases', 'about', 'contact']) {
+    assert.ok(en.pages[page], `missing en meta for ${page}`);
+    assert.doesNotMatch(en.pages[page].title, CJK, `${page} title still Chinese`);
+    assert.doesNotMatch(en.pages[page].description, CJK, `${page} description still Chinese`);
+  }
+  assert.doesNotMatch(en.keywords, CJK);
+  assert.doesNotMatch(en.siteName, CJK);
+  assert.match(component, /document\.title = page\.title/);
+});
+
+test('home data arrays match the counts the component renders', () => {
+  // 長度對不上的症狀:首頁少一格或多一格空白卡片
+  const expected = {
+    rotating: 4,
+    hotTags: 6,
+    heroPromises: 3,
+    stats: 4,
+    audiences: 4,
+    flow: 6,
+    categories: 12,
+    pains: 4,
+    testimonials: 3,
+    trust: 3,
+    articlesTop: 3,
+  };
+  for (const lang of LANGS) {
+    const data = dict(lang).home.data;
+    for (const [key, count] of Object.entries(expected)) {
+      assert.ok(Array.isArray(data[key]), `dict('${lang}').home.data.${key} must be an array`);
+      assert.equal(data[key].length, count, `dict('${lang}').home.data.${key}`);
+    }
+  }
+
+  // 元件用 index 去對齊字典,所以常數陣列必須等長
+  const data = dict('zh').home.data;
+  assert.equal(constArray('FLOW_IMGS').length, data.flow.length);
+  assert.equal(constArray('CATEGORY_IMGS').length, data.categories.length);
+  assert.equal(constArray('ARTICLE_DATES').length, data.articlesTop.length);
+  assert.equal(constArray('ARTICLE_IMGS').length, data.articlesTop.length);
+  // NO_LABELS 是編號 01–04,audiences 與 trust 共用(trust 只取前三個)
+  assert.equal(constArray('NO_LABELS').length, data.audiences.length);
+  assert.ok(constArray('NO_LABELS').length >= data.trust.length);
+
+  // stats 的數字目標仍在元件裡,一樣靠 index 對上 data.stats 的標籤
+  const statsBlock = component.slice(component.indexOf('stats: ['), component.indexOf('].map((s, i)'));
+  assert.equal((statsBlock.match(/\{ (?:target|text):/g) || []).length, data.stats.length);
+});
+
+test('detect() prefers the stored choice, then the browser, then Chinese', () => {
+  assert.equal(detect(fakeWindow({ language: 'zh-TW' })), 'zh');
+  assert.equal(detect(fakeWindow({ language: 'zh-Hant-TW' })), 'zh');
+  assert.equal(detect(fakeWindow({ language: 'en-US' })), 'en');
+  assert.equal(detect(fakeWindow({ languages: ['en-GB', 'en'], language: 'en-GB' })), 'en');
+  // 只有日文 —— 認不得就落回預設語系,不能回 null 讓畫面空掉
+  assert.equal(detect(fakeWindow({ languages: ['ja'], language: 'ja' })), DEFAULT_LANG);
+  assert.equal(DEFAULT_LANG, 'zh');
+  // 按過語言鈕就聽他的,壓過瀏覽器語系(兩個方向都測)
+  assert.equal(detect(fakeWindow({ stored: 'en', language: 'zh-TW' })), 'en');
+  assert.equal(detect(fakeWindow({ stored: 'zh', languages: ['en-US'], language: 'en-US' })), 'zh');
+  // localStorage 裡是垃圾值就當作沒存過
+  assert.equal(detect(fakeWindow({ stored: 'ja', language: 'en-US' })), 'en');
+  // 完全沒有 navigator 也不能爆
+  assert.equal(detect({}), DEFAULT_LANG);
+});
+
+test('detect() survives a localStorage that throws (private browsing)', () => {
+  const win = fakeWindow({ storageThrows: true, language: 'en-US' });
+  assert.equal(detect(win), 'en');
+  assert.equal(detect(fakeWindow({ storageThrows: true, language: 'ja' })), DEFAULT_LANG);
+  // 寫入失敗要回 false,不是丟例外 —— 切語系的流程不能因此中斷
+  assert.equal(storeLang(win, 'en'), false);
+
+  const writable = fakeWindow();
+  assert.equal(storeLang(writable, 'en'), true);
+  assert.equal(writable._store.get(STORAGE_KEY), 'en');
+  assert.equal(storeLang(writable, 'ja'), false);
+});
+
+test('assets and support.js are root-absolute so /en/ pages load the same files', () => {
+  // 相對路徑在 /en/suppliers 之下 base 會變成 /en/,./support.js 會去要 /en/support.js
+  // 然後 404 —— 整個框架不載入、頁面全白。2026-09-22 線上實際踩過。
+  for (const script of ['i18n.js', 'routing.js', 'support.js']) {
+    assert.match(rawSource, new RegExp(`<script src="/${script.replace('.', '\\.')}"></script>`));
+  }
+  // ./x、../x、裸檔名 x.js 一律不行
+  assert.doesNotMatch(rawSource, /(?:src|href)="\.{1,2}\//);
+  assert.doesNotMatch(rawSource, /(?:src|href)="[A-Za-z0-9_-]+\.(?:js|css|png|svg|ico)"/);
+
+  const assetRefs = Array.from(rawSource.matchAll(/['"(]([^'"()\s]*assets\/[^'"()\s]+)['")]/g), (m) => m[1]);
+  assert.ok(assetRefs.length >= 21, `expected the asset paths to be found, got ${assetRefs.length}`);
+  for (const ref of assetRefs) assert.match(ref, /^\/assets\//, `asset path must be root-absolute: ${ref}`);
+
+  // 其他本機檔案(logo、icon、favicon)同理
+  const localRefs = Array.from(rawSource.matchAll(/(?:src|href)="([^"]+\.(?:png|ico|svg|js|css))"/g), (m) => m[1])
+    .filter((ref) => !/^https?:/.test(ref));
+  for (const ref of localRefs) assert.match(ref, /^\//, `local asset must be root-absolute: ${ref}`);
+});
+
+test('internal links are language-aware bindings, never hard-coded paths', () => {
+  // 寫死 href="/restaurants" 的話,英文頁上右鍵開新分頁會跳回中文站
+  const internal = Array.from(markup.matchAll(/<a[^>]+href="([^"]*)"/g), (m) => m[1])
+    .filter((href) => !/^https?:|^mailto:|^tel:|^#/.test(href));
+  assert.ok(internal.length > 20, `expected internal links in the markup, found ${internal.length}`);
+  for (const href of internal) {
+    assert.match(
+      href,
+      /^\{\{ (href[A-Za-z]*|langHref|loginUrl|restaurantRegistrationUrl|supplierApplicationUrl) \}\}$/,
+      `internal link must be a binding, got ${href}`,
+    );
+  }
+});

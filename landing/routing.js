@@ -10,6 +10,12 @@
   }
 })(typeof window !== 'undefined' ? window : null, function () {
   var publicBaseUrl = 'https://ifoodmap-landing.vercel.app';
+
+  // 語系走網址前綴:中文是 /xxx(不帶前綴,維持既有網址不變),英文是 /en/xxx。
+  // 前綴是「哪個語系被渲染」的唯一真相 —— 連結才分享得出去、Google 才索引得到英文版。
+  var DEFAULT_LANG = 'zh';
+  var PREFIXED_LANGS = { en: '/en' };
+
   var pageByPath = {
     '/': 'home',
     '/restaurants': 'restaurants',
@@ -28,33 +34,86 @@
     contact: '/contact',
   };
 
+  var htmlLangByLang = { zh: 'zh-Hant', en: 'en' };
+  var ogLocaleByLang = { zh: 'zh_TW', en: 'en_US' };
+
   function normalizePath(pathname) {
     var path = typeof pathname === 'string' ? pathname : '/';
     path = path.split(/[?#]/, 1)[0].replace(/\/+$/, '');
     return path || '/';
   }
 
-  function pathToPage(pathname) {
-    return pageByPath[normalizePath(pathname)] || 'home';
+  // '/en/suppliers' → { lang:'en', path:'/suppliers' };'/suppliers' → { lang:'zh', path:'/suppliers' }
+  function splitLang(pathname) {
+    var path = normalizePath(pathname);
+    for (var lang in PREFIXED_LANGS) {
+      var prefix = PREFIXED_LANGS[lang];
+      if (path === prefix) return { lang: lang, path: '/' };
+      if (path.indexOf(prefix + '/') === 0) return { lang: lang, path: path.slice(prefix.length) };
+    }
+    return { lang: DEFAULT_LANG, path: path };
   }
 
-  function pageToPath(page) {
-    return pathByPage[page] || '/';
+  function pathToPage(pathname) {
+    return pageByPath[splitLang(pathname).path] || 'home';
+  }
+
+  function pathToLang(pathname) {
+    return splitLang(pathname).lang;
+  }
+
+  function pathToRoute(pathname) {
+    var split = splitLang(pathname);
+    return { page: pageByPath[split.path] || 'home', lang: split.lang };
+  }
+
+  function pageToPath(page, lang) {
+    var path = pathByPage[page] || '/';
+    var prefix = PREFIXED_LANGS[lang];
+    if (!prefix) return path;
+    return path === '/' ? prefix : prefix + path;
   }
 
   function canonicalUrlForPath(pathname) {
-    var normalized = normalizePath(pathname);
-    var publicPath = pageByPath[normalized] ? normalized : '/';
-    return publicBaseUrl + publicPath;
+    var route = pathToRoute(pathname);
+    return publicBaseUrl + pageToPath(route.page, route.lang);
+  }
+
+  // hreflang:同一頁的各語系版本。x-default 指中文版(預設語系)。
+  function alternateUrlsForPath(pathname) {
+    var page = pathToRoute(pathname).page;
+    return {
+      zh: publicBaseUrl + pageToPath(page, 'zh'),
+      en: publicBaseUrl + pageToPath(page, 'en'),
+      xDefault: publicBaseUrl + pageToPath(page, DEFAULT_LANG),
+    };
   }
 
   function syncMetadata(win) {
-    if (!win.document || typeof win.document.querySelector !== 'function') return;
+    var doc = win && win.document;
+    if (!doc || typeof doc.querySelector !== 'function') return;
+
+    var route = pathToRoute(win.location.pathname);
     var url = canonicalUrlForPath(win.location.pathname);
-    var canonical = win.document.querySelector('link[rel="canonical"]');
-    var openGraphUrl = win.document.querySelector('meta[property="og:url"]');
+    var alternates = alternateUrlsForPath(win.location.pathname);
+
+    var canonical = doc.querySelector('link[rel="canonical"]');
+    var openGraphUrl = doc.querySelector('meta[property="og:url"]');
     if (canonical) canonical.setAttribute('href', url);
     if (openGraphUrl) openGraphUrl.setAttribute('content', url);
+
+    var openGraphLocale = doc.querySelector('meta[property="og:locale"]');
+    if (openGraphLocale) openGraphLocale.setAttribute('content', ogLocaleByLang[route.lang] || ogLocaleByLang[DEFAULT_LANG]);
+
+    if (doc.documentElement && typeof doc.documentElement.setAttribute === 'function') {
+      doc.documentElement.setAttribute('lang', htmlLangByLang[route.lang] || htmlLangByLang[DEFAULT_LANG]);
+    }
+
+    var hreflangs = [['zh-Hant', alternates.zh], ['en', alternates.en], ['x-default', alternates.xDefault]];
+    for (var i = 0; i < hreflangs.length; i++) {
+      var link = doc.querySelector('link[rel="alternate"][hreflang="' + hreflangs[i][0] + '"]');
+      if (link) link.setAttribute('href', hreflangs[i][1]);
+    }
   }
 
   function shouldHandleClick(event) {
@@ -66,16 +125,16 @@
 
   function createHistoryController(options) {
     var win = options.window;
-    var onPage = options.onPage;
+    var onRoute = options.onRoute;
     var focusPage = options.focusPage;
     var started = false;
-    var renderPage = function (page, shouldFocus) {
-      onPage(page);
-      if (shouldFocus && typeof focusPage === 'function') focusPage(page);
+    var renderRoute = function (route, shouldFocus) {
+      onRoute(route);
+      if (shouldFocus && typeof focusPage === 'function') focusPage(route.page);
     };
     var onPopState = function () {
       syncMetadata(win);
-      renderPage(pathToPage(win.location.pathname), true);
+      renderRoute(pathToRoute(win.location.pathname), true);
     };
 
     return {
@@ -85,15 +144,40 @@
         syncMetadata(win);
         started = true;
       },
-      navigate: function (page, event) {
+      route: function () {
+        return pathToRoute(win.location.pathname);
+      },
+      navigate: function (page, event, lang) {
         if (!shouldHandleClick(event)) return false;
         if (event && typeof event.preventDefault === 'function') event.preventDefault();
 
-        var path = pageToPath(page);
+        var nextLang = lang || pathToLang(win.location.pathname);
+        var path = pageToPath(page, nextLang);
         if (normalizePath(win.location.pathname) === path) return false;
         win.history.pushState({}, '', path);
         syncMetadata(win);
-        renderPage(page, true);
+        renderRoute({ page: page, lang: nextLang }, true);
+        return true;
+      },
+      // 切語系:同一頁換到另一個語系的網址。用 pushState 讓「上一頁」能切回來。
+      setLang: function (lang) {
+        var current = pathToRoute(win.location.pathname);
+        if (current.lang === lang) return false;
+        win.history.pushState({}, '', pageToPath(current.page, lang));
+        syncMetadata(win);
+        renderRoute({ page: current.page, lang: lang }, false);
+        return true;
+      },
+      // 只在「裸網址 /」時依瀏覽器語系自動落地,而且不留歷史紀錄(replaceState)。
+      // 深層網址一律照網址渲染 —— 否則 Googlebot 帶 Accept-Language: en 逛中文頁會被踢走,
+      // 中文版就索引不到了。
+      applyPreferredLang: function (lang) {
+        var current = pathToRoute(win.location.pathname);
+        if (current.page !== 'home' || current.lang === lang) return false;
+        if (normalizePath(win.location.pathname) !== pageToPath('home', DEFAULT_LANG)) return false;
+        win.history.replaceState({}, '', pageToPath('home', lang));
+        syncMetadata(win);
+        renderRoute({ page: 'home', lang: lang }, false);
         return true;
       },
       stop: function () {
@@ -182,10 +266,14 @@
   }
 
   return {
+    DEFAULT_LANG: DEFAULT_LANG,
+    alternateUrlsForPath: alternateUrlsForPath,
     canonicalUrlForPath: canonicalUrlForPath,
     createDrawerFocusManager: createDrawerFocusManager,
     createHistoryController: createHistoryController,
+    pathToLang: pathToLang,
     pathToPage: pathToPage,
+    pathToRoute: pathToRoute,
     pageToPath: pageToPath,
   };
 });

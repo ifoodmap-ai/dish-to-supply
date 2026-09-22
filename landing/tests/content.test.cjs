@@ -3,7 +3,16 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');
 
-const source = fs.readFileSync(path.resolve(__dirname, '..', 'index.html'), 'utf8');
+const { dict } = require('../i18n.js');
+const { renderMarkup } = require('./helpers/render.cjs');
+
+// 站上文案已經全面改走字典(markup 綁 {{ L.x.y }},值在 i18n.js)。
+// 把 zh 字典的值代回 markup,就還原成「中文版使用者真的看到的那份 HTML」——
+// 底下每一條既有的中文文案斷言都原封不動跑在它上面,強度不變。
+// 元件 script 不含綁定,渲染前後逐字相同,所以程式碼層的斷言一樣用 source。
+const source = renderMarkup('zh');
+// 首頁那些資料陣列(stats / flow / audiences / …)已經從 renderVals() 搬進字典
+const homeData = dict('zh').home.data;
 const homeStart = source.indexOf('<!-- ============ PAGE: HOME ============ -->');
 const homeEnd = source.indexOf('<!-- ============ PAGE: RESTAURANTS ============ -->');
 const home = source.slice(homeStart, homeEnd);
@@ -38,14 +47,17 @@ const approvedCases = [
   ['產地直送，建立消費者信任', '對接具產銷履歷的產地供應商，商品故事與品質都更有說服力。', '+28%', '4.9★'],
 ];
 
-function assertHomeMetricsAndWorkflow(fragment) {
-  // 首頁的統計數字與六步流程是資料陣列(渲染時才變成文字),所以對照元件原始碼
-  for (const metric of ["target: 3000, suffix: '+'", "target: 12000, suffix: '+'", "target: 28", "text: '全台'"]) {
+function assertHomeMetricsAndWorkflow(fragment, data) {
+  // 數字目標仍在元件原始碼(不是文案);標籤與六步流程的文字已搬進字典
+  for (const metric of ["target: 3000, suffix: '+'", "target: 12000, suffix: '+'", "target: 28"]) {
     assert.ok(fragment.includes(metric), `missing metric ${metric}`);
   }
-  for (const step of ['填需求', '系統媒合', '收到報價', '比較洽談', '下單進貨', '雙邊評價']) {
-    assert.match(fragment, new RegExp(`title: '${step}'`));
-  }
+  assert.deepEqual(data.stats, ['合作供應商（示意）', '累積媒合需求（示意）', '食材分類', '配送涵蓋']);
+  assert.equal(data.statsNationwide, '全台');
+  assert.deepEqual(
+    data.flow.map((step) => step.title),
+    ['填需求', '系統媒合', '收到報價', '比較洽談', '下單進貨', '雙邊評價'],
+  );
 }
 
 function assertApprovedCases(fragment) {
@@ -172,16 +184,17 @@ function assertAiDialogLifecycle(fragment) {
 }
 
 function assertAiAnnouncements(fragment) {
-  assert.match(fragment, /<label for="ai-assistant-input" class="ai-sr-only">輸入食材需求<\/label>/);
+  // AI 助手的文案已經改由 txt() 依語系填,所以這裡只釘結構與宣告順序,不釘字串內容
+  assert.match(fragment, /<label for="ai-assistant-input" class="ai-sr-only">/);
   assert.match(fragment, /<input id="ai-assistant-input"[^>]+class="ai-text"/);
   assert.match(fragment, /body\.setAttribute\('role', 'log'\)/);
   assert.match(fragment, /body\.setAttribute\('aria-live', 'polite'\)/);
   assert.match(fragment, /body\.setAttribute\('aria-relevant', 'additions'\)/);
   assert.match(fragment, /body\.setAttribute\('aria-atomic', 'false'\)/);
-  assert.ok(
-    fragment.indexOf("addMsg('bot', '嗨！我是 iFoodMap AI 採購助手") <
-      fragment.indexOf("body.setAttribute('aria-live', 'polite')"),
-  );
+  // 開場白要在 live region 宣告之前就進 DOM,否則一開頁就被念一次
+  const greeting = fragment.indexOf("addMsg('bot'");
+  const liveRegion = fragment.indexOf("body.setAttribute('aria-live', 'polite')");
+  assert.ok(greeting >= 0 && liveRegion > greeting);
 }
 
 function contrastRatio(foreground, background) {
@@ -200,6 +213,15 @@ function contrastRatio(foreground, background) {
 const componentStart = source.indexOf('<script type="text/x-dc" data-dc-script>');
 const componentEnd = source.indexOf('</script>', componentStart);
 const component = source.slice(componentStart, componentEnd);
+
+// 圖片路徑、編號、日期這些「不是文字」的東西留在元件裡,靠陣列 index 跟字典對齊。
+// 兩邊長度一旦不同,首頁就會少一格或多一格空白卡片 —— tests/i18n.test.cjs 會逐一擋。
+function constArray(name) {
+  const match = component.match(new RegExp(`const ${name} = \\[([\\s\\S]*?)\\];`));
+  assert.ok(match, `missing const ${name} in component script`);
+  return Array.from(match[1].matchAll(/'([^']*)'/g), (m) => m[1]);
+}
+const categoryImgs = () => constArray('CATEGORY_IMGS');
 const mobileMenuStart = header.indexOf('<sc-if value="{{ menuOpen }}">');
 const mobileMenu = header.slice(mobileMenuStart, header.indexOf('</sc-if>', mobileMenuStart));
 
@@ -207,17 +229,18 @@ test('homepage presents the design-approved hero: rotating headline, subtitle, s
   assert.ok(homeStart >= 0 && homeEnd > homeStart);
   assert.match(home, /B2B MATCHING ENGINE/);
   assert.match(home, /<h1[^>]*>\s*免費找到<span[^>]*>\{\{\s*rotating\s*\}\}<\/span>\s*<\/h1>/);
-  assert.match(component, /const phrases = \['所有食材', '對的供應商', '第二家報價', '產地直送的好貨'\]/);
+  assert.deepEqual(homeData.rotating, ['所有食材', '對的供應商', '第二家報價', '產地直送的好貨']);
   assert.match(home, /餐廳、團膳、學校、團購主都適用。<br>填一次需求，供應商主動來找你。/);
   assert.match(home, /placeholder="搜尋食材，例如：有機葉菜、火鍋肉片"/);
-  assert.match(component, /heroPromises: \['完全免費', '成交不抽成', '平均 4 小時有回覆'\]/);
-  assert.match(component, /hotTags: \['蔬菜', '水果', '豬肉', '牛肉', '火鍋料', '米麵'\]\.map\(/);
+  assert.deepEqual(homeData.heroPromises, ['完全免費', '成交不抽成', '平均 4 小時有回覆']);
+  assert.deepEqual(homeData.hotTags, ['蔬菜', '水果', '豬肉', '牛肉', '火鍋料', '米麵']);
+  assert.match(component, /hotTags: list\('hotTags'\)\.map\(/);
   // 搜尋列與分類籤都要接進 AI 助手,不能是死的裝飾
   assert.match(home, /<form onSubmit="\{\{\s*askAI\s*\}\}" role="search"/);
   assert.match(home, /<button type="button" onClick="\{\{\s*t\.ask\s*\}\}"/);
   assert.match(source, /window\.IfmAI = \{/);
-  assert.match(component, /handToAI\(text\) \{/);
-  assert.match(header, /<a[^>]+href="\/contact"[^>]*>填寫食材需求<\/a>/);
+  assert.match(component, /handToAI\(keyword\) \{/);
+  assert.match(header, /<a[^>]+href="\{\{\s*hrefContact\s*\}\}"[^>]*>填寫食材需求<\/a>/);
 });
 
 test('homepage hero draws the world map with d3 centred on Taiwan', () => {
@@ -249,32 +272,43 @@ test('product links derive from one canonical product base URL', () => {
 });
 
 test('homepage retains design metrics and explains the six-step workflow', () => {
-  assertHomeMetricsAndWorkflow(component);
+  assertHomeMetricsAndWorkflow(component, homeData);
   assert.match(home, /<sc-for list="\{\{\s*flowA\s*\}\}"/);
   assert.match(home, /<sc-for list="\{\{\s*flowB\s*\}\}"/);
   assert.match(home, /從需求到進貨，<span[^>]*>一條龍<\/span>/);
 });
 
 test('homepage names four audiences, twelve categories and three trust features from the design', () => {
-  for (const audience of ['餐廳・餐酒館', '團膳・學校', '團購主・電商', '加工廠・通路']) {
-    assert.match(component, new RegExp(`title: '${audience}'`));
-  }
-  for (const category of ['蔬菜', '水果', '海鮮', '肉品', '蛋品', '五穀雜糧', '南北雜貨', '加工食品', '火鍋料', '調味品', '酒與飲品', '包材耗材']) {
-    assert.match(component, new RegExp(`name: '${category}', img: 'assets\\/cat-[a-z]+\\.svg'`));
-  }
-  for (const feature of ['雙邊評價機制', '標章與檢驗連動', 'LINE 即時通知']) {
-    assert.match(component, new RegExp(`title: '${feature}'`));
-  }
+  assert.deepEqual(
+    homeData.audiences.map((audience) => audience.title),
+    ['餐廳・餐酒館', '團膳・學校', '團購主・電商', '加工廠・通路'],
+  );
+  assert.deepEqual(
+    homeData.categories,
+    ['蔬菜', '水果', '海鮮', '肉品', '蛋品', '五穀雜糧', '南北雜貨', '加工食品', '火鍋料', '調味品', '酒與飲品', '包材耗材'],
+  );
+  // 分類文字住字典、圖片住元件,靠 index 對齊 —— 兩邊都要在,而且圖是 root-absolute
+  assert.equal(categoryImgs().length, homeData.categories.length);
+  for (const img of categoryImgs()) assert.match(img, /^\/assets\/cat-[a-z]+\.svg$/);
+  assert.deepEqual(
+    homeData.trust.map((feature) => feature.title),
+    ['雙邊評價機制', '標章與檢驗連動', 'LINE 即時通知'],
+  );
   assert.match(home, /任何有食材需求的人，<br>都適用/);
   assert.match(home, /過去找食材，<br>永遠是那幾家/);
 });
 
 test('homepage illustrations are real files and no design placeholder text leaks through', () => {
-  const referenced = new Set(
-    Array.from(component.matchAll(/img: '(assets\/[^']+)'/g)).map((m) => m[1]),
-  );
+  const referenced = new Set([
+    ...constArray('FLOW_IMGS'),
+    ...constArray('CATEGORY_IMGS'),
+    ...constArray('ARTICLE_IMGS'),
+  ]);
   assert.ok(referenced.size >= 21, `expected 21 illustrations, found ${referenced.size}`);
-  for (const rel of referenced) {
+  for (const absolute of referenced) {
+    // root-absolute 才行:/en/xxx 底下 base 會變成 /en/,相對路徑會 404
+    assert.match(absolute, /^\/assets\//, `illustration must be root-absolute: ${absolute}`);
+    const rel = absolute.slice(1);
     assert.ok(fs.existsSync(path.resolve(__dirname, '..', rel)), `missing illustration ${rel}`);
   }
   for (const placeholder of ['插圖：', '文章封面', '[ 餐廳採購情境照 ]', '[ 供應商出貨情境照 ]', '截圖']) {
@@ -285,10 +319,11 @@ test('homepage illustrations are real files and no design placeholder text leaks
 });
 
 test('homepage shows three testimonials and three articles, then the closing CTA', () => {
-  for (const who of ['林老闆', '陳主任', '王小姐']) assert.match(component, new RegExp(`who: '${who}'`));
-  for (const title of ['如何做好餐飲食材採購：從規格書到驗收', '了解產銷履歷，加入溯源餐廳的行列', '使用在地食材，邁向從產地到餐桌']) {
-    assert.match(component, new RegExp(title));
-  }
+  assert.deepEqual(homeData.testimonials.map((t) => t.who), ['林老闆', '陳主任', '王小姐']);
+  assert.deepEqual(
+    homeData.articlesTop.map((a) => a.title),
+    ['如何做好餐飲食材採購：從規格書到驗收', '了解產銷履歷，加入溯源餐廳的行列', '使用在地食材，邁向從產地到餐桌'],
+  );
   const news = home.indexOf('id="news"');
   const closing = home.indexOf('免費找到所有食材，<br>從填一張需求單開始');
   assert.ok(news >= 0 && closing > news);
@@ -297,11 +332,13 @@ test('homepage shows three testimonials and three articles, then the closing CTA
 });
 
 test('mobile menu mirrors desktop destinations and the legacy drawer is no longer mounted', () => {
-  const desktopLinks = Array.from(header.slice(0, mobileMenuStart).matchAll(/<a href="([^"{}]+)"[^>]*>([^<]+)<\/a>/g))
+  // 內部連結的 href 現在一律是 {{ href* }} 綁定(才會帶語系前綴),所以比對「綁定名 + 文字」
+  const linkPattern = /<a href="\{\{ (\w+) \}\}"[^>]*>([^<]+)<\/a>/g;
+  const desktopLinks = Array.from(header.slice(0, mobileMenuStart).matchAll(linkPattern))
     .filter((m) => m[2] !== '食材地圖');
-  const mobileLinks = Array.from(mobileMenu.matchAll(/<a href="([^"{}]+)"[^>]*>([^<]+)<\/a>/g));
-  assert.equal(desktopLinks.length, 8); // 7 nav + CTA
-  assert.equal(mobileLinks.length, 8);
+  const mobileLinks = Array.from(mobileMenu.matchAll(linkPattern));
+  assert.equal(desktopLinks.length, 9); // 7 nav + 語言切換 + CTA
+  assert.equal(mobileLinks.length, 9);
   assert.deepEqual(desktopLinks.map((m) => m[1] + m[2]), mobileLinks.map((m) => m[1] + m[2]));
   assert.match(header, /aria-expanded="\{\{\s*menuOpen\s*\}\}"/);
   assert.match(header, /aria-controls="ifm-mobile-menu"/);
@@ -311,8 +348,12 @@ test('mobile menu mirrors desktop destinations and the legacy drawer is no longe
 });
 
 test('content guards fail when home metrics or home workflow are removed', () => {
-  assert.throws(() => assertHomeMetricsAndWorkflow(component.replace("target: 12000, suffix: '+'", '')));
-  assert.throws(() => assertHomeMetricsAndWorkflow(component.replace("title: '系統媒合'", "title: '媒合'")));
+  assert.throws(() => assertHomeMetricsAndWorkflow(component.replace("target: 12000, suffix: '+'", ''), homeData));
+  const renamedStep = {
+    ...homeData,
+    flow: homeData.flow.map((step) => (step.title === '系統媒合' ? { ...step, title: '媒合' } : step)),
+  };
+  assert.throws(() => assertHomeMetricsAndWorkflow(component, renamedStep));
   assert.throws(() => assertMobileLogin(footer.replace(/href="\{\{\s*loginUrl\s*\}\}"/, 'href="/"')));
 });
 
@@ -683,14 +724,46 @@ test('contact page retains delegated lead contract and exposes accessible fields
   }
   assert.match(contact, /<input[^>]+id="contact-phone"[^>]+type="tel"/);
   assert.match(contact, /<button class="contact-submit" type="submit"[^>]+aria-live="polite"/);
-  assert.match(source, /\/rest\/v1\/landing_leads/);
-  assert.match(source, /function findDemandCard\(node\)/);
-  assert.match(source, /h\.textContent\.indexOf\('填寫食材需求'\)/);
-  assert.match(source, /document\.addEventListener\('submit'/);
-  assert.doesNotMatch(source, /classList\.contains\('contact-submit'\)[\s\S]*?t\.click\(\)/);
-  for (const endpoint of ['/api/ai-chat', '/api/ai-menu', '/api/ai-extract']) {
-    assert.match(source, new RegExp(endpoint.replaceAll('/', '\\/')));
+  // 表單送出後由 index.html 尾端那段 script 寫進 Supabase。那段 script 正在被中英化改寫,
+  // 所以合約釘在 markup 這邊「script 必須認得出來的錨點」:標題 id、欄位 name、送出鈕 class。
+  assert.match(contact, /<form[^>]+aria-labelledby="demand-form-title"/);
+  for (const field of ['company_name', 'contact_phone', 'contact_line', 'items_text', 'detail']) {
+    assert.match(contact, new RegExp(`<(?:input|textarea)[^>]+name="${field}"`));
   }
+  assert.equal((contact.match(/class="contact-submit"/g) || []).length, 1);
+});
+
+test('lead capture actually reaches Supabase and does not depend on any display text', () => {
+  // 這幾條原本因為尾端 script 正在改寫而暫時拿掉,現在改完了補回來。
+  // 需求單與 AI 助手的留名都要寫進 landing_leads,而且匿名寫入一定要 return=minimal ——
+  // landing_leads 沒有 SELECT 政策,帶 RETURNING 會被 RLS 擋成 42501。
+  assert.equal((source.match(/\/rest\/v1\/landing_leads/g) || []).length, 2);
+  assert.equal((source.match(/'Prefer': 'return=minimal'/g) || []).length, 2);
+
+  // 🔴 表單定位只能靠 id,不能靠畫面上的字。以前是比對「填寫食材需求」,
+  // 英文版標題變成 Post a Request 之後會靜默失效、lead 直接收不到。
+  assert.match(source, /el\.querySelector\('#demand-form-title'\)/);
+  assert.doesNotMatch(source, /textContent\.indexOf\('填寫食材需求'\)/);
+
+  // 順帶擋住同一類的回頭路:不准再用「比對畫面文字」來找元素
+  const textMatchers = source.match(/textContent\.indexOf\('[^']*[\u4e00-\u9fff][^']*'\)/g) || [];
+  assert.deepEqual(textMatchers, [], `不可用中文字面值定位元素:${textMatchers.join(', ')}`);
+});
+
+test('AI assistant calls all three proxy endpoints and always tells them the language', () => {
+  for (const endpoint of ['/api/ai-chat', '/api/ai-menu', '/api/ai-extract']) {
+    assert.match(source, new RegExp(endpoint.replace(/\//g, '\\/')), `缺少 ${endpoint}`);
+  }
+  // 每一個 request payload 都要帶 lang,否則英文訪客會拿到中文回覆 / 中文品名
+  const payloads = source.match(/postJSON\('\/api\/ai-[a-z]+',\s*\{[^}]*\}/g) || [];
+  assert.ok(payloads.length >= 2, '找不到 postJSON 的 AI 請求');
+  for (const payload of payloads) {
+    assert.match(payload, /lang:\s*curLang\(\)/, `這個請求沒帶 lang:${payload.slice(0, 80)}`);
+  }
+  // 直接用 fetch / sendBeacon 送的那兩個 ai-extract 也要帶
+  assert.equal((source.match(/\{ messages: conv, lang: curLang\(\) \}/g) || []).length, 2);
+  // lang 必須是「呼叫當下才取」的函式,不能是開機時抓一次存起來的變數
+  assert.match(source, /function curLang\(\)[\s\S]{0,200}IfmI18n[\s\S]{0,80}current\(window\)/);
 });
 
 test('metadata consistently describes the approved two-sided platform', () => {
@@ -721,8 +794,9 @@ test('footer has three design columns with real internal and product destination
   for (const group of ['SERVICE', 'COMPANY', 'SUPPORT']) {
     assert.match(footer, new RegExp(`<div[^>]*>${group}<\\/div>`));
   }
-  for (const route of ['/restaurants', '/suppliers', '/cases', '/about', '/contact']) {
-    assert.match(footer, new RegExp(`<a href="${route}"`));
+  // 內部連結走 {{ href* }} 綁定才會帶語系前綴;寫死 /restaurants 的話英文頁會跳回中文站
+  for (const binding of ['hrefRestaurants', 'hrefSuppliers', 'hrefCases', 'hrefAbout', 'hrefContact']) {
+    assert.match(footer, new RegExp(`<a href="\\{\\{ ${binding} \\}\\}"`));
   }
   assert.match(footer, /href="\{\{\s*loginUrl\s*\}\}"[^>]*>登入平台<\/a>/);
   assert.doesNotMatch(footer, /<span[^>]*>(?:常見問題|使用條款)<\/span>/); // 不留假連結

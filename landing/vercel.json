@@ -21,6 +21,30 @@
     {
       "source": "/contact",
       "destination": "/"
+    },
+    {
+      "source": "/en",
+      "destination": "/"
+    },
+    {
+      "source": "/en/restaurants",
+      "destination": "/"
+    },
+    {
+      "source": "/en/suppliers",
+      "destination": "/"
+    },
+    {
+      "source": "/en/cases",
+      "destination": "/"
+    },
+    {
+      "source": "/en/about",
+      "destination": "/"
+    },
+    {
+      "source": "/en/contact",
+      "destination": "/"
     }
   ],
   "headers": [

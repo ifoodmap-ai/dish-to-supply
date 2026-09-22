@@ -17,15 +17,22 @@
 
 ```
 ifoodmap_deploy/
-├─ index.html          ← 網站主檔（可編輯原始碼；載入 ./support.js）★ 部署這個
-├─ support.js          ← 執行階段，必須與 index.html 同層
-├─ standalone.html     ← 100% 離線單一檔（驗收基準 / 備援，可不部署）
-├─ vercel.json         ← Vercel 靜態部署設定
-├─ package.json        ← 本機預覽（npx serve）
+├─ index.html          ← 網站主檔（可編輯原始碼；載入 /support.js）★ 部署這個
+├─ support.js          ← 執行階段，必須放在站台根目錄
+├─ routing.js          ← 網址 ↔ {頁面, 語系}、canonical / hreflang / <html lang>
+├─ i18n.js             ← 中英字典 + 語系偵測（改文案改這裡，見 docs/I18N.md）
+├─ api/                ← Vercel Serverless：AI 助手轉給 Supabase Edge Function
+├─ assets/             ← 站上的 SVG 插圖
+├─ tests/              ← node --test（npm test）
+├─ scripts/            ← 瀏覽器實跑的語系煙霧測試（見 scripts/README.md）
+├─ standalone.html     ← 100% 離線單一檔（舊版視覺基準，已不隨新版更新）
+├─ vercel.json         ← Vercel 靜態部署設定 + 12 條語系 rewrite
+├─ package.json        ← 本機預覽與測試
 ├─ .env.example        ← 接後端時的環境變數範本
 ├─ supabase_schema.sql ← 之後接資料庫用的建表 SQL
 ├─ README.md           ← 本檔
-└─ DEPLOY.md           ← 逐步部署（GitHub→Vercel→Supabase→Railway）
+├─ DEPLOY.md           ← 逐步部署（GitHub→Vercel→Supabase→Railway）
+└─ docs/I18N.md        ← 中英雙語怎麼運作（含三個踩過的坑）
 ```
 
 ---
@@ -34,19 +41,25 @@ ifoodmap_deploy/
 
 ```bash
 cd ifoodmap_deploy
-npx serve .
-# 開 http://localhost:3000 → 應與 standalone.html 完全一致
+npm run dev
+# 開 http://localhost:3000
 ```
+> 注意：`npx serve` 不會套用 `vercel.json` 的 rewrite，所以 `/suppliers`、`/en` 這類深層網址在本機會 404，
+> 只有 `/` 打得開。要完整驗證語系路由請部署到 Vercel preview，或自己寫一個會讀 `vercel.json` 的小伺服器。
 > 直接用 `file://` 開 `index.html` 可能因瀏覽器限制讀不到 `support.js`；請用上面的本機伺服器，或部署後驗證。`standalone.html` 則可直接雙擊開。
 
 ---
 
 ## 3. 這個網站怎麼運作（給接手者）
 
-- 單頁應用：**首頁 / 服務 / 客戶案例 / 關於我們 / 聯絡我們** 都在 `index.html` 內，用前端狀態切換（非多 URL 路由），所以**靜態託管單一檔即可**。
+- 單頁應用：**首頁 / 餐廳方案 / 供應商方案 / 成功案例 / 關於我們 / 聯絡我們** 都在 `index.html` 內。
+  有真實網址（`/suppliers` 這類，靠 `vercel.json` 的 rewrite 全部回到 `/`，再由 `routing.js` 決定渲染哪一頁），
+  所以**靜態託管單一檔即可**，但連結分享得出去、Google 也索引得到。
+- **中英雙語**：中文是 `/xxx`、英文是 `/en/xxx`；第一次從裸網址 `/` 進來會依瀏覽器語系自動落地。
+  詳見 `docs/I18N.md`。
 - 視覺系統、動畫、頁面內容的完整規格，見隨附的 `design_handoff_ifoodmap`（若一併取得）或本檔第 5 節摘要。
-- 目前所有圖片為**佔位圖**（斜紋 + 用途文字），等真實照片再替換。
-- 聯絡頁表單目前是**純前端 UI**（按鈕沒送出到後端）。要讓它真的收件 → 見 DEPLOY.md 第 4–5 節接 Supabase。
+- 插圖是 `assets/` 底下自製的品牌 SVG（不是斜紋佔位圖，那批已在首頁改版時換掉）。
+- 聯絡頁表單**已接上 Supabase**（寫入 `landing_leads`，匿名只寫不讀）；右下角還有 AI 採購助手會引導訪談並留下 lead。
 
 ---
 
