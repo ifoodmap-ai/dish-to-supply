@@ -714,38 +714,44 @@ test('about page explains the two-sided platform and retains exactly three appro
   assert.doesNotMatch(about, /成立於|團隊成員|合作夥伴|媒體報導/);
 });
 
-test('contact page retains delegated lead contract and exposes accessible fields and status', () => {
-  assert.equal((contact.match(/填寫食材需求/g) || []).length, 1);
-  assert.match(contact, /<h2 id="demand-form-title"[^>]*>填寫食材需求<\/h2>/);
-  assert.match(contact, /<form[^>]+aria-labelledby="demand-form-title"[^>]+novalidate/);
-  for (const id of ['company-name', 'contact-phone', 'contact-line', 'needed-items', 'need-detail']) {
-    assert.match(contact, new RegExp(`<label[^>]+for="${id}"`));
-    assert.match(contact, new RegExp(`<(?:input|textarea)[^>]+id="${id}"`));
-  }
-  assert.match(contact, /<input[^>]+id="contact-phone"[^>]+type="tel"/);
-  assert.match(contact, /<button class="contact-submit" type="submit"[^>]+aria-live="polite"/);
-  // 表單送出後由 index.html 尾端那段 script 寫進 Supabase。那段 script 正在被中英化改寫,
-  // 所以合約釘在 markup 這邊「script 必須認得出來的錨點」:標題 id、欄位 name、送出鈕 class。
-  assert.match(contact, /<form[^>]+aria-labelledby="demand-form-title"/);
-  for (const field of ['company_name', 'contact_phone', 'contact_line', 'items_text', 'detail']) {
-    assert.match(contact, new RegExp(`<(?:input|textarea)[^>]+name="${field}"`));
-  }
-  assert.equal((contact.match(/class="contact-submit"/g) || []).length, 1);
+test('contact page hands every request to the AI assistant instead of a form', () => {
+  // 需求單表單 2026-09-23 移除,所有「送出媒合」一律開右下角的 AI 採購助手。
+  // 表單不該以任何形式復活 —— 這幾條同時擋住「不小心把 markup 貼回來」。
+  assert.doesNotMatch(contact, /<form/);
+  assert.doesNotMatch(contact, /class="contact-field"/);
+  assert.doesNotMatch(contact, /name="(?:company_name|contact_phone|items_text)"/);
+
+  // 上方的 aria / 錨點仍然指著這個標題,id 不能掉
+  assert.match(contact, /id="demand-form-title"/);
+  // 注意:contact 是 renderMarkup('zh') 的結果,L.* 綁定已經被代成中文了,
+  // 只有非 L 的綁定(openAI / hotTags)還是原樣。所以這裡比對「渲染後的按鈕文字」。
+  const { dict } = require('../i18n.js');
+  const aiCta = dict('zh').contact.aiCta;
+  assert.match(contact, new RegExp(`onClick="\\{\\{ openAI \\}\\}"[^>]*>${aiCta.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}`));
+  // 英文版也要指到同一個 handler(不是各自寫死一顆按鈕)
+  const { renderMarkup } = require('./helpers/render.cjs');
+  const contactEn = (() => {
+    const en = renderMarkup('en');
+    return en.slice(en.indexOf('PAGE: CONTACT'), en.indexOf('FOOTER ====='));
+  })();
+  assert.match(contactEn, new RegExp(`onClick="\\{\\{ openAI \\}\\}"[^>]*>${dict('en').contact.aiCta.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}`));
+  // 常見需求快捷籤沿用首頁那組,點下去直接把關鍵字丟進助手
+  assert.match(contact, /<sc-for list="\{\{ hotTags \}\}" as="t"/);
+  assert.match(contact, /onClick="\{\{ t\.ask \}\}"/);
 });
 
-test('lead capture actually reaches Supabase and does not depend on any display text', () => {
-  // 這幾條原本因為尾端 script 正在改寫而暫時拿掉,現在改完了補回來。
-  // 需求單與 AI 助手的留名都要寫進 landing_leads,而且匿名寫入一定要 return=minimal ——
-  // landing_leads 沒有 SELECT 政策,帶 RETURNING 會被 RLS 擋成 42501。
-  assert.equal((source.match(/\/rest\/v1\/landing_leads/g) || []).length, 2);
-  assert.equal((source.match(/'Prefer': 'return=minimal'/g) || []).length, 2);
+test('lead capture now flows only through the AI assistant, and still reaches Supabase', () => {
+  // 表單那條寫入路徑已經移除,現在只剩 AI 助手自己那一條。
+  // 匿名寫入一定要 return=minimal:landing_leads 沒有 SELECT 政策,
+  // 帶 RETURNING 會被 RLS 擋成 42501。
+  assert.equal((source.match(/\/rest\/v1\/landing_leads/g) || []).length, 1);
+  assert.equal((source.match(/'Prefer': 'return=minimal'/g) || []).length, 1);
 
-  // 🔴 表單定位只能靠 id,不能靠畫面上的字。以前是比對「填寫食材需求」,
-  // 英文版標題變成 Post a Request 之後會靜默失效、lead 直接收不到。
-  assert.match(source, /el\.querySelector\('#demand-form-title'\)/);
-  assert.doesNotMatch(source, /textContent\.indexOf\('填寫食材需求'\)/);
+  // 死掉的表單 script 不可以留著
+  assert.doesNotMatch(source, /function findDemandCard/);
+  assert.doesNotMatch(source, /document\.addEventListener\('submit'/);
 
-  // 順帶擋住同一類的回頭路:不准再用「比對畫面文字」來找元素
+  // 🔴 整類「靠畫面文字找元素」的寫法一律擋掉 —— 中英雙語之下那種 hook 會靜默失效
   const textMatchers = source.match(/textContent\.indexOf\('[^']*[\u4e00-\u9fff][^']*'\)/g) || [];
   assert.deepEqual(textMatchers, [], `不可用中文字面值定位元素:${textMatchers.join(', ')}`);
 });

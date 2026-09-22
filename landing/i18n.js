@@ -600,17 +600,11 @@
         "hoursValue": "週一至週五 9:00 – 18:00",
         "lineLabel": "官方 LINE",
         "lineValue": "加入好友即時諮詢",
-        "formTitle": "填寫食材需求",
-        "formHelp": "標示「必填」的欄位需填寫；送出狀態會顯示在按鈕位置。",
-        "labelCompany": "餐廳 / 公司名稱（必填）",
-        "placeholderCompany": "例：好味道餐廳",
-        "labelPhone": "聯絡電話（必填）",
-        "placeholderLine": "選填",
-        "labelItems": "需求食材品項",
-        "placeholderItems": "例：蔬菜、豬肉、火鍋料",
-        "labelDetail": "需求說明",
-        "placeholderDetail": "數量、配送區域、配送頻率等…",
-        "submit": "送出需求，免費媒合 →"
+        "aiTitle": "直接跟 AI 採購助手說",
+        "aiHelp": "不用填表。說一句你要找什麼，助手會問清楚品項、數量、配送區域與時程，再把需求送給合適的供應商。",
+        "aiCta": "開始對話，免費媒合 →",
+        "aiHint": "也可以直接上傳菜單照片，讓它幫你整理採購清單。",
+        "aiQuickLabel": "常見需求，點一下開始"
       },
       "footer": {
         "brandTagline": "食材地圖",
@@ -659,16 +653,10 @@
             "description": "iFoodmap 是連結餐廳與食材供應商的雙邊 B2B 食材採購平台，讓資訊沿著採購流程流動。"
           },
           "contact": {
-            "title": "聯絡我們｜填寫食材需求或申請供應商上架 - iFoodmap 食材地圖",
-            "description": "餐廳可以直接建立帳號、供應商可以申請上架，一般商務諮詢與食材需求也可以由客服協助。"
+            "title": "聯絡我們｜跟 AI 採購助手說需求，或申請供應商上架 - iFoodmap 食材地圖",
+            "description": "餐廳可以直接建立帳號、供應商可以申請上架。食材需求交給 AI 採購助手問清楚，平台再送給合適的供應商，需求方完全免費。"
           }
         }
-      },
-      "lead": {
-        "requireCompanyPhone": "請填寫公司名稱與聯絡電話",
-        "submitting": "送出中…",
-        "success": "✓ 已送出，我們會盡快與您聯繫",
-        "failure": "送出失敗，請稍後再試或加 LINE"
       },
       "ai": {
         "fabLabel": "開啟 AI 採購助手",
@@ -1281,17 +1269,11 @@
         "hoursValue": "Mon–Fri 9:00 – 18:00",
         "lineLabel": "Official LINE",
         "lineValue": "Add us for instant support",
-        "formTitle": "Tell us what you need",
-        "formHelp": "Fields marked required must be filled in. Submission status appears on the button.",
-        "labelCompany": "Restaurant / company name (required)",
-        "placeholderCompany": "e.g. Good Taste Restaurant",
-        "labelPhone": "Phone number (required)",
-        "placeholderLine": "Optional",
-        "labelItems": "Ingredients needed",
-        "placeholderItems": "e.g. vegetables, pork, hot pot ingredients",
-        "labelDetail": "Request details",
-        "placeholderDetail": "Quantity, delivery area, delivery frequency…",
-        "submit": "Get matched, free →"
+        "aiTitle": "Just tell our AI assistant",
+        "aiHelp": "No forms. Say what you need and the assistant will work through the items, volume, delivery area and timing, then send your request to suppliers that fit.",
+        "aiCta": "Start chatting — free →",
+        "aiHint": "You can also upload a photo of your menu and let it build the sourcing list for you.",
+        "aiQuickLabel": "Common requests — tap to start"
       },
       "footer": {
         "brandTagline": "Food Sourcing Map",
@@ -1340,16 +1322,10 @@
             "description": "iFoodmap is a two-sided B2B sourcing platform connecting restaurants with ingredient suppliers, keeping information moving through the sourcing process."
           },
           "contact": {
-            "title": "Contact | Post a Request or Apply as a Supplier - iFoodmap",
-            "description": "Restaurants can create an account directly and suppliers can apply to list. For general business inquiries or ingredient requests, our team is here to help."
+            "title": "Contact | Tell our AI assistant what you need - iFoodmap",
+            "description": "Restaurants can create an account and suppliers can apply to list. Tell our AI assistant what ingredients you need and we will send your request to suppliers that fit, at no cost to buyers."
           }
         }
-      },
-      "lead": {
-        "requireCompanyPhone": "Company name and phone required",
-        "submitting": "Sending…",
-        "success": "✓ Sent — we'll be in touch soon",
-        "failure": "Couldn't send — retry or reach us on LINE"
       },
       "ai": {
         "fabLabel": "Open the AI sourcing assistant",
