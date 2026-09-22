@@ -1,0 +1,592 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@500;600;700&family=Noto+Sans+TC:wght@300;400;500;700&display=swap" rel="stylesheet">
+<style>
+  *{box-sizing:border-box}
+  body{margin:0;font-family:"Noto Sans TC","PingFang TC","Microsoft JhengHei",sans-serif;background:#FAF8F3;color:#1A1F1B;font-weight:400;-webkit-font-smoothing:antialiased}
+  h1,h2,h3,h4{font-family:"Noto Serif TC",'Songti TC',serif;font-weight:600;margin:0;letter-spacing:.01em}
+  p,ul,ol{margin:0}
+  ul{padding:0;list-style:none}
+  a{color:#2E6B4A;text-decoration:none}
+  a:hover{color:#1A4430}
+  button{font-family:inherit}
+  input,textarea{font-family:inherit}
+</style>
+</helmet>
+
+<div style="min-height:100vh;display:flex;flex-direction:column">
+
+  <header style="position:sticky;top:0;z-index:50;background:rgba(250,248,243,.92);backdrop-filter:blur(10px);border-bottom:1px solid #E3DED2">
+    <div style="max-width:1180px;margin:0 auto;padding:18px 28px;display:flex;align-items:baseline;gap:28px;flex-wrap:wrap">
+      <div onClick="{{ goHome }}" style="cursor:pointer;margin-right:auto">
+        <div style="font-family:'Noto Serif TC',serif;font-weight:700;font-size:21px;letter-spacing:.06em;color:#1A1F1B">食材地圖</div>
+        <div style="font-size:10px;color:#8A8677;letter-spacing:.28em;margin-top:2px">IFOODMAP</div>
+      </div>
+      <nav style="display:flex;gap:26px;flex-wrap:wrap;align-items:baseline">
+        <sc-for list="{{ nav }}" as="item" hint-placeholder-count="7">
+          <button onClick="{{ item.go }}" style="border:none;background:transparent;padding:0 0 3px;font-size:14.5px;letter-spacing:.04em;color:#4A5149;cursor:pointer;border-bottom:1px solid transparent" style-hover="color:#1A1F1B;border-bottom-color:#2E6B4A">{{ item.label }}</button>
+        </sc-for>
+      </nav>
+      <button onClick="{{ openForm }}" style="border:1px solid #1A1F1B;background:transparent;color:#1A1F1B;padding:10px 20px;font-size:13.5px;letter-spacing:.06em;cursor:pointer;border-radius:2px" style-hover="background:#1A1F1B;color:#FAF8F3">填寫食材需求</button>
+    </div>
+  </header>
+
+  <main style="flex:1">
+
+    <!-- 首頁 -->
+    <sc-if value="{{ isHome }}" hint-placeholder-val="{{ true }}">
+      <section style="border-bottom:1px solid #E3DED2">
+        <div style="max-width:1180px;margin:0 auto;padding:0 28px">
+          <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(330px,1fr));gap:0">
+            <div style="padding:86px 48px 86px 0;display:flex;flex-direction:column;justify-content:center">
+              <div style="font-size:11.5px;letter-spacing:.3em;color:#8A8677;margin-bottom:26px">B2B 食材採購媒合</div>
+              <h1 style="font-size:clamp(32px,4.4vw,50px);line-height:1.42;letter-spacing:.02em">免費找到<br>所有食材</h1>
+              <p style="margin-top:26px;font-size:16px;line-height:2.1;color:#4A5149;max-width:440px;font-weight:300">餐廳、團膳、學校、團購主、加工廠——任何有食材需求的人，都能在這裡找到供應商，並直接聯絡上。</p>
+
+              <div style="margin-top:34px;display:flex;border-bottom:1px solid #1A1F1B;padding-bottom:10px;gap:12px;max-width:460px">
+                <input placeholder="搜尋食材，例如：有機葉菜、火鍋肉片" style="flex:1;min-width:0;border:none;outline:none;font-size:15px;background:transparent;color:#1A1F1B">
+                <button onClick="{{ openForm }}" style="border:none;background:transparent;color:#2E6B4A;font-size:14px;letter-spacing:.06em;cursor:pointer;padding:0;white-space:nowrap" style-hover="color:#1A4430">搜尋 →</button>
+              </div>
+              <div style="margin-top:16px;display:flex;gap:16px;flex-wrap:wrap">
+                <sc-for list="{{ hotTags }}" as="t" hint-placeholder-count="6">
+                  <span style="font-size:12.5px;color:#8A8677;letter-spacing:.04em">{{ t }}</span>
+                </sc-for>
+              </div>
+            </div>
+            <div style="border-left:1px solid #E3DED2;min-height:430px;background:#F2EFE6;display:flex;align-items:flex-end;padding:22px">
+              <span style="font-family:ui-monospace,Menlo,monospace;font-size:11px;color:#8A8677;letter-spacing:.08em">主視覺／產地或食材照</span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section style="border-bottom:1px solid #E3DED2">
+        <div style="max-width:1180px;margin:0 auto;padding:0 28px;display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr))">
+          <sc-for list="{{ stats }}" as="s" hint-placeholder-count="4">
+            <div style="padding:34px 24px 34px 0">
+              <div style="font-family:'Noto Serif TC',serif;font-size:30px;font-weight:600;color:#1A1F1B">{{ s.num }}</div>
+              <div style="font-size:13px;color:#8A8677;margin-top:6px;letter-spacing:.06em">{{ s.label }}</div>
+            </div>
+          </sc-for>
+        </div>
+      </section>
+
+      <section style="max-width:1180px;margin:0 auto;padding:90px 28px">
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:56px">
+          <div>
+            <h2 style="font-size:clamp(24px,3vw,32px);line-height:1.6">任何有食材需求的人，<br>都適用</h2>
+            <p style="margin-top:20px;font-size:15px;line-height:2.1;color:#4A5149;font-weight:300;max-width:360px">不只是餐廳。只要需要進貨，我們就幫你找到對的供應商。</p>
+          </div>
+          <div style="display:grid;gap:0">
+            <sc-for list="{{ audiences }}" as="a" hint-placeholder-count="4">
+              <div style="padding:24px 0;border-top:1px solid #E3DED2;display:grid;grid-template-columns:120px 1fr;gap:20px">
+                <h3 style="font-size:17px;font-weight:500">{{ a.title }}</h3>
+                <p style="font-size:14.5px;line-height:1.95;color:#4A5149;font-weight:300;text-wrap:pretty">{{ a.desc }}</p>
+              </div>
+            </sc-for>
+          </div>
+        </div>
+      </section>
+
+      <section style="background:#F2EFE6;border-block:1px solid #E3DED2">
+        <div style="max-width:1180px;margin:0 auto;padding:90px 28px">
+          <h2 style="font-size:clamp(24px,3vw,32px);margin-bottom:8px">三個步驟，免費取得報價</h2>
+          <p style="font-size:15px;color:#6E7269;font-weight:300;margin-bottom:48px">填完需求就等供應商聯絡你。</p>
+          <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:36px">
+            <sc-for list="{{ steps }}" as="s" hint-placeholder-count="3">
+              <div>
+                <div style="font-family:'Noto Serif TC',serif;font-size:13px;letter-spacing:.24em;color:#8A8677">{{ s.n }}</div>
+                <div style="margin-top:16px;height:170px;background:#E8E4D8;display:flex;align-items:flex-end;padding:14px">
+                  <span style="font-family:ui-monospace,Menlo,monospace;font-size:10.5px;color:#8A8677">{{ s.img }}</span>
+                </div>
+                <h3 style="margin-top:20px;font-size:18px;font-weight:500">{{ s.title }}</h3>
+                <p style="margin-top:10px;font-size:14.5px;line-height:1.95;color:#4A5149;font-weight:300">{{ s.desc }}</p>
+              </div>
+            </sc-for>
+          </div>
+          <button onClick="{{ openForm }}" style="margin-top:48px;border:1px solid #1A1F1B;background:transparent;color:#1A1F1B;padding:14px 30px;font-size:14px;letter-spacing:.06em;cursor:pointer;border-radius:2px" style-hover="background:#1A1F1B;color:#FAF8F3">填寫食材需求</button>
+        </div>
+      </section>
+
+      <section style="max-width:1180px;margin:0 auto;padding:90px 28px">
+        <div style="display:flex;justify-content:space-between;align-items:baseline;gap:20px;flex-wrap:wrap;margin-bottom:36px">
+          <h2 style="font-size:clamp(24px,3vw,32px)">食材分類</h2>
+          <p style="font-size:14px;color:#8A8677;font-weight:300">從產地、工廠、大盤到小盤商</p>
+        </div>
+        <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));border-top:1px solid #E3DED2;border-left:1px solid #E3DED2">
+          <sc-for list="{{ categories }}" as="c" hint-placeholder-count="12">
+            <button onClick="{{ goFind }}" style="cursor:pointer;background:transparent;border:none;border-right:1px solid #E3DED2;border-bottom:1px solid #E3DED2;padding:0;text-align:left" style-hover="background:#F2EFE6">
+              <div style="height:108px;background:#F2EFE6"></div>
+              <div style="padding:14px 16px;font-size:14.5px;color:#1A1F1B;letter-spacing:.04em">{{ c }}</div>
+            </button>
+          </sc-for>
+        </div>
+      </section>
+
+      <section style="background:#1D2620;color:#EFEDE4">
+        <div style="max-width:1180px;margin:0 auto;padding:90px 28px;display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:64px">
+          <div>
+            <h2 style="font-size:clamp(24px,3vw,32px);line-height:1.6;color:#FAF8F3">過去找食材，<br>永遠是那幾家</h2>
+            <p style="margin-top:24px;font-size:15px;line-height:2.15;color:#B4BAB0;font-weight:300;max-width:420px;text-wrap:pretty">同行介紹、上網搜尋，資訊卻不齊全；想詢價、想確認配送區域，留了聯絡方式往往好幾天沒有回覆。</p>
+            <p style="margin-top:18px;font-size:15px;line-height:2.15;color:#B4BAB0;font-weight:300;max-width:420px;text-wrap:pretty">食材地圖把需求送到對的供應商手上，讓他們主動聯繫你。</p>
+            <button onClick="{{ goFind }}" style="margin-top:30px;border:1px solid #6E7A6F;background:transparent;color:#EFEDE4;padding:13px 26px;font-size:14px;letter-spacing:.06em;cursor:pointer;border-radius:2px" style-hover="background:#EFEDE4;color:#1D2620;border-color:#EFEDE4">了解運作方式</button>
+          </div>
+          <div>
+            <sc-for list="{{ pains }}" as="p" hint-placeholder-count="4">
+              <div style="padding:20px 0;border-top:1px solid rgba(255,255,255,.14);font-size:15px;line-height:1.9;color:#D5D9D0;font-weight:300">{{ p }}</div>
+            </sc-for>
+          </div>
+        </div>
+      </section>
+
+      <section style="max-width:1180px;margin:0 auto;padding:90px 28px">
+        <h2 style="font-size:clamp(24px,3vw,32px);margin-bottom:44px">使用者怎麼說</h2>
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(270px,1fr));gap:44px">
+          <sc-for list="{{ testimonials }}" as="t" hint-placeholder-count="3">
+            <div style="border-top:1px solid #1A1F1B;padding-top:22px">
+              <p style="font-family:'Noto Serif TC',serif;font-size:17px;line-height:2;color:#1A1F1B;text-wrap:pretty">「{{ t.quote }}」</p>
+              <div style="margin-top:20px;font-size:13px;color:#8A8677;letter-spacing:.04em">{{ t.who }}　{{ t.role }}</div>
+            </div>
+          </sc-for>
+        </div>
+      </section>
+
+      <section style="background:#F2EFE6;border-block:1px solid #E3DED2">
+        <div style="max-width:1180px;margin:0 auto;padding:78px 28px;display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:48px">
+          <sc-for list="{{ trust }}" as="t" hint-placeholder-count="3">
+            <div>
+              <h3 style="font-size:18px;font-weight:500">{{ t.title }}</h3>
+              <p style="margin-top:12px;font-size:14.5px;line-height:1.95;color:#4A5149;font-weight:300">{{ t.desc }}</p>
+            </div>
+          </sc-for>
+        </div>
+      </section>
+
+      <section style="max-width:1180px;margin:0 auto;padding:90px 28px">
+        <div style="display:flex;align-items:baseline;justify-content:space-between;gap:16px;flex-wrap:wrap;margin-bottom:36px">
+          <h2 style="font-size:clamp(24px,3vw,32px)">餐飲相關資訊</h2>
+          <button onClick="{{ goNews }}" style="border:none;background:transparent;color:#2E6B4A;font-size:14px;cursor:pointer;padding:0;letter-spacing:.04em">全部文章 →</button>
+        </div>
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:36px">
+          <sc-for list="{{ articlesTop }}" as="a" hint-placeholder-count="3">
+            <div onClick="{{ goNews }}" style="cursor:pointer">
+              <div style="height:170px;background:#F2EFE6;display:flex;align-items:flex-end;padding:14px">
+                <span style="font-family:ui-monospace,Menlo,monospace;font-size:10.5px;color:#8A8677">文章封面</span>
+              </div>
+              <div style="margin-top:18px;font-size:11.5px;letter-spacing:.2em;color:#8A8677">{{ a.tag }}</div>
+              <h3 style="margin-top:10px;font-size:17px;font-weight:500;line-height:1.7;text-wrap:pretty">{{ a.title }}</h3>
+              <div style="margin-top:10px;font-size:12.5px;color:#A5A192">{{ a.date }}</div>
+            </div>
+          </sc-for>
+        </div>
+      </section>
+    </sc-if>
+
+    <!-- 找食材 -->
+    <sc-if value="{{ isFind }}">
+      <section style="border-bottom:1px solid #E3DED2">
+        <div style="max-width:1180px;margin:0 auto;padding:78px 28px">
+          <div style="font-size:11.5px;letter-spacing:.3em;color:#8A8677">FOR BUYERS</div>
+          <h1 style="margin-top:22px;font-size:clamp(28px,4vw,42px);line-height:1.5">免費找食材，<br>讓供應商主動聯繫你</h1>
+          <p style="margin-top:24px;font-size:15.5px;line-height:2.1;color:#4A5149;max-width:560px;font-weight:300">餐廳、團膳、學校、團購主、加工廠都適用。填一次需求，依品項、數量與配送區域精準媒合，不必一家一家問。</p>
+          <button onClick="{{ openForm }}" style="margin-top:32px;border:1px solid #1A1F1B;background:transparent;color:#1A1F1B;padding:14px 30px;font-size:14px;letter-spacing:.06em;cursor:pointer;border-radius:2px" style-hover="background:#1A1F1B;color:#FAF8F3">填寫食材需求</button>
+        </div>
+      </section>
+
+      <section style="max-width:1180px;margin:0 auto;padding:80px 28px;display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:56px">
+        <h2 style="font-size:clamp(22px,2.6vw,28px);line-height:1.6">你可能正遇到<br>這些問題</h2>
+        <div>
+          <sc-for list="{{ buyerPains }}" as="p" hint-placeholder-count="4">
+            <div style="padding:20px 0;border-top:1px solid #E3DED2;font-size:15px;line-height:1.95;color:#4A5149;font-weight:300">{{ p }}</div>
+          </sc-for>
+        </div>
+      </section>
+
+      <section style="background:#F2EFE6;border-block:1px solid #E3DED2">
+        <div style="max-width:1180px;margin:0 auto;padding:80px 28px">
+          <h2 style="font-size:clamp(22px,2.6vw,28px)">需求送出後會發生什麼事</h2>
+          <p style="margin-top:12px;font-size:15px;color:#6E7269;font-weight:300;margin-bottom:44px">全程免費，沒有媒合成功也不收費。</p>
+          <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:36px">
+            <sc-for list="{{ buyerFlow }}" as="f" hint-placeholder-count="4">
+              <div style="border-top:1px solid #1A1F1B;padding-top:18px">
+                <div style="font-family:'Noto Serif TC',serif;font-size:13px;letter-spacing:.2em;color:#8A8677">0{{ f.n }}</div>
+                <h3 style="margin-top:12px;font-size:17px;font-weight:500">{{ f.title }}</h3>
+                <p style="margin-top:10px;font-size:14.5px;line-height:1.95;color:#4A5149;font-weight:300">{{ f.desc }}</p>
+              </div>
+            </sc-for>
+          </div>
+        </div>
+      </section>
+
+      <section style="max-width:1180px;margin:0 auto;padding:80px 28px">
+        <h2 style="font-size:clamp(22px,2.6vw,28px);margin-bottom:40px">依你的身分，看怎麼用</h2>
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:40px">
+          <sc-for list="{{ audiences }}" as="a" hint-placeholder-count="4">
+            <div style="border-top:1px solid #E3DED2;padding-top:20px">
+              <h3 style="font-size:18px;font-weight:500">{{ a.title }}</h3>
+              <p style="margin-top:12px;font-size:14.5px;line-height:1.95;color:#4A5149;font-weight:300">{{ a.long }}</p>
+            </div>
+          </sc-for>
+        </div>
+      </section>
+    </sc-if>
+
+    <!-- 成為供應商 -->
+    <sc-if value="{{ isSupplier }}">
+      <section style="background:#1D2620;color:#EFEDE4">
+        <div style="max-width:1180px;margin:0 auto;padding:80px 28px">
+          <div style="font-size:11.5px;letter-spacing:.3em;color:#9AA396">FOR SUPPLIERS</div>
+          <h1 style="margin-top:22px;font-size:clamp(28px,4vw,42px);line-height:1.5;color:#FAF8F3">好商品，<br>要被對的人看見</h1>
+          <p style="margin-top:24px;font-size:15.5px;line-height:2.1;color:#B4BAB0;max-width:560px;font-weight:300">上架免費。每天有餐廳、團膳、學校與團購主在平台上找食材，我們把符合你供應範圍的需求，直接送到你手上。</p>
+          <button onClick="{{ goContact }}" style="margin-top:32px;border:1px solid #EFEDE4;background:transparent;color:#EFEDE4;padding:14px 30px;font-size:14px;letter-spacing:.06em;cursor:pointer;border-radius:2px" style-hover="background:#EFEDE4;color:#1D2620">申請成為供應商</button>
+        </div>
+      </section>
+
+      <section style="max-width:1180px;margin:0 auto;padding:80px 28px;display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:56px">
+        <h2 style="font-size:clamp(22px,2.6vw,28px);line-height:1.6">加入後<br>你會得到</h2>
+        <div>
+          <sc-for list="{{ supplierBenefits }}" as="b" hint-placeholder-count="4">
+            <div style="padding:22px 0;border-top:1px solid #E3DED2">
+              <h3 style="font-size:17px;font-weight:500">{{ b.title }}</h3>
+              <p style="margin-top:8px;font-size:14.5px;line-height:1.95;color:#4A5149;font-weight:300">{{ b.desc }}</p>
+            </div>
+          </sc-for>
+        </div>
+      </section>
+
+      <section style="background:#F2EFE6;border-block:1px solid #E3DED2">
+        <div style="max-width:1180px;margin:0 auto;padding:80px 28px">
+          <h2 style="font-size:clamp(22px,2.6vw,28px);margin-bottom:40px">入駐流程</h2>
+          <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:36px">
+            <sc-for list="{{ supplierFlow }}" as="f" hint-placeholder-count="4">
+              <div style="border-top:1px solid #1A1F1B;padding-top:18px">
+                <div style="font-family:'Noto Serif TC',serif;font-size:13px;letter-spacing:.2em;color:#8A8677">0{{ f.n }}</div>
+                <h3 style="margin-top:12px;font-size:17px;font-weight:500">{{ f.title }}</h3>
+                <p style="margin-top:10px;font-size:14.5px;line-height:1.95;color:#4A5149;font-weight:300">{{ f.desc }}</p>
+              </div>
+            </sc-for>
+          </div>
+        </div>
+      </section>
+    </sc-if>
+
+    <!-- 平台功能 -->
+    <sc-if value="{{ isProduct }}">
+      <section style="border-bottom:1px solid #E3DED2">
+        <div style="max-width:1180px;margin:0 auto;padding:78px 28px">
+          <h1 style="font-size:clamp(28px,4vw,42px)">平台功能</h1>
+          <p style="margin-top:20px;font-size:15.5px;color:#4A5149;max-width:520px;line-height:2.1;font-weight:300">不必導入系統、不用教育訓練。開啟網頁或 LINE 就能用。</p>
+        </div>
+      </section>
+      <section style="max-width:1180px;margin:0 auto;padding:70px 28px">
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:44px">
+          <sc-for list="{{ features }}" as="f" hint-placeholder-count="6">
+            <div style="border-top:1px solid #E3DED2;padding-top:20px">
+              <div style="font-size:11.5px;letter-spacing:.2em;color:#8A8677">{{ f.no }}</div>
+              <h3 style="margin-top:12px;font-size:18px;font-weight:500">{{ f.title }}</h3>
+              <p style="margin-top:10px;font-size:14.5px;line-height:1.95;color:#4A5149;font-weight:300">{{ f.desc }}</p>
+            </div>
+          </sc-for>
+        </div>
+      </section>
+    </sc-if>
+
+    <!-- FAQ -->
+    <sc-if value="{{ isFaq }}">
+      <section style="border-bottom:1px solid #E3DED2">
+        <div style="max-width:1180px;margin:0 auto;padding:78px 28px">
+          <h1 style="font-size:clamp(28px,4vw,42px)">常見問題</h1>
+          <p style="margin-top:20px;font-size:15.5px;color:#4A5149;font-weight:300">找不到答案？直接加 LINE 問我們。</p>
+        </div>
+      </section>
+      <section style="max-width:840px;margin:0 auto;padding:60px 28px 90px">
+        <sc-for list="{{ faqs }}" as="q" hint-placeholder-count="6">
+          <div onClick="{{ q.toggle }}" style="border-top:1px solid #E3DED2;padding:24px 0;cursor:pointer">
+            <div style="display:flex;gap:20px;align-items:baseline;justify-content:space-between">
+              <h3 style="font-size:17px;font-weight:500;line-height:1.7">{{ q.q }}</h3>
+              <span style="color:#8A8677;font-size:15px">{{ q.sign }}</span>
+            </div>
+            <sc-if value="{{ q.open }}">
+              <p style="margin-top:14px;font-size:14.5px;line-height:2.05;color:#4A5149;font-weight:300;max-width:620px;text-wrap:pretty">{{ q.a }}</p>
+            </sc-if>
+          </div>
+        </sc-for>
+      </section>
+    </sc-if>
+
+    <!-- 關於我們 -->
+    <sc-if value="{{ isAbout }}">
+      <section style="border-bottom:1px solid #E3DED2">
+        <div style="max-width:1180px;margin:0 auto;padding:78px 28px">
+          <h1 style="font-size:clamp(28px,4vw,42px);line-height:1.5">把台灣的供應鏈<br>攤開成一張地圖</h1>
+          <p style="margin-top:24px;font-size:15.5px;color:#4A5149;max-width:580px;line-height:2.15;font-weight:300">我們相信，找食材不該靠人脈。任何有需求的人，都應該能免費找到對的供應商。</p>
+        </div>
+      </section>
+      <section style="max-width:1180px;margin:0 auto;padding:70px 28px 90px">
+        <div style="height:340px;background:#F2EFE6;display:flex;align-items:flex-end;padding:18px">
+          <span style="font-family:ui-monospace,Menlo,monospace;font-size:11px;color:#8A8677">團隊／產地照片</span>
+        </div>
+        <div style="margin-top:60px;display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:44px">
+          <sc-for list="{{ values }}" as="v" hint-placeholder-count="3">
+            <div style="border-top:1px solid #1A1F1B;padding-top:20px">
+              <h3 style="font-size:18px;font-weight:500">{{ v.title }}</h3>
+              <p style="margin-top:12px;font-size:14.5px;line-height:1.95;color:#4A5149;font-weight:300">{{ v.desc }}</p>
+            </div>
+          </sc-for>
+        </div>
+      </section>
+    </sc-if>
+
+    <!-- 最新消息 -->
+    <sc-if value="{{ isNews }}">
+      <section style="border-bottom:1px solid #E3DED2">
+        <div style="max-width:1180px;margin:0 auto;padding:78px 28px">
+          <h1 style="font-size:clamp(28px,4vw,42px)">最新消息與餐飲知識</h1>
+          <p style="margin-top:20px;font-size:15.5px;color:#4A5149;font-weight:300">食材趨勢、採購知識、法規與食安提醒。</p>
+        </div>
+      </section>
+      <section style="max-width:1180px;margin:0 auto;padding:60px 28px 90px">
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:44px">
+          <sc-for list="{{ articles }}" as="a" hint-placeholder-count="6">
+            <div>
+              <div style="height:170px;background:#F2EFE6;display:flex;align-items:flex-end;padding:14px">
+                <span style="font-family:ui-monospace,Menlo,monospace;font-size:10.5px;color:#8A8677">文章封面</span>
+              </div>
+              <div style="margin-top:18px;font-size:11.5px;letter-spacing:.2em;color:#8A8677">{{ a.tag }}</div>
+              <h3 style="margin-top:10px;font-size:17px;font-weight:500;line-height:1.7;text-wrap:pretty">{{ a.title }}</h3>
+              <div style="margin-top:10px;font-size:12.5px;color:#A5A192">{{ a.date }}</div>
+            </div>
+          </sc-for>
+        </div>
+      </section>
+    </sc-if>
+
+    <!-- 聯絡我們 -->
+    <sc-if value="{{ isContact }}">
+      <section style="border-bottom:1px solid #E3DED2">
+        <div style="max-width:1180px;margin:0 auto;padding:78px 28px">
+          <h1 style="font-size:clamp(28px,4vw,42px)">聯絡我們</h1>
+          <p style="margin-top:20px;font-size:15.5px;color:#4A5149;font-weight:300">留下聯絡方式，專人會在一個工作天內回覆。</p>
+        </div>
+      </section>
+      <section style="max-width:1180px;margin:0 auto;padding:60px 28px 90px;display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:64px;align-items:start">
+        <div style="display:grid;gap:26px">
+          <div style="display:flex;gap:26px">
+            <sc-for list="{{ roleTabs }}" as="r" hint-placeholder-count="2">
+              <button onClick="{{ r.pick }}" style="background:transparent;border:none;padding:0 0 6px;font-size:15px;cursor:pointer;letter-spacing:.04em;color:{{ r.color }};border-bottom:1px solid {{ r.border }}">{{ r.label }}</button>
+            </sc-for>
+          </div>
+          <div style="display:grid;gap:22px">
+            <sc-for list="{{ formFields }}" as="f" hint-placeholder-count="4">
+              <label style="display:grid;gap:8px">
+                <span style="font-size:12px;letter-spacing:.14em;color:#8A8677">{{ f.label }}</span>
+                <input placeholder="{{ f.ph }}" style="border:none;border-bottom:1px solid #D8D2C4;padding:8px 0;font-size:15px;outline:none;background:transparent;color:#1A1F1B">
+              </label>
+            </sc-for>
+            <label style="display:grid;gap:8px">
+              <span style="font-size:12px;letter-spacing:.14em;color:#8A8677">需求說明</span>
+              <textarea rows="3" placeholder="例如：每週需要 50 公斤有機葉菜，配送台北市" style="border:none;border-bottom:1px solid #D8D2C4;padding:8px 0;font-size:15px;outline:none;background:transparent;resize:vertical;color:#1A1F1B"></textarea>
+            </label>
+          </div>
+          <button onClick="{{ openForm }}" style="justify-self:start;border:1px solid #1A1F1B;background:transparent;color:#1A1F1B;padding:14px 32px;font-size:14px;letter-spacing:.06em;cursor:pointer;border-radius:2px" style-hover="background:#1A1F1B;color:#FAF8F3">送出需求</button>
+          <div style="font-size:12px;color:#A5A192;font-weight:300">送出即表示同意隱私權政策，我們不會將資料提供給第三方。</div>
+        </div>
+        <div>
+          <sc-for list="{{ contactInfo }}" as="c" hint-placeholder-count="4">
+            <div style="border-top:1px solid #E3DED2;padding:20px 0">
+              <div style="font-size:11px;letter-spacing:.24em;color:#8A8677">{{ c.label }}</div>
+              <div style="margin-top:8px;font-size:16px;color:#1A1F1B">{{ c.value }}</div>
+            </div>
+          </sc-for>
+        </div>
+      </section>
+    </sc-if>
+
+    <section style="border-top:1px solid #E3DED2;background:#F2EFE6">
+      <div style="max-width:1180px;margin:0 auto;padding:80px 28px;display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:36px;align-items:end">
+        <h2 style="font-size:clamp(22px,2.8vw,30px);line-height:1.6">免費找到所有食材，<br>從填一張需求單開始</h2>
+        <div style="display:flex;gap:16px;flex-wrap:wrap;justify-self:end">
+          <button onClick="{{ openForm }}" style="border:1px solid #1A1F1B;background:#1A1F1B;color:#FAF8F3;padding:14px 30px;font-size:14px;letter-spacing:.06em;cursor:pointer;border-radius:2px" style-hover="background:transparent;color:#1A1F1B">填寫食材需求</button>
+          <button onClick="{{ goContact }}" style="border:1px solid #1A1F1B;background:transparent;color:#1A1F1B;padding:14px 30px;font-size:14px;letter-spacing:.06em;cursor:pointer;border-radius:2px" style-hover="background:#1A1F1B;color:#FAF8F3">免費註冊會員</button>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer style="background:#1D2620;color:#9AA396">
+    <div style="max-width:1180px;margin:0 auto;padding:64px 28px 24px;display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:40px">
+      <div>
+        <div style="font-family:'Noto Serif TC',serif;font-size:19px;color:#FAF8F3;letter-spacing:.06em">食材地圖</div>
+        <div style="font-size:10px;letter-spacing:.28em;margin-top:4px">IFOODMAP</div>
+        <p style="margin-top:20px;font-size:13.5px;line-height:2;font-weight:300">服務專線｜02-7704-5539<br>E-MAIL｜ifoodmaptw@gmail.com<br>服務時間｜週一至週五 9:00–18:00</p>
+      </div>
+      <sc-for list="{{ footerCols }}" as="col" hint-placeholder-count="3">
+        <div>
+          <div style="color:#EFEDE4;font-size:12px;letter-spacing:.18em;margin-bottom:16px">{{ col.title }}</div>
+          <ul style="display:grid;gap:11px">
+            <sc-for list="{{ col.links }}" as="l" hint-placeholder-count="3">
+              <li><button onClick="{{ l.go }}" style="border:none;background:transparent;padding:0;color:#9AA396;font-size:13.5px;cursor:pointer;text-align:left;font-weight:300" style-hover="color:#FAF8F3">{{ l.label }}</button></li>
+            </sc-for>
+          </ul>
+        </div>
+      </sc-for>
+    </div>
+    <div style="border-top:1px solid rgba(255,255,255,.1)">
+      <div style="max-width:1180px;margin:0 auto;padding:18px 28px;font-size:12px;color:#6E7A6F;font-weight:300">© 2026 iFoodMap 食材地圖</div>
+    </div>
+  </footer>
+</div>
+
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;accent&quot;:{&quot;editor&quot;:&quot;color&quot;,&quot;default&quot;:&quot;#2E6B4A&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;options&quot;:[&quot;#2E6B4A&quot;,&quot;#2E8B57&quot;,&quot;#1D3B2A&quot;,&quot;#4A7C59&quot;]}}">
+class Component extends DCLogic {
+  state = { page: "home", openFaq: 0, role: "buyer" };
+
+  go(p) { this.setState({ page: p }); window.scrollTo(0, 0); }
+
+  renderVals() {
+    const g = (p) => () => this.go(p);
+    const page = this.state.page;
+    const nav = [
+      ["找食材", "find"], ["成為供應商", "supplier"], ["平台功能", "product"],
+      ["常見問題", "faq"], ["關於我們", "about"], ["最新消息", "news"], ["聯絡我們", "contact"]
+    ].map(([label, key]) => ({ label, go: g(key) }));
+
+    const audiences = [
+      { title: "餐廳・餐酒館", desc: "小量也能問，換供應商不必重新累積人脈。", long: "不論單店或連鎖，依品項、數量與配送區域媒合，比價、換商都更容易。" },
+      { title: "團膳・學校", desc: "大量、穩定、需要文件？一次找齊符合資格的供應商。", long: "需要產銷履歷、SGS 檢驗或投標文件的單位，可篩選具備相關標章的供應商。" },
+      { title: "團購主・電商", desc: "找源頭貨、找代工，談量談價都從這裡開始。", long: "直接對接產地與工廠，掌握檔期備貨量與出貨能力，避免層層轉單。" },
+      { title: "加工廠・通路", desc: "原料穩定供應，備援廠商一次備齊。", long: "建立第二、第三供應來源，遇到缺料或漲價時有替代方案。" }
+    ];
+
+    const faqSrc = [
+      ["使用食材地圖要付費嗎？", "需求方完全免費。填寫需求、接收報價、聯繫供應商都不收費，也不抽成。"],
+      ["我不是餐廳，也可以用嗎？", "可以。團膳、學校、團購主、電商、加工廠、攤販，只要有食材需求都能填單媒合。"],
+      ["多久會有供應商聯絡我？", "一般在四小時內開始收到回覆，複雜或特殊品項約一至兩個工作天。"],
+      ["要買多少量才有人理？", "沒有門檻。平台上有大盤也有小盤商，小量需求同樣媒合得到。"],
+      ["可以指定不想媒合的供應商嗎？", "可以。填單時能排除特定廠商，需求不會發送給他們。"],
+      ["供應商上架要收費嗎？", "基本上架免費，採點數制接收需求，詳情可聯繫我們索取方案說明。"]
+    ];
+    const faqs = faqSrc.map(([q, a], i) => ({
+      q, a, open: this.state.openFaq === i, sign: this.state.openFaq === i ? "—" : "＋",
+      toggle: () => this.setState(s => ({ openFaq: s.openFaq === i ? -1 : i }))
+    }));
+
+    const articles = [
+      { tag: "採購", title: "如何做好餐飲食材採購：從規格書到驗收", date: "2026.08.12" },
+      { tag: "食安", title: "了解產銷履歷，加入溯源餐廳的行列", date: "2026.07.30" },
+      { tag: "趨勢", title: "使用在地食材，邁向從產地到餐桌", date: "2026.07.11" },
+      { tag: "永續", title: "改善剩食問題，餐飲業的因應之道", date: "2026.06.25" },
+      { tag: "市場", title: "食材漲價期，採購該怎麼談長約", date: "2026.06.02" },
+      { tag: "團膳", title: "學校午餐採購：法規與供應商資格一次看", date: "2026.05.19" }
+    ];
+
+    const roleTabs = ["buyer", "supplier"].map((k) => {
+      const on = this.state.role === k;
+      return {
+        label: k === "buyer" ? "我要找食材" : "我是供應商",
+        pick: () => this.setState({ role: k }),
+        border: on ? "#1A1F1B" : "transparent",
+        color: on ? "#1A1F1B" : "#8A8677"
+      };
+    });
+
+    const footerCols = [
+      { title: "服務", links: [["找食材", "find"], ["成為供應商", "supplier"], ["平台功能", "product"]] },
+      { title: "關於", links: [["關於我們", "about"], ["最新消息", "news"], ["聯絡我們", "contact"]] },
+      { title: "支援", links: [["常見問題", "faq"], ["使用條款", "faq"], ["隱私權政策", "faq"]] }
+    ].map(c => ({ title: c.title, links: c.links.map(([label, key]) => ({ label, go: g(key) })) }));
+
+    return {
+      nav, audiences, faqs, articles, roleTabs, footerCols,
+      articlesTop: articles.slice(0, 3),
+      isHome: page === "home", isFind: page === "find", isSupplier: page === "supplier",
+      isProduct: page === "product", isFaq: page === "faq", isAbout: page === "about",
+      isNews: page === "news", isContact: page === "contact",
+      goHome: g("home"), goFind: g("find"), goNews: g("news"), goContact: g("contact"),
+      openForm: g("contact"),
+      hotTags: ["蔬菜", "水果", "豬肉", "牛肉", "火鍋料", "米麵"],
+      stats: [
+        { num: "3,000+", label: "合作供應商（示意）" },
+        { num: "12,000+", label: "累積媒合需求（示意）" },
+        { num: "28", label: "食材分類" },
+        { num: "全台", label: "配送涵蓋" }
+      ],
+      steps: [
+        { n: "STEP 01", title: "填寫食材需求", desc: "選品項、數量與配送區域，兩分鐘填完。", img: "填單畫面" },
+        { n: "STEP 02", title: "系統精準媒合", desc: "比對供應範圍與配送能力，只發給送得到的人。", img: "媒合示意" },
+        { n: "STEP 03", title: "供應商主動聯繫", desc: "收到報價後直接洽談，成交不抽成。", img: "洽談示意" }
+      ],
+      categories: ["蔬菜", "水果", "海鮮", "肉品", "蛋品", "五穀雜糧", "南北雜貨", "加工食品", "火鍋料", "調味品", "酒與飲品", "包材耗材"],
+      pains: ["上網搜尋永遠是那幾家，資訊也不齊全", "留了聯絡方式，好幾天等不到回覆", "不確定對方配不配送我的區域", "想比價，卻沒有第二、第三家可以問"],
+      testimonials: [
+        { who: "林老闆", role: "日式餐廳・台北", quote: "以前換一家蔬菜商要問三個月，這裡填完需求隔天就有三家報價。" },
+        { who: "陳主任", role: "國小午餐團膳", quote: "需要產銷履歷的供應商很難找，這邊可以直接篩選有標章的廠商。" },
+        { who: "王小姐", role: "生鮮團購主", quote: "終於直接談到產地，不必再透過中間商加價。" }
+      ],
+      trust: [
+        { title: "雙邊評價機制", desc: "媒合完成後互相評價，讓優質供應商被更多人看見。" },
+        { title: "標章與檢驗連動", desc: "產銷履歷、SGS 檢驗報告附上文件連結，可連至認證機構查核。" },
+        { title: "LINE 即時通知", desc: "新供應商、食材優惠與媒合結果，第一時間通知你。" }
+      ],
+      buyerPains: ["食材漲價，但手上只有一家可以問", "想開新品項，不知道該找誰供貨", "臨時缺貨，找不到備援廠商", "供應商配不配送我的區域，每次都要重問"],
+      buyerFlow: [
+        { n: 1, title: "需求進入資料庫", desc: "系統解析品項、數量與區域。" },
+        { n: 2, title: "比對供應商能力", desc: "只送給供得起、送得到的廠商。" },
+        { n: 3, title: "供應商回覆報價", desc: "平均四小時內開始收到聯繫。" },
+        { n: 4, title: "由你決定合作對象", desc: "自由比較，不成交也不收費。" }
+      ],
+      supplierBenefits: [
+        { title: "精準需求，不做白工", desc: "只收到符合供應品項與配送範圍的需求。" },
+        { title: "免費曝光商品", desc: "建立商家頁面，展示品項、產地與供貨條件。" },
+        { title: "標章加分", desc: "上傳產銷履歷與檢驗報告，提高被選中的機率。" },
+        { title: "評價累積信任", desc: "好評累積成長期客源，不必再靠低價競爭。" }
+      ],
+      supplierFlow: [
+        { n: 1, title: "填寫入駐申請", desc: "留下公司與供應品項資料。" },
+        { n: 2, title: "資格審核", desc: "確認營業登記與供貨能力。" },
+        { n: 3, title: "建立商家頁面", desc: "上架品項、產地與配送區域。" },
+        { n: 4, title: "開始接收需求", desc: "符合條件的需求即時通知。" }
+      ],
+      features: [
+        { no: "01", title: "食材搜尋與分類瀏覽", desc: "28 類食材，依品項、產地、配送區域快速篩選。" },
+        { no: "02", title: "需求媒合單", desc: "兩分鐘填完，可上傳採購明細或食材照片。" },
+        { no: "03", title: "雙邊評價", desc: "成交後互評，累積透明的合作紀錄。" },
+        { no: "04", title: "標章與文件連動", desc: "產銷履歷、SGS 報告一鍵查核。" },
+        { no: "05", title: "LINE 通知與客服", desc: "媒合結果與優惠資訊即時推播。" },
+        { no: "06", title: "供應商商家頁", desc: "完整呈現品項、供貨量與配送條件。" }
+      ],
+      values: [
+        { title: "資訊透明", desc: "供貨條件、配送區域與檢驗文件都攤在陽光下。" },
+        { title: "人人可用", desc: "不必是大型連鎖，小店與團購主一樣找得到好貨。" },
+        { title: "在地連結", desc: "從產地到餐桌，讓台灣的好食材被更多人看見。" }
+      ],
+      formFields: [
+        { label: "姓名／單位名稱", ph: "王小明／○○餐廳" },
+        { label: "聯絡電話", ph: "09xx-xxx-xxx" },
+        { label: "EMAIL", ph: "you@example.com" },
+        { label: "配送區域", ph: "台北市・大安區" }
+      ],
+      contactInfo: [
+        { label: "服務專線", value: "02-7704-5539" },
+        { label: "EMAIL", value: "ifoodmaptw@gmail.com" },
+        { label: "LINE", value: "@ifoodmap" },
+        { label: "服務時間", value: "週一至週五 9:00–18:00" }
+      ]
+    };
+  }
+}
+</script>
+</body>
+</html>
