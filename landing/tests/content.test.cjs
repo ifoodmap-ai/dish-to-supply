@@ -116,6 +116,15 @@ function assertRestaurantOverflowRegions(fragment) {
   }
 }
 
+// 只取能力區那一段 —— 流程區也用同一組 .ifm-eyebrow__no / bt-* class,
+// 整頁一起數會把兩區加在一起(我第一次就是這樣錯的:算出 8 個編號籤)。
+function supplierCapabilitySection(fragment) {
+  const start = fragment.indexOf('<section id="supplier-capabilities"');
+  const end = fragment.indexOf('supplier-outcomes-title', start);
+  assert.ok(start !== -1 && end > start, '找不到供應商能力區');
+  return fragment.slice(start, end);
+}
+
 function assertSupplierCapabilities(fragment) {
   for (const capability of ['商機雷達', '報價與接單', '定價與預測', '客戶經營']) {
     assert.match(fragment, new RegExp(`<h2[^>]*>${capability}<\\/h2>`));
@@ -129,6 +138,18 @@ function assertSupplierCapabilityOrder(fragment) {
   const headings = [...capabilityFragment.matchAll(/<h2[^>]*>([^<]+)<\/h2>/g)]
     .map((match) => match[1]);
   assert.deepEqual(headings, ['商機雷達', '報價與接單', '定價與預測', '客戶經營']);
+}
+
+// bento 改版後:每張能力卡都要有自己的插圖,而且四張不能重複用同一張。
+// 這是「整頁一張圖都沒有」那個問題的擋線。
+function assertSupplierCapabilityArt(fragment) {
+  const arts = [...fragment.matchAll(/src="(\/assets\/sup-cap-\d\.svg)"/g)].map((m) => m[1]);
+  assert.equal(arts.length, 4, `能力卡應該有 4 張插圖,目前 ${arts.length} 張`);
+  assert.equal(new Set(arts).size, 4, `四張插圖不可以重複:${arts.join(', ')}`);
+  // 裝飾性插圖一律空 alt(標題已經說明了內容,重複唸一次只是噪音)
+  for (const art of arts) {
+    assert.match(fragment, new RegExp(`alt=""[^>]*src="${art.replace(/\//g, '\\/')}"|src="${art.replace(/\//g, '\\/')}"[^>]*alt=""`));
+  }
 }
 
 function assertSupplierApplicationCtas(fragment) {
@@ -584,29 +605,22 @@ test('supplier page names four pains and an accurate lead-to-relationship workfl
   }
 });
 
-test('supplier page presents four product-grounded capabilities with semantic example mockups', () => {
+test('supplier capabilities are four illustrated bento cards, not walls of fake table data', () => {
   assertSupplierCapabilities(suppliers);
   assertSupplierCapabilityOrder(suppliers);
-  for (const detail of [
-    '需求單自動媒合',
-    '品項缺口分析',
-    '近 90 天',
-    '回覆報價',
-    '交期、付款條件與替代品項',
-    '待確認',
-    '確認出貨',
-    '同區同品項行情',
-    '下週備貨建議',
-    '近 13 週需求量趨勢',
-    '下單頻率',
-    '回購狀況',
-    '可能流失',
-    '交易評價',
-    '商店評價',
-  ]) {
-    assert.match(suppliers, new RegExp(detail));
-  }
-  assert.equal((suppliers.match(/產品功能示意畫面 · 示例資料/g) || []).length, 4);
+  assertSupplierCapabilityArt(supplierCapabilitySection(suppliers));
+
+  // 假表格(示例資料)2026-09-23 移除 —— 那是整頁文字量最大的一塊,
+  // 而且資料是假的,讀者看了也不會更懂功能。
+  assert.doesNotMatch(suppliers, /產品功能示意畫面/);
+  assert.doesNotMatch(suppliers, /supplier-mock-table|supplier-mock-scroll/);
+
+  // 每張卡:插圖 + 編號 eyebrow + 標題 + 一句說明 + 三個短標籤
+  const caps = supplierCapabilitySection(suppliers);
+  assert.equal((caps.match(/class="ifm-eyebrow__no"/g) || []).length, 4);
+  assert.equal((caps.match(/<ul class="ifm-chips">/g) || []).length, 4);
+  assert.equal((caps.match(/<ul class="ifm-chips">\s*(?:<li>[^<]*<\/li>\s*){3}<\/ul>/g) || []).length, 4);
+
   for (const id of [
     'supplier-leads-title',
     'supplier-quotes-title',
@@ -617,15 +631,34 @@ test('supplier page presents four product-grounded capabilities with semantic ex
   }
 });
 
-test('supplier capability order guard fails when adjacent capabilities are swapped', () => {
-  const leadsStart = suppliers.indexOf('<article class="supplier-capability"');
-  const quotesStart = suppliers.indexOf('<article class="supplier-capability supplier-capability--reverse"', leadsStart);
-  const pricingStart = suppliers.indexOf('<article class="supplier-capability"', quotesStart + 1);
-  const leads = suppliers.slice(leadsStart, quotesStart);
-  const quotes = suppliers.slice(quotesStart, pricingStart);
-  const swapped = suppliers.slice(0, leadsStart) + quotes + leads + suppliers.slice(pricingStart);
-  assert.throws(() => assertSupplierCapabilityOrder(swapped));
+test('supplier capability cards are laid out irregularly, not as a four-up equal grid', () => {
+  const capStart = suppliers.indexOf('<section id="supplier-capabilities"');
+  const capEnd = suppliers.indexOf('supplier-outcomes-title', capStart);
+  const caps = suppliers.slice(capStart, capEnd);
+  assert.match(caps, /<div class="ifm-bento"/);
+  // 至少兩種不同寬度,而且至少一張有垂直位移 —— 不然就退化成規律四欄了
+  const spans = new Set((caps.match(/\bbt-(\d+)\b/g) || []));
+  assert.ok(spans.size >= 2, `能力卡只有一種寬度(${[...spans].join(', ')}),沒有不規則感`);
+  assert.ok(/bt-rise|bt-drop/.test(caps), '能力卡沒有任何垂直位移');
 });
+
+
+test('supplier capability guards fail when cards are swapped or lose their art', () => {
+  const capStart = suppliers.indexOf('<section id="supplier-capabilities"');
+  const marker = '<article class="ifm-card bt-';
+  const first = suppliers.indexOf(marker, capStart);
+  const second = suppliers.indexOf(marker, first + 1);
+  const third = suppliers.indexOf(marker, second + 1);
+  const a = suppliers.slice(first, second);
+  const b = suppliers.slice(second, third);
+  const swapped = suppliers.slice(0, first) + b + a + suppliers.slice(third);
+  assert.throws(() => assertSupplierCapabilityOrder(swapped));
+
+  // 四張卡共用同一張圖也要被抓到
+  const duplicated = supplierCapabilitySection(suppliers).replace(/sup-cap-[234]\.svg/g, 'sup-cap-1.svg');
+  assert.throws(() => assertSupplierCapabilityArt(duplicated));
+});
+
 
 test('supplier outcomes distinguish public metrics from examples and include a qualifier', () => {
   for (const metric of ['2,500+', '28 類', '24hr']) {
@@ -655,17 +688,14 @@ test('supplier content guards fail if capabilities or either join action are rem
   assert.throws(() => assertSupplierApplicationCtas(withoutFirstCta));
 });
 
-test('supplier in-page capability target and keyboard-scrollable mockups are accessible', () => {
+test('supplier in-page capability anchor still clears the sticky header', () => {
   assert.match(source, /#supplier-capabilities\s*\{[^}]*scroll-margin-top:\s*96px/s);
-  assertSupplierOverflowRegions(suppliers);
-  assert.match(source, /\.supplier-mock-scroll:focus-visible\s*\{/);
-
-  const withoutFirstTabStop = suppliers.replace(
-    /(<div class="supplier-mock-scroll"[^>]*?) tabindex="0"/,
-    '$1',
-  );
-  assert.throws(() => assertSupplierOverflowRegions(withoutFirstTabStop));
+  assert.match(suppliers, /id="supplier-capabilities"/);
+  assert.match(suppliers, /href="#supplier-capabilities"/);
+  // 假表格拿掉之後就沒有需要鍵盤捲動的溢出區了,對應的 tabindex/role=region 也該一起消失
+  assert.doesNotMatch(suppliers, /supplier-mock-scroll/);
 });
+
 
 test('site shell exposes one header, labelled desktop and mobile navigation, and one footer', () => {
   assert.equal((source.match(/<header\b/g) || []).length, 1);
@@ -770,6 +800,22 @@ test('AI assistant calls all three proxy endpoints and always tells them the lan
   assert.equal((source.match(/\{ messages: conv, lang: curLang\(\) \}/g) || []).length, 2);
   // lang 必須是「呼叫當下才取」的函式,不能是開機時抓一次存起來的變數
   assert.match(source, /function curLang\(\)[\s\S]{0,200}IfmI18n[\s\S]{0,80}current\(window\)/);
+});
+
+test('every bento span class used in markup has a matching CSS rule', () => {
+  // 我自己踩過:markup 寫了 bt-3 但 CSS 只定義到 bt-4,那四張卡靜默縮成一欄寬,
+  // 文字被擠成直書。grid 不會報錯,只會長得很醜,所以要有測試釘住。
+  const used = new Set((source.match(/\bbt-(\d+)\b/g) || []).map((c) => c.trim()));
+  const defined = new Set((source.match(/\.bt-(\d+)\s*\{/g) || []).map((c) => c.replace(/^\./, '').replace(/\s*\{$/, '')));
+  const missing = [...used].filter((c) => !defined.has(c));
+  assert.deepEqual(missing, [], `markup 用了這些 class 但 CSS 沒定義:${missing.join(', ')}`);
+
+  // 同理,位移 class 也要有規則
+  for (const shift of ['bt-rise', 'bt-drop']) {
+    if (source.includes(`${shift}"`) || source.includes(`${shift} `)) {
+      assert.match(source, new RegExp(`\\.${shift}\\s*\\{`), `${shift} 沒有 CSS 規則`);
+    }
+  }
 });
 
 test('metadata consistently describes the approved two-sided platform', () => {

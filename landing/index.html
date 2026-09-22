@@ -323,11 +323,13 @@
     align-items:start;
   }
   .ifm-bento > * { min-width:0; }
+  .bt-3  { grid-column:span 3; }
   .bt-4  { grid-column:span 4; }
   .bt-5  { grid-column:span 5; }
   .bt-6  { grid-column:span 6; }
   .bt-7  { grid-column:span 7; }
   .bt-8  { grid-column:span 8; }
+  .bt-9  { grid-column:span 9; }
   .bt-12 { grid-column:span 12; }
   .bt-rise { margin-top:-44px; }
   .bt-drop { margin-top:52px; }
@@ -1004,11 +1006,27 @@
           <h2 style="font-size:38px;line-height:1.3;color:#17261c;margin:0 0 14px;">{{ L.sup.painTitle }}</h2>
           <p class="supplier-mobile-copy" style="font-size:17px;line-height:1.75;color:#5b6b62;margin:0;">{{ L.sup.painSub }}</p>
         </div>
-        <div class="supplier-pain-grid">
-          <article data-reveal style="padding:24px;border-radius:18px;background:#fff;border:1px solid #e0e9e2;"><h3 style="font-size:17px;margin:0 0 8px;">{{ L.sup.painScatteredTitle }}</h3><p style="font-size:14px;line-height:1.65;color:#5b6b62;margin:0;">{{ L.sup.painScatteredDesc }}</p></article>
-          <article data-reveal style="padding:24px;border-radius:18px;background:#fff;border:1px solid #e0e9e2;"><h3 style="font-size:17px;margin:0 0 8px;">{{ L.sup.painQuotesTitle }}</h3><p style="font-size:14px;line-height:1.65;color:#5b6b62;margin:0;">{{ L.sup.painQuotesDesc }}</p></article>
-          <article data-reveal style="padding:24px;border-radius:18px;background:#fff;border:1px solid #e0e9e2;"><h3 style="font-size:17px;margin:0 0 8px;">{{ L.sup.painPricingTitle }}</h3><p style="font-size:14px;line-height:1.65;color:#5b6b62;margin:0;">{{ L.sup.painPricingDesc }}</p></article>
-          <article data-reveal style="padding:24px;border-radius:18px;background:#fff;border:1px solid #e0e9e2;"><h3 style="font-size:17px;margin:0 0 8px;">{{ L.sup.painRetentionTitle }}</h3><p style="font-size:14px;line-height:1.65;color:#5b6b62;margin:0;">{{ L.sup.painRetentionDesc }}</p></article>
+        <div class="ifm-bento">
+          <article class="ifm-card bt-5" data-reveal>
+            <img class="ifm-art ifm-art--pad" src="/assets/sup-pain-1.svg" alt="" width="120" height="120" loading="lazy" style="width:76px;height:76px;padding:10px;margin-bottom:16px;">
+            <h3 style="font-size:17.5px;margin:0 0 8px;color:#0E1A14;">{{ L.sup.painScatteredTitle }}</h3>
+            <p style="font-size:14.5px;line-height:1.7;color:#4B5A52;margin:0;">{{ L.sup.painScatteredDesc }}</p>
+          </article>
+          <article class="ifm-card bt-7 bt-drop" data-reveal>
+            <img class="ifm-art ifm-art--pad" src="/assets/sup-pain-2.svg" alt="" width="120" height="120" loading="lazy" style="width:76px;height:76px;padding:10px;margin-bottom:16px;">
+            <h3 style="font-size:17.5px;margin:0 0 8px;color:#0E1A14;">{{ L.sup.painQuotesTitle }}</h3>
+            <p style="font-size:14.5px;line-height:1.7;color:#4B5A52;margin:0;">{{ L.sup.painQuotesDesc }}</p>
+          </article>
+          <article class="ifm-card bt-7 bt-rise" data-reveal>
+            <img class="ifm-art ifm-art--pad" src="/assets/sup-pain-3.svg" alt="" width="120" height="120" loading="lazy" style="width:76px;height:76px;padding:10px;margin-bottom:16px;">
+            <h3 style="font-size:17.5px;margin:0 0 8px;color:#0E1A14;">{{ L.sup.painPricingTitle }}</h3>
+            <p style="font-size:14.5px;line-height:1.7;color:#4B5A52;margin:0;">{{ L.sup.painPricingDesc }}</p>
+          </article>
+          <article class="ifm-card bt-5" data-reveal>
+            <img class="ifm-art ifm-art--pad" src="/assets/sup-pain-4.svg" alt="" width="120" height="120" loading="lazy" style="width:76px;height:76px;padding:10px;margin-bottom:16px;">
+            <h3 style="font-size:17.5px;margin:0 0 8px;color:#0E1A14;">{{ L.sup.painRetentionTitle }}</h3>
+            <p style="font-size:14.5px;line-height:1.7;color:#4B5A52;margin:0;">{{ L.sup.painRetentionDesc }}</p>
+          </article>
         </div>
       </div>
     </section>
@@ -1019,136 +1037,85 @@
         <h2 style="font-size:38px;line-height:1.3;color:#17261c;margin:0 0 14px;">{{ L.sup.flowTitle }}</h2>
         <p class="supplier-mobile-copy" style="font-size:17px;line-height:1.75;color:#5b6b62;margin:0;">{{ L.sup.flowSub }}</p>
       </div>
-      <div class="supplier-flow">
-        <article data-reveal style="padding:24px;border-radius:18px;background:#f3f7f3;"><h3 style="font-size:18px;margin:0 0 8px;">{{ L.sup.flowCatalogTitle }}</h3><p style="font-size:15px;line-height:1.65;color:#5b6b62;margin:0;">{{ L.sup.flowCatalogDesc }}</p></article>
-        <article data-reveal style="padding:24px;border-radius:18px;background:#f3f7f3;"><h3 style="font-size:18px;margin:0 0 8px;">{{ L.sup.flowLeadsTitle }}</h3><p style="font-size:15px;line-height:1.65;color:#5b6b62;margin:0;">{{ L.sup.flowLeadsDesc }}</p></article>
-        <article data-reveal style="padding:24px;border-radius:18px;background:#f3f7f3;"><h3 style="font-size:18px;margin:0 0 8px;">{{ L.sup.flowQuoteTitle }}</h3><p style="font-size:15px;line-height:1.65;color:#5b6b62;margin:0;">{{ L.sup.flowQuoteDesc }}</p></article>
-        <article data-reveal style="padding:24px;border-radius:18px;background:#f3f7f3;"><h3 style="font-size:18px;margin:0 0 8px;">{{ L.sup.flowShipTitle }}</h3><p style="font-size:15px;line-height:1.65;color:#5b6b62;margin:0;">{{ L.sup.flowShipDesc }}</p></article>
+      <!-- 蜿蜒路徑插圖打頭,四個節點的號碼由下面的卡片用 .ifm-eyebrow__no 疊上去,
+           不畫進 SVG —— 圖裡有數字的話英文版也改不動,而且換順序要重畫圖。 -->
+      <img class="ifm-art" src="/assets/sup-flow.svg" alt="" width="960" height="300" loading="lazy" style="margin-bottom:26px;">
+      <div class="ifm-bento">
+        <article class="ifm-card ifm-card--tint bt-3" data-reveal>
+          <div class="ifm-eyebrow"><span class="ifm-eyebrow__no">1</span></div>
+          <h3 style="font-size:17.5px;margin:14px 0 8px;color:#0E1A14;">{{ L.sup.flowCatalogTitle }}</h3>
+          <p style="font-size:14.5px;line-height:1.7;color:#4B5A52;margin:0;">{{ L.sup.flowCatalogDesc }}</p>
+        </article>
+        <article class="ifm-card ifm-card--tint bt-3 bt-drop" data-reveal>
+          <div class="ifm-eyebrow"><span class="ifm-eyebrow__no">2</span></div>
+          <h3 style="font-size:17.5px;margin:14px 0 8px;color:#0E1A14;">{{ L.sup.flowLeadsTitle }}</h3>
+          <p style="font-size:14.5px;line-height:1.7;color:#4B5A52;margin:0;">{{ L.sup.flowLeadsDesc }}</p>
+        </article>
+        <article class="ifm-card ifm-card--tint bt-3" data-reveal>
+          <div class="ifm-eyebrow"><span class="ifm-eyebrow__no">3</span></div>
+          <h3 style="font-size:17.5px;margin:14px 0 8px;color:#0E1A14;">{{ L.sup.flowQuoteTitle }}</h3>
+          <p style="font-size:14.5px;line-height:1.7;color:#4B5A52;margin:0;">{{ L.sup.flowQuoteDesc }}</p>
+        </article>
+        <article class="ifm-card ifm-card--tint bt-3 bt-drop" data-reveal>
+          <div class="ifm-eyebrow"><span class="ifm-eyebrow__no">4</span></div>
+          <h3 style="font-size:17.5px;margin:14px 0 8px;color:#0E1A14;">{{ L.sup.flowShipTitle }}</h3>
+          <p style="font-size:14.5px;line-height:1.7;color:#4B5A52;margin:0;">{{ L.sup.flowShipDesc }}</p>
+        </article>
       </div>
     </section>
 
     <section id="supplier-capabilities" style="background:#fbfcfb;border-top:1px solid #e8eee9;border-bottom:1px solid #e8eee9;">
       <div class="supplier-wrap">
-        <article class="supplier-capability" data-reveal aria-labelledby="supplier-leads-title">
-          <div class="supplier-copy">
-            <div style="font-size:13px;font-weight:700;color:#166534;letter-spacing:.1em;margin-bottom:10px;">{{ L.sup.cap1Eyebrow }}</div>
-            <h2 id="supplier-leads-title" style="font-size:38px;line-height:1.3;color:#17261c;margin:0 0 14px;">{{ L.sup.cap1Title }}</h2>
-            <p class="supplier-mobile-copy" style="font-size:17px;line-height:1.75;color:#5b6b62;margin:0;">{{ L.sup.cap1Sub }}</p>
-            <ul class="supplier-detail-list">
-              <li>{{ L.sup.cap1Li1 }}</li>
-              <li>{{ L.sup.cap1Li2 }}</li>
-              <li>{{ L.sup.cap1Li3 }}</li>
-            </ul>
-          </div>
-          <div class="supplier-product-mock">
-            <div class="supplier-mock-bar"><span>{{ L.sup.mockCaption }}</span><span>{{ L.sup.cap1MockTag }}</span></div>
-            <div class="supplier-mock-body">
-              <div class="supplier-mock-scroll" tabindex="0" role="region" aria-label="{{ L.sup.cap1ScrollAria }}">
-                <table class="supplier-mock-table" aria-label="{{ L.sup.cap1TableAria }}">
-                  <thead><tr><th>{{ L.sup.cap1ThItem }}</th><th>{{ L.sup.cap1ThArea }}</th><th>{{ L.sup.cap1ThFreq }}</th><th>{{ L.sup.cap1ThStatus }}</th></tr></thead>
-                  <tbody>
-                    <tr><td>{{ L.sup.cap1Row1Item }}</td><td>{{ L.sup.cap1Row1Area }}</td><td>{{ L.sup.cap1Row1Freq }}</td><td><span style="color:#166534;font-weight:700;">{{ L.sup.cap1Row1Status }}</span></td></tr>
-                    <tr><td>{{ L.sup.cap1Row2Item }}</td><td>{{ L.sup.cap1Row2Area }}</td><td>{{ L.sup.cap1Row2Freq }}</td><td>{{ L.sup.cap1Row2Status }}</td></tr>
-                    <tr><td>{{ L.sup.cap1Row3Item }}</td><td>{{ L.sup.cap1Row3Area }}</td><td>{{ L.sup.cap1Row3Freq }}</td><td>{{ L.sup.cap1Row3Status }}</td></tr>
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          </div>
+      <!-- 原本是四個「文字 + 假表格」左右交替的大區塊,整頁一張圖都沒有。
+           改成 bento:每格用插圖打頭、三條說明壓成短標籤,寬度與垂直位移刻意錯開。 -->
+      <div class="ifm-bento" style="padding:64px 0 72px;">
+        <article class="ifm-card bt-7" data-reveal aria-labelledby="supplier-leads-title">
+          <img class="ifm-art ifm-art--bleed" src="/assets/sup-cap-1.svg" alt="" width="480" height="360" loading="lazy">
+          <div class="ifm-eyebrow"><span class="ifm-eyebrow__no">1</span>{{ L.sup.cap1Eyebrow }}</div>
+          <h2 id="supplier-leads-title" style="font-size:25px;line-height:1.35;color:#0E1A14;margin:14px 0 10px;">{{ L.sup.cap1Title }}</h2>
+          <p style="font-size:15px;line-height:1.8;color:#4B5A52;margin:0;">{{ L.sup.cap1Sub }}</p>
+          <ul class="ifm-chips">
+            <li>{{ L.sup.cap1Li1 }}</li>
+            <li>{{ L.sup.cap1Li2 }}</li>
+            <li>{{ L.sup.cap1Li3 }}</li>
+          </ul>
         </article>
-
-        <article class="supplier-capability supplier-capability--reverse" data-reveal aria-labelledby="supplier-quotes-title">
-          <div class="supplier-copy">
-            <div style="font-size:13px;font-weight:700;color:#166534;letter-spacing:.1em;margin-bottom:10px;">{{ L.sup.cap2Eyebrow }}</div>
-            <h2 id="supplier-quotes-title" style="font-size:38px;line-height:1.3;color:#17261c;margin:0 0 14px;">{{ L.sup.cap2Title }}</h2>
-            <p class="supplier-mobile-copy" style="font-size:17px;line-height:1.75;color:#5b6b62;margin:0;">{{ L.sup.cap2Sub }}</p>
-            <ul class="supplier-detail-list">
-              <li>{{ L.sup.cap2Li1 }}</li>
-              <li>{{ L.sup.cap2Li2 }}</li>
-              <li>{{ L.sup.cap2Li3 }}</li>
-            </ul>
-          </div>
-          <div class="supplier-product-mock">
-            <div class="supplier-mock-bar"><span>{{ L.sup.mockCaption }}</span><span>{{ L.sup.cap2MockTag }}</span></div>
-            <div class="supplier-mock-body">
-              <div class="supplier-mock-scroll" tabindex="0" role="region" aria-label="{{ L.sup.cap2ScrollAria }}">
-                <table class="supplier-mock-table" aria-label="{{ L.sup.cap2TableAria }}">
-                  <thead><tr><th>{{ L.sup.cap2ThSummary }}</th><th>{{ L.sup.cap2ThTotal }}</th><th>{{ L.sup.cap2ThLeadTime }}</th><th>{{ L.sup.cap2ThStatus }}</th></tr></thead>
-                  <tbody>
-                    <tr><td>{{ L.sup.cap2Row1Summary }}</td><td>NT$ 12,600</td><td>{{ L.sup.cap2Row1LeadTime }}</td><td><span style="color:#166534;font-weight:700;">{{ L.sup.cap2Row1Status }}</span></td></tr>
-                    <tr><td>{{ L.sup.cap2Row2Summary }}</td><td>{{ L.sup.cap2Row2Total }}</td><td>—</td><td>{{ L.sup.cap2Row2Status }}</td></tr>
-                    <tr><td>{{ L.sup.cap2Row3Summary }}</td><td>NT$ 8,450</td><td>07/29</td><td>{{ L.sup.cap2Row3Status }}</td></tr>
-                  </tbody>
-                </table>
-              </div>
-              <div style="margin-top:14px;padding:12px 14px;border-radius:12px;background:#edf7ed;font-size:13px;line-height:1.6;color:#294331;">{{ L.sup.cap2Note }}</div>
-            </div>
-          </div>
+        <article class="ifm-card bt-5 bt-drop" data-reveal aria-labelledby="supplier-quotes-title">
+          <img class="ifm-art ifm-art--bleed" src="/assets/sup-cap-2.svg" alt="" width="480" height="360" loading="lazy">
+          <div class="ifm-eyebrow"><span class="ifm-eyebrow__no">2</span>{{ L.sup.cap2Eyebrow }}</div>
+          <h2 id="supplier-quotes-title" style="font-size:25px;line-height:1.35;color:#0E1A14;margin:14px 0 10px;">{{ L.sup.cap2Title }}</h2>
+          <p style="font-size:15px;line-height:1.8;color:#4B5A52;margin:0;">{{ L.sup.cap2Sub }}</p>
+          <ul class="ifm-chips">
+            <li>{{ L.sup.cap2Li1 }}</li>
+            <li>{{ L.sup.cap2Li2 }}</li>
+            <li>{{ L.sup.cap2Li3 }}</li>
+          </ul>
         </article>
-
-        <article class="supplier-capability" data-reveal aria-labelledby="supplier-pricing-title">
-          <div class="supplier-copy">
-            <div style="font-size:13px;font-weight:700;color:#166534;letter-spacing:.1em;margin-bottom:10px;">{{ L.sup.cap3Eyebrow }}</div>
-            <h2 id="supplier-pricing-title" style="font-size:38px;line-height:1.3;color:#17261c;margin:0 0 14px;">{{ L.sup.cap3Title }}</h2>
-            <p class="supplier-mobile-copy" style="font-size:17px;line-height:1.75;color:#5b6b62;margin:0;">{{ L.sup.cap3Sub }}</p>
-            <ul class="supplier-detail-list">
-              <li>{{ L.sup.cap3Li1 }}</li>
-              <li>{{ L.sup.cap3Li2 }}</li>
-              <li>{{ L.sup.cap3Li3 }}</li>
-            </ul>
-          </div>
-          <div class="supplier-product-mock">
-            <div class="supplier-mock-bar"><span>{{ L.sup.mockCaption }}</span><span>{{ L.sup.cap3MockTag }}</span></div>
-            <div class="supplier-mock-body">
-              <div class="supplier-mock-scroll" tabindex="0" role="region" aria-label="{{ L.sup.cap3ScrollAria }}">
-                <table class="supplier-mock-table" aria-label="{{ L.sup.cap3TableAria }}">
-                  <thead><tr><th>{{ L.sup.cap3ThItem }}</th><th>{{ L.sup.cap3ThMyPrice }}</th><th>{{ L.sup.cap3ThMarket }}</th><th>{{ L.sup.cap3ThRestock }}</th></tr></thead>
-                  <tbody>
-                    <tr><td>{{ L.sup.cap3Row1Item }}</td><td>NT$ 52 / kg</td><td>NT$ 48–56</td><td>136 kg</td></tr>
-                    <tr><td>{{ L.sup.cap3Row2Item }}</td><td>NT$ 63 / kg</td><td>NT$ 50–58</td><td>94 kg</td></tr>
-                    <tr><td>{{ L.sup.cap3Row3Item }}</td><td>{{ L.sup.cap3Row3MyPrice }}</td><td>NT$ 82–96</td><td>{{ L.sup.cap3Row3Restock }}</td></tr>
-                  </tbody>
-                </table>
-              </div>
-              <p style="font-size:12px;line-height:1.6;color:#5b6b62;margin:13px 2px 0;">{{ L.sup.cap3Note }}</p>
-            </div>
-          </div>
+        <article class="ifm-card bt-5" data-reveal aria-labelledby="supplier-pricing-title">
+          <img class="ifm-art ifm-art--bleed" src="/assets/sup-cap-3.svg" alt="" width="480" height="360" loading="lazy">
+          <div class="ifm-eyebrow"><span class="ifm-eyebrow__no">3</span>{{ L.sup.cap3Eyebrow }}</div>
+          <h2 id="supplier-pricing-title" style="font-size:25px;line-height:1.35;color:#0E1A14;margin:14px 0 10px;">{{ L.sup.cap3Title }}</h2>
+          <p style="font-size:15px;line-height:1.8;color:#4B5A52;margin:0;">{{ L.sup.cap3Sub }}</p>
+          <ul class="ifm-chips">
+            <li>{{ L.sup.cap3Li1 }}</li>
+            <li>{{ L.sup.cap3Li2 }}</li>
+            <li>{{ L.sup.cap3Li3 }}</li>
+          </ul>
         </article>
-
-        <article class="supplier-capability supplier-capability--reverse" data-reveal aria-labelledby="supplier-customers-title">
-          <div class="supplier-copy">
-            <div style="font-size:13px;font-weight:700;color:#166534;letter-spacing:.1em;margin-bottom:10px;">{{ L.sup.cap4Eyebrow }}</div>
-            <h2 id="supplier-customers-title" style="font-size:38px;line-height:1.3;color:#17261c;margin:0 0 14px;">{{ L.sup.cap4Title }}</h2>
-            <p class="supplier-mobile-copy" style="font-size:17px;line-height:1.75;color:#5b6b62;margin:0;">{{ L.sup.cap4Sub }}</p>
-            <ul class="supplier-detail-list">
-              <li>{{ L.sup.cap4Li1 }}</li>
-              <li>{{ L.sup.cap4Li2 }}</li>
-              <li>{{ L.sup.cap4Li3 }}</li>
-            </ul>
-          </div>
-          <div class="supplier-product-mock">
-            <div class="supplier-mock-bar"><span>{{ L.sup.mockCaption }}</span><span>{{ L.sup.cap4MockTag }}</span></div>
-            <div class="supplier-mock-body">
-              <div class="supplier-mock-scroll" tabindex="0" role="region" aria-label="{{ L.sup.cap4ScrollAria }}">
-                <table class="supplier-mock-table" aria-label="{{ L.sup.cap4TableAria }}">
-                  <thead><tr><th>{{ L.sup.cap4ThCustomer }}</th><th>{{ L.sup.cap4ThFreq }}</th><th>{{ L.sup.cap4ThLastOrder }}</th><th>{{ L.sup.cap4ThStatus }}</th></tr></thead>
-                  <tbody>
-                    <tr><td>{{ L.sup.cap4Row1Customer }}</td><td>{{ L.sup.cap4Row1Freq }}</td><td>{{ L.sup.cap4Row1LastOrder }}</td><td><span style="color:#166534;font-weight:700;">{{ L.sup.cap4Row1Status }}</span></td></tr>
-                    <tr><td>{{ L.sup.cap4Row2Customer }}</td><td>{{ L.sup.cap4Row2Freq }}</td><td>{{ L.sup.cap4Row2LastOrder }}</td><td>{{ L.sup.cap4Row2Status }}</td></tr>
-                    <tr><td>{{ L.sup.cap4Row3Customer }}</td><td>{{ L.sup.cap4Row3Freq }}</td><td>{{ L.sup.cap4Row3LastOrder }}</td><td>{{ L.sup.cap4Row3Status }}</td></tr>
-                  </tbody>
-                </table>
-              </div>
-              <div style="display:flex;flex-wrap:wrap;gap:10px;margin-top:14px;">
-                <span style="padding:8px 10px;border-radius:999px;background:#edf7ed;color:#294331;font-size:13px;">{{ L.sup.cap4PillRating }}</span>
-                <span style="padding:8px 10px;border-radius:999px;background:#f1f4f2;color:#34473b;font-size:13px;">{{ L.sup.cap4PillReviews }}</span>
-              </div>
-            </div>
-          </div>
+        <article class="ifm-card bt-7 bt-rise" data-reveal aria-labelledby="supplier-customers-title">
+          <img class="ifm-art ifm-art--bleed" src="/assets/sup-cap-4.svg" alt="" width="480" height="360" loading="lazy">
+          <div class="ifm-eyebrow"><span class="ifm-eyebrow__no">4</span>{{ L.sup.cap4Eyebrow }}</div>
+          <h2 id="supplier-customers-title" style="font-size:25px;line-height:1.35;color:#0E1A14;margin:14px 0 10px;">{{ L.sup.cap4Title }}</h2>
+          <p style="font-size:15px;line-height:1.8;color:#4B5A52;margin:0;">{{ L.sup.cap4Sub }}</p>
+          <ul class="ifm-chips">
+            <li>{{ L.sup.cap4Li1 }}</li>
+            <li>{{ L.sup.cap4Li2 }}</li>
+            <li>{{ L.sup.cap4Li3 }}</li>
+          </ul>
         </article>
       </div>
-    </section>
-
+    </div>
+  </section>
     <section aria-labelledby="supplier-outcomes-title" style="background:#fff;">
       <div class="supplier-wrap" style="padding-top:80px;padding-bottom:80px;">
         <div data-reveal style="max-width:760px;margin-bottom:34px;">
@@ -2109,28 +2076,6 @@ class Component extends DCLogic {
     return v.trim().split(/\s+/).length;
   }
 
-  // 缺圖佔位框 → on-brand SVG 對照表（精確文字比對）
-  var IMG_MAP = {
-    '[ 餐廳採購情境照 ]': '/assets/scene-buyer.svg',
-    '[ 供應商出貨情境照 ]': '/assets/scene-supplier.svg',
-    '[ 餐廳實拍 ]': '/assets/case-restaurant.svg',
-    '[ 團膳廚房實拍 ]': '/assets/case-kitchen.svg',
-    '[ 生鮮團購實拍 ]': '/assets/case-fresh.svg',
-    '[ AI 媒合流程介面 ]': '/assets/ui-match.svg',
-    '[ 採購管理後台介面 ]': '/assets/ui-admin.svg',
-    '[ 評價機制介面 ]': '/assets/ui-rating.svg',
-    '[ 標章與履歷展示 ]': '/assets/ui-cert.svg',
-    '[ LINE 通知示意 ]': '/assets/ui-line.svg',
-    '蔬菜': '/assets/cat-vegetable.svg',
-    '水果': '/assets/cat-fruit.svg',
-    '海鮮': '/assets/cat-seafood.svg',
-    '肉品': '/assets/cat-meat.svg',
-    '穀類': '/assets/cat-grain.svg',
-    '雜貨': '/assets/cat-grocery.svg',
-    '蛋品': '/assets/cat-egg.svg',
-    '加工食品': '/assets/cat-processed.svg',
-    '酒、飲品': '/assets/cat-drink.svg'
-  };
 
   function tag() {
     var els = root.querySelectorAll('*');
@@ -2138,23 +2083,11 @@ class Component extends DCLogic {
       var el = els[i], s = el.style;
       if (!s) continue;
 
-      // 缺圖佔位框（條紋）→ 換成對應 SVG（cover）
-      if (!el.getAttribute('data-img-done') &&
-          /repeating-linear-gradient/.test((s.background || '') + (s.backgroundImage || ''))) {
-        var imgKey = (el.textContent || '').trim();
-        var imgSrc = IMG_MAP[imgKey];
-        if (imgSrc) {
-          el.style.backgroundImage = "url('" + imgSrc + "')";
-          el.style.backgroundSize = 'cover';
-          el.style.backgroundPosition = 'center';
-          el.style.backgroundRepeat = 'no-repeat';
-          el.setAttribute('data-img-done', '1');
-          if (imgKey.charAt(0) === '[') {            // 情境/案例/UI：隱藏等寬字標籤
-            var lbl = el.querySelector('span');
-            if (lbl) lbl.style.display = 'none';
-          }
-        }
-      }
+      // 缺圖佔位框換圖的機制已於 2026-09-23 移除。首頁改版之後 markup 裡一個
+      // repeating-linear-gradient 佔位框都不剩了,那段 IMG_MAP 從此沒有作用;
+      // 而且它是靠「比對畫面上的中文字」找元素,中英雙語之下本來就會失效。
+      // 連帶沒用到的 assets/ui-*.svg、scene-*.svg、case-*.svg 也一併刪掉
+      // (那幾張裡面寫死了中文 <text>,留著遲早有人誤用到英文版上)。
 
       // 導覽列（sticky, z-index:50）：標記其內層三個群組
       if (s.position === 'sticky' && s.zIndex === '50' && !el.classList.contains('m-header')) {
