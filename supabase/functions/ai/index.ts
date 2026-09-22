@@ -193,6 +193,21 @@ const CHAT_SYSTEM = [
   "5. 不要憑空報價、不要保證有貨或有幾家會回覆;不確定的事就說會交給供應商回覆。"
 ].join("\n");
 
+// 形象站有中英兩版(/ 與 /en)。英文訪客的每一句回覆、菜單分析的品名與摘要都要跟著換語言 ——
+// 上面那幾個 system prompt 與 schema description 寫死「繁體中文」,所以這裡補一段優先級更高的
+// 覆寫指令接在後面,而不是另外維護一整份英文 prompt(兩份會各自長歪)。
+const EN_DIRECTIVE = [
+  "",
+  "LANGUAGE OVERRIDE — this instruction outranks every language rule above, including any field",
+  "description in the JSON schema that says Traditional Chinese:",
+  "The visitor is on the English site. Write every user-facing string in natural business English",
+  "(replies, `name`, `summary`, `message`). Romanize Taiwanese place names (Taipei, Taichung,",
+  "Da'an District). Keep the interview structure, tone and rules exactly as described above."
+].join("\n");
+
+const withLang = (system: string, lang: unknown): string =>
+  lang === "en" ? system + "\n" + EN_DIRECTIVE : system;
+
 type GPart = { text: string } | { inlineData: { mimeType: string; data: string } };
 
 const geminiGenerate = async (
@@ -303,7 +318,7 @@ Deno.serve(async (req) => {
           { text: "這是一張餐廳菜單的照片。請辨識上面的菜色,推算需要採購的食材清單與摘要。" },
           { inlineData: { mimeType, data } }
         ] }],
-        { system: ANALYSIS_SYSTEM, structured: true, temperature: 0.2, action: "analyze-menu" }
+        { system: withLang(ANALYSIS_SYSTEM, body.lang), structured: true, temperature: 0.2, action: "analyze-menu" }
       );
       const result = parseAnalysis(raw);
       const dataUrl = image.startsWith("data:") ? image : `data:${mimeType};base64,${image}`;
@@ -325,7 +340,7 @@ Deno.serve(async (req) => {
           "以下是客人與 ifoodmap 客服機器人的對話。請整理出客人實際的食材採購需求,並寫一段摘要。",
           "", "=== 對話開始 ===", transcript, "=== 對話結束 ==="
         ].join("\n") }] }],
-        { system: ANALYSIS_SYSTEM, structured: true, temperature: 0.2, action: "analyze-chat" }
+        { system: withLang(ANALYSIS_SYSTEM, body.lang), structured: true, temperature: 0.2, action: "analyze-chat" }
       ));
 
       if (analysisId) {
@@ -364,7 +379,7 @@ Deno.serve(async (req) => {
         role: m.role === "user" ? "user" : "model",
         parts: [{ text: m.text ?? "" }] as GPart[]
       }));
-      const reply = await geminiGenerate(contents, { system: CHAT_SYSTEM, structured: false, temperature: 0.6, action: "chat" });
+      const reply = await geminiGenerate(contents, { system: withLang(CHAT_SYSTEM, body.lang), structured: false, temperature: 0.6, action: "chat" });
       return json({ data: { reply } });
     }
 
