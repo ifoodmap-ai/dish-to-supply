@@ -211,7 +211,12 @@ test('homepage presents the design-approved hero: rotating headline, subtitle, s
   assert.match(home, /餐廳、團膳、學校、團購主都適用。<br>填一次需求，供應商主動來找你。/);
   assert.match(home, /placeholder="搜尋食材，例如：有機葉菜、火鍋肉片"/);
   assert.match(component, /heroPromises: \['完全免費', '成交不抽成', '平均 4 小時有回覆'\]/);
-  assert.match(component, /hotTags: \['蔬菜', '水果', '豬肉', '牛肉', '火鍋料', '米麵'\]/);
+  assert.match(component, /hotTags: \['蔬菜', '水果', '豬肉', '牛肉', '火鍋料', '米麵'\]\.map\(/);
+  // 搜尋列與分類籤都要接進 AI 助手,不能是死的裝飾
+  assert.match(home, /<form onSubmit="\{\{\s*askAI\s*\}\}" role="search"/);
+  assert.match(home, /<button type="button" onClick="\{\{\s*t\.ask\s*\}\}"/);
+  assert.match(source, /window\.IfmAI = \{/);
+  assert.match(component, /handToAI\(text\) \{/);
   assert.match(header, /<a[^>]+href="\/contact"[^>]*>填寫食材需求<\/a>/);
 });
 

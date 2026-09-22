@@ -445,13 +445,15 @@
         </h1>
         <p style="margin-top:20px;font-size:17px;line-height:1.9;color:#4B5A52;max-width:520px;font-weight:400">餐廳、團膳、學校、團購主都適用。<br>填一次需求，供應商主動來找你。</p>
 
-        <div style="margin-top:34px;width:100%;max-width:620px;display:flex;gap:10px;flex-wrap:wrap;background:#fff;border:1px solid #DCE3DE;border-radius:999px;padding:8px 8px 8px 10px;box-shadow:0 14px 34px rgba(14,26,20,.08)">
-          <input aria-label="搜尋食材" placeholder="搜尋食材，例如：有機葉菜、火鍋肉片" style="flex:1;min-width:190px;border:none;outline:none;background:transparent;color:#0E1A14;font-size:15.5px;padding:12px 14px">
-          <a href="/contact" onClick="{{ goContact }}" style="background:#128A54;color:#fff;font-size:15px;font-weight:700;padding:13px 30px;border-radius:999px;text-decoration:none;cursor:pointer;box-shadow:0 8px 18px rgba(18,138,84,.3)" style-hover="background:#0B6B40">搜尋</a>
-        </div>
+        <!-- 搜尋不是真的搜尋:送出後把關鍵字帶進右下角的 AI 採購助手,由它接著訪談
+             (數量、頻率、配送區域…),最後引導留下聯絡方式。見 askAI() 與 window.IfmAI -->
+        <form onSubmit="{{ askAI }}" role="search" aria-label="搜尋食材" style="margin-top:34px;width:100%;max-width:620px;display:flex;gap:10px;flex-wrap:wrap;background:#fff;border:1px solid #DCE3DE;border-radius:999px;padding:8px 8px 8px 10px;box-shadow:0 14px 34px rgba(14,26,20,.08)">
+          <input name="q" aria-label="搜尋食材" autocomplete="off" placeholder="搜尋食材，例如：有機葉菜、火鍋肉片" style="flex:1;min-width:190px;border:none;outline:none;background:transparent;color:#0E1A14;font-size:15.5px;padding:12px 14px">
+          <button type="submit" style="border:none;background:#128A54;color:#fff;font-size:15px;font-weight:700;padding:13px 30px;border-radius:999px;cursor:pointer;box-shadow:0 8px 18px rgba(18,138,84,.3)" style-hover="background:#0B6B40">搜尋</button>
+        </form>
         <div style="margin-top:16px;display:flex;gap:8px;flex-wrap:wrap;justify-content:center">
           <sc-for list="{{ hotTags }}" as="t" hint-placeholder-count="6">
-            <span style="font-size:12.5px;color:#5E6E65;border:1px solid #E6EAE7;background:#fff;border-radius:999px;padding:6px 14px">{{ t }}</span>
+            <button type="button" onClick="{{ t.ask }}" style="font-size:12.5px;color:#5E6E65;border:1px solid #E6EAE7;background:#fff;border-radius:999px;padding:6px 14px;cursor:pointer" style-hover="border-color:#128A54;color:#0B6B40">{{ t.label }}</button>
           </sc-for>
         </div>
 
@@ -1601,6 +1603,22 @@ class Component extends DCLogic {
     };
   }
 
+  // 首頁搜尋列 / 分類籤 → 交給右下角的 AI 採購助手接著訪談。
+  // 助手是獨立的 widget(window.IfmAI),萬一還沒載好就退回聯絡頁,不讓人按了沒反應。
+  askAI(event) {
+    if (event && typeof event.preventDefault === 'function') event.preventDefault();
+    const form = event && event.currentTarget;
+    const input = form && typeof form.querySelector === 'function' ? form.querySelector('input') : null;
+    const q = input ? input.value.trim() : '';
+    this.handToAI(q ? '我想找食材：' + q : '');
+    if (input) input.value = '';
+  }
+  handToAI(text) {
+    const api = typeof window !== 'undefined' ? window.IfmAI : null;
+    if (api && typeof api.ask === 'function') { api.ask(text); return; }
+    this.go('contact')();
+  }
+
   // 「平台功能」「最新消息」在設計稿裡是獨立頁,這個站還沒有;先捲到首頁對應區塊
   goAnchor(id) {
     return (event) => {
@@ -1680,7 +1698,8 @@ class Component extends DCLogic {
 
       /* 首頁內容(文案 1:1 取自設計稿) */
       rotating,
-      hotTags: ['蔬菜', '水果', '豬肉', '牛肉', '火鍋料', '米麵'],
+      hotTags: ['蔬菜', '水果', '豬肉', '牛肉', '火鍋料', '米麵'].map((label) => ({ label, ask: () => this.handToAI('我想找食材：' + label) })),
+      askAI: (event) => this.askAI(event),
       heroPromises: ['完全免費', '成交不抽成', '平均 4 小時有回覆'],
       stats: [
         { target: 3000, suffix: '+', label: '合作供應商（示意）' },
@@ -2760,6 +2779,20 @@ class Component extends DCLogic {
     }
   });
   fab.addEventListener('click', function () { panel.classList.contains('ai-open') ? closePanel() : openPanel(); });
+
+  // ---- 對外 API:首頁搜尋列 / 分類籤把關鍵字直接帶進對話 ----
+  // ask(text):打開面板並把 text 當成使用者的一句話送出,AI 會接著訪談。
+  // 正在收聯絡資料(collect.active)時只開面板不送字,免得把關鍵字當成姓名存起來。
+  window.IfmAI = {
+    open: openPanel,
+    ask: function (text) {
+      var v = String(text || '').trim();
+      if (!panel.classList.contains('ai-open')) openPanel();
+      if (!v || collect.active) return;
+      textInput.value = v;
+      sendText();
+    }
+  };
   panel.querySelector('.ai-x').addEventListener('click', closePanel);
   backdrop.addEventListener('click', closePanel);
   panel.querySelector('.ai-upload').addEventListener('click', function () { fileInput.click(); });
