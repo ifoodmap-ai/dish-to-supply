@@ -389,14 +389,8 @@
        連結一律用 <a href onClick> 走 routing.js,保留真實網址與 SEO;不用設計稿的 setState 換頁。 -->
   <header class="ifm-v2" ref="{{ headRef }}" style="position:sticky;top:0;z-index:60;background:rgba(255,255,255,.88);backdrop-filter:blur(14px);border-bottom:1px solid #E6EAE7">
     <div style="max-width:1240px;margin:0 auto;padding:16px 26px;display:flex;align-items:center;gap:26px;flex-wrap:wrap">
-      <a href="/" onClick="{{ goHome }}" aria-current="{{ ariaCurrentHome }}" aria-label="食材地圖 首頁" style="margin-right:auto;display:flex;align-items:center;gap:11px;text-decoration:none;color:inherit;cursor:pointer">
-        <div style="width:26px;height:26px;border:1.5px solid #128A54;border-radius:7px;display:flex;align-items:center;justify-content:center">
-          <div style="width:7px;height:7px;background:#128A54;border-radius:50%;animation:pulseDot 2.4s ease-in-out infinite"></div>
-        </div>
-        <div style="display:flex;align-items:baseline;gap:9px">
-          <span style="font-size:18px;font-weight:700;letter-spacing:.02em">食材地圖</span>
-          <span style="font-family:'Space Grotesk',sans-serif;font-size:11px;letter-spacing:.22em;color:#5E6E65">IFOODMAP</span>
-        </div>
+      <a href="/" onClick="{{ goHome }}" aria-current="{{ ariaCurrentHome }}" style="margin-right:auto;display:flex;align-items:center;text-decoration:none;cursor:pointer">
+        <img src="/logo.png" alt="iFoodmap 食材地圖" width="137" height="40" style="height:40px;width:auto;display:block">
       </a>
       <sc-if value="{{ isDesktop }}" hint-placeholder-val="{{ true }}">
         <nav aria-label="主要導覽" style="display:flex;gap:22px;flex-wrap:wrap;align-items:center">
@@ -1325,9 +1319,9 @@
   <footer class="ifm-v2" style="background:#0E1A14;color:#9FB0A6">
     <div style="max-width:1240px;margin:0 auto;padding:60px 26px 22px;display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:40px">
       <div>
-        <div style="display:flex;align-items:baseline;gap:9px">
-          <span style="color:#fff;font-size:18px;font-weight:700">食材地圖</span>
-          <span style="font-family:'Space Grotesk',sans-serif;font-size:10.5px;letter-spacing:.22em;color:#71867A">IFOODMAP</span>
+        <div style="display:flex;align-items:center;gap:10px">
+          <img src="/icon.png" alt="" width="34" height="34" style="width:34px;height:34px;display:block">
+          <div style="font-weight:900;font-size:19px;color:#fff">iFoodmap <span style="font-weight:500;color:#9FB0A6;font-size:14px">食材地圖</span></div>
         </div>
         <p style="margin-top:18px;font-size:13.5px;line-height:2;font-weight:300">服務專線｜<a href="tel:0277045539" style="color:inherit;text-decoration:none">02-7704-5539</a><br>E-MAIL｜<a href="mailto:ifoodmaptw@gmail.com" style="color:inherit;text-decoration:none">ifoodmaptw@gmail.com</a><br>服務時間｜週一至週五 9:00–18:00</p>
       </div>
@@ -2337,22 +2331,29 @@ class Component extends DCLogic {
 
 <!-- ============ 右下角 AI 採購助手 Widget（對談 + 菜單分析 + 留名媒合）============ -->
 <style id="m-ai">
-  /* 外觀對齊設計稿的右下角泡泡;按下去還是原本的 AI 採購助手(對談 + 菜單分析 + 留名) */
+  /* 右下角 AI 採購助手:做成 logo 的地圖大頭針造型(跟主站購物車按鈕同一招)。
+     正方形只圓三個角再轉 45°,尖角朝下;漸層取自 icon.png(上黃綠 → 尖端深綠)。
+     裡面放一顆白色圓點 —— 圓形轉了看不出來,不用反轉,而且剛好呼應 logo 中間的白圈。
+     按下去還是原本的 AI 助手(對談 + 菜單分析 + 留名),功能沒動。 */
   .ai-fab {
     position: fixed; z-index: 65;
-    right: calc(22px + env(safe-area-inset-right)); bottom: calc(22px + env(safe-area-inset-bottom));
-    width: 62px; height: 62px; border-radius: 20px;
-    background: #128A54; color: #fff;
-    border: 2.5px solid #0B6B40; cursor: pointer; display: flex; align-items: center; justify-content: center;
-    box-shadow: 0 12px 26px rgba(18,138,84,.34); transition: transform .2s ease, background .2s ease;
+    right: calc(28px + env(safe-area-inset-right)); bottom: calc(30px + env(safe-area-inset-bottom));
+    width: 58px; height: 58px;
+    border-radius: 50% 50% 0 50%;
+    transform: rotate(45deg);
+    background: linear-gradient(135deg, #c3d543 0%, #8db83c 48%, #3b8a3b 100%);
+    color: #fff; border: 2.5px solid rgba(255,255,255,.85); cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    box-shadow: 0 12px 26px rgba(18,138,84,.34);
+    transition: transform .2s ease, box-shadow .2s ease;
   }
-  .ai-fab:hover { background: #0B6B40; transform: translateY(-2px); }
+  .ai-fab:hover { transform: rotate(45deg) scale(1.06); box-shadow: 0 16px 32px rgba(18,138,84,.42); }
   .ai-fab svg { display: none; }
   .ai-fab::before {
     content: ''; width: 16px; height: 16px; border-radius: 999px; background: #fff;
     animation: pulseDot 2.4s ease-in-out infinite;
   }
-  .ai-fab.ai-open { transform: scale(.9); }
+  .ai-fab.ai-open { transform: rotate(45deg) scale(.9); }
 
   .ai-backdrop {
     position: fixed; inset: 0; z-index: 64; background: rgba(8,18,12,.4);
@@ -2431,7 +2432,7 @@ class Component extends DCLogic {
   @media (prefers-reduced-motion: reduce) {
     .ai-fab { transition: none !important; }
     .ai-fab:hover,
-    .ai-fab.ai-open { transform: none !important; }
+    .ai-fab.ai-open { transform: rotate(45deg) !important; }
     .ai-fab::after { animation: none !important; }
     .ai-dot { animation: none !important; opacity: .6 !important; }
     .ai-panel { transition: opacity .15s ease !important; transform: none !important; }

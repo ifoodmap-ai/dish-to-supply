@@ -749,6 +749,8 @@ test('reduced-motion mode removes drawer, scrim, hamburger and AI FAB transition
   );
   assert.match(
     source,
-    /@media \(prefers-reduced-motion: reduce\)\s*\{[\s\S]*?\.ai-fab\s*\{[^}]*transition:\s*none\s*!important[^}]*\}[\s\S]*?\.ai-fab:hover,[\s\S]*?\.ai-fab\.ai-open\s*\{[^}]*transform:\s*none\s*!important/s,
+    // 泡泡是靜態轉 45° 的大頭針造型;reduced-motion 只需拿掉 hover/open 的縮放動效,
+    // 保留 rotate(45deg) 這個沒有動作的基礎變形,否則會變回正方形
+    /@media \(prefers-reduced-motion: reduce\)\s*\{[\s\S]*?\.ai-fab\s*\{[^}]*transition:\s*none\s*!important[^}]*\}[\s\S]*?\.ai-fab:hover,[\s\S]*?\.ai-fab\.ai-open\s*\{[^}]*transform:\s*(?:none|rotate\(45deg\))\s*!important/s,
   );
 });
