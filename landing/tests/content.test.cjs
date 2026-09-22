@@ -66,6 +66,19 @@ function assertApprovedCases(fragment) {
   }
 }
 
+function restaurantCapabilitySection(fragment) {
+  const start = fragment.indexOf('<section id="restaurant-capabilities"');
+  const end = fragment.indexOf('restaurant-cases-title', start);
+  assert.ok(start !== -1 && end > start, '找不到餐廳能力區');
+  return fragment.slice(start, end);
+}
+
+function assertRestaurantCapabilityArt(fragment) {
+  const arts = [...fragment.matchAll(/src="(\/assets\/rest-cap-[a-z-]+\.svg)"/g)].map((m) => m[1]);
+  assert.equal(arts.length, 4, `能力卡應該有 4 張插圖,目前 ${arts.length} 張`);
+  assert.equal(new Set(arts).size, 4, `四張插圖不可以重複:${arts.join(', ')}`);
+}
+
 function assertRestaurantCapabilities(fragment) {
   for (const capability of ['AI 菜單分析', '成本與採購', '訂單與收貨', '團隊管理']) {
     assert.match(fragment, new RegExp(`<h2[^>]*>${capability}<\\/h2>`));
@@ -436,45 +449,51 @@ test('restaurant page names four accurate pains and a menu-to-receiving workflow
   }
 });
 
-test('restaurant page presents four product-grounded capabilities with labelled example mockups', () => {
+test('restaurant capabilities are four illustrated bento cards, not walls of fake table data', () => {
   assertRestaurantCapabilities(restaurants);
   assertRestaurantCapabilityOrder(restaurants);
-  for (const detail of [
-    '辨識菜色與食材',
-    '確認或編輯分析結果',
-    '菜色食材成本',
-    '供應商價格比較',
-    '替代食材與當季參考',
-    '採購與訂單狀態',
-    '確認收貨',
-    '事件履歷',
-    '分店',
-    'owner',
-    'manager',
-    'purchaser',
-    '收貨地點與時段',
+  const caps = restaurantCapabilitySection(restaurants);
+  assertRestaurantCapabilityArt(caps);
+
+  // 假表格(示例資料)2026-09-23 移除 —— 全頁文字量最大的一塊,而且資料是假的
+  assert.doesNotMatch(restaurants, /產品功能示意畫面/);
+  assert.doesNotMatch(restaurants, /restaurant-mock-table|restaurant-mock-scroll/);
+
+  assert.equal((caps.match(/class="ifm-eyebrow__no"/g) || []).length, 4);
+  assert.equal((caps.match(/<ul class="ifm-chips">\s*(?:<li>[^<]*<\/li>\s*){3}<\/ul>/g) || []).length, 4);
+
+  for (const id of [
+    'restaurant-analyze-title',
+    'restaurant-cost-title',
+    'restaurant-orders-title',
+    'restaurant-team-title',
   ]) {
-    assert.match(restaurants, new RegExp(detail, 'i'));
+    assert.match(restaurants, new RegExp(`<article[^>]+aria-labelledby="${id}"`));
   }
-  assert.equal(
-    (restaurants.match(/產品功能示意畫面 · 示例資料/g) || []).length,
-    4,
-  );
-  assert.match(restaurants, /<article[^>]+aria-labelledby="restaurant-analyze-title"/);
-  assert.match(restaurants, /<article[^>]+aria-labelledby="restaurant-cost-title"/);
-  assert.match(restaurants, /<article[^>]+aria-labelledby="restaurant-orders-title"/);
-  assert.match(restaurants, /<article[^>]+aria-labelledby="restaurant-team-title"/);
 });
 
-test('restaurant capability order guard fails when adjacent capabilities are swapped', () => {
-  const costStart = restaurants.indexOf('<article class="restaurant-capability restaurant-capability--reverse"');
-  const ordersStart = restaurants.indexOf('<article class="restaurant-capability"', costStart + 1);
-  const teamStart = restaurants.indexOf('<article class="restaurant-capability restaurant-capability--reverse"', ordersStart + 1);
-  const cost = restaurants.slice(costStart, ordersStart);
-  const orders = restaurants.slice(ordersStart, teamStart);
-  const swapped = restaurants.slice(0, costStart) + orders + cost + restaurants.slice(teamStart);
-  assert.throws(() => assertRestaurantCapabilityOrder(swapped));
+test('restaurant capability cards are laid out irregularly, not as a four-up equal grid', () => {
+  const caps = restaurantCapabilitySection(restaurants);
+  assert.match(caps, /<div class="ifm-bento"/);
+  const spans = new Set((caps.match(/\bbt-(\d+)\b/g) || []));
+  assert.ok(spans.size >= 2, `能力卡只有一種寬度(${[...spans].join(', ')}),沒有不規則感`);
+  assert.ok(/bt-rise|bt-drop/.test(caps), '能力卡沒有任何垂直位移');
 });
+
+
+test('restaurant capability guards fail when cards are swapped or lose their art', () => {
+  const capStart = restaurants.indexOf('<section id="restaurant-capabilities"');
+  const marker = '<article class="ifm-card bt-';
+  const first = restaurants.indexOf(marker, capStart);
+  const second = restaurants.indexOf(marker, first + 1);
+  const third = restaurants.indexOf(marker, second + 1);
+  const a = restaurants.slice(first, second);
+  const b = restaurants.slice(second, third);
+  assert.throws(() => assertRestaurantCapabilityOrder(restaurants.slice(0, first) + b + a + restaurants.slice(third)));
+  const duplicated = restaurantCapabilitySection(restaurants).replace(/rest-cap-(cost|orders|team)\.svg/g, 'rest-cap-menu-ai.svg');
+  assert.throws(() => assertRestaurantCapabilityArt(duplicated));
+});
+
 
 test('restaurant page retains the approved restaurant outcomes and qualifier', () => {
   for (const approvedCase of approvedCases.slice(0, 2)) {
@@ -561,16 +580,14 @@ test('reduced-motion users keep reveal content visible without animation', () =>
   assert.throws(() => assertReducedMotionRevealVisibility(withoutVisibleReveal));
 });
 
-test('only horizontally overflowing restaurant mockups are labelled keyboard regions', () => {
-  assertRestaurantOverflowRegions(restaurants);
-  assert.match(source, /\.restaurant-mock-scroll:focus-visible\s*\{/);
-
-  const withoutFirstTabStop = restaurants.replace(
-    /(<div class="restaurant-mock-scroll"[^>]*?) tabindex="0"/,
-    '$1',
-  );
-  assert.throws(() => assertRestaurantOverflowRegions(withoutFirstTabStop));
+test('restaurant in-page capability anchor still clears the sticky header', () => {
+  assert.match(source, /#restaurant-capabilities\s*\{[^}]*scroll-margin-top:\s*96px/s);
+  assert.match(restaurants, /id="restaurant-capabilities"/);
+  assert.match(restaurants, /href="#restaurant-capabilities"/);
+  // 假表格拿掉之後沒有需要鍵盤捲動的溢出區了,tabindex/role=region 也該一起消失
+  assert.doesNotMatch(restaurants, /restaurant-mock-scroll/);
 });
+
 
 test('supplier solution page follows the approved story and uses two canonical join actions', () => {
   assert.ok(suppliersStart >= 0 && suppliersEnd > suppliersStart);

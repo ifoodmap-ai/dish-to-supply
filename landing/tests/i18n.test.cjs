@@ -99,7 +99,14 @@ test('the key-structure guard actually fails when a key is dropped or an array s
 
 test('every {{ L.* }} binding in index.html resolves to a string in both languages', () => {
   const keys = bindingKeys();
-  assert.ok(keys.length > 300, `expected the markup to be fully bound, found ${keys.length} keys`);
+  // 這條只是「掃描器沒壞」的地板,不是文案數量的規格 —— 版面改版會讓 key 數上下跑
+  // (例如 2026-09-23 拿掉八張假表格就少了 120 個)。真正有意義的是下面兩件事:
+  // 每個 key 在兩個語系都查得到字串,而且每個區段都有被掃到。
+  assert.ok(keys.length > 150, `binding 掃描器可能壞了,只找到 ${keys.length} 個 key`);
+  const sections = new Set(keys.map((k) => k.split('.')[0]));
+  for (const section of ['nav', 'home', 'rest', 'sup', 'cases', 'about', 'contact', 'footer']) {
+    assert.ok(sections.has(section), `markup 裡完全沒有 L.${section}.* 的綁定,某個區段可能整塊掉了`);
+  }
 
   for (const lang of LANGS) {
     const values = dict(lang);
