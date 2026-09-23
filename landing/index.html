@@ -11,6 +11,9 @@
 <script src="/i18n.js"></script>
 <script src="/news.js"></script>
 <script>window.IFM_PRODUCT_BASE_URL = 'https://dish-to-supply.vercel.app';</script>
+<!-- Supabase 連線常數。anon key 是公開金鑰(RLS 才是防線),寫死沒問題,但只能有一份 ——
+     AI 助手與異業合作表單都要用,以前它包在 widget 的 IIFE 裡,外面拿不到。 -->
+<script>window.IFM_SUPA = { url: 'https://cwvpehqcvbfuynabpqop.supabase.co', anon: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImN3dnBlaHFjdmJmdXluYWJwcW9wIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzk5NzQ5NjgsImV4cCI6MjA5NTU1MDk2OH0.QMkcOlGjRTP5XeddI4IAzSkGJoUjaRtcjI_Tjl6rj2k' };</script>
 <script src="/routing.js"></script>
 <script src="/support.js"></script>
 <!-- 首頁 hero 的世界地圖(d3 + world-atlas),見 drawMap() -->
@@ -306,6 +309,16 @@
   .contact-field:focus-visible,
   .contact-submit:focus-visible,
   footer a:focus-visible { outline:3px solid #166534; outline-offset:3px; }
+  /* 頁尾是 #0E1A14 深色底,#166534 對它只有 2.5:1,鍵盤使用者根本看不到焦點跑到哪。
+     換成設計稿裡深色卡片用的那個亮萊姆(#C3D543 對 #0E1A14 是 11:1)。 */
+  footer a:focus-visible { outline-color:#C3D543; }
+  .footer-social a:hover { color:#fff; }
+  /* 聯絡資訊四列:padding 撐出 >=44px 的點擊區,負 margin 把版面推回原位
+     (業主只要求「能點」,沒有要改長相)。只有 <a> 的那三列吃 hover / focus。 */
+  .contact-line { display:flex; gap:14px; align-items:center; min-height:46px; padding:8px; margin:-8px; border-radius:14px; }
+  a.contact-line { text-decoration:none; color:inherit; transition:background .16s ease; }
+  a.contact-line:hover { background:#F3FAF6; }
+  a.contact-line:focus-visible { outline:3px solid #166534; outline-offset:2px; background:#F3FAF6; }
   .contact-submit { border:0; min-height:52px; }
   .footer-grid { display:grid; grid-template-columns:minmax(250px,1.5fr) repeat(4,minmax(120px,1fr)); gap:32px; }
   .footer-group-title { font-size:14px; font-weight:700; color:#fff; margin-bottom:16px; }
@@ -320,7 +333,8 @@
   .ifm-bento {
     display:grid;
     grid-template-columns:repeat(12,minmax(0,1fr));
-    gap:22px;
+    --bt-gap:22px;
+    gap:var(--bt-gap);
     align-items:start;
   }
   .ifm-bento > * { min-width:0; }
@@ -332,8 +346,11 @@
   .bt-8  { grid-column:span 8; }
   .bt-9  { grid-column:span 9; }
   .bt-12 { grid-column:span 12; }
-  .bt-rise { margin-top:-44px; }
-  .bt-drop { margin-top:52px; }
+  /* 🔴 bt-rise 的負位移「必須小於 gap」,否則卡片會戳進上一列 —— 跨欄數不同的兩列
+     只要有共用欄位就會真的疊在一起(-44px 配 gap:22px 曾造成 22px 重疊,四個頁面八組)。
+     所以位移綁在 --bt-gap 上用比例算,改 gap 時不會再算錯。 */
+  .bt-rise { margin-top:calc(var(--bt-gap) * -0.7); }
+  .bt-drop { margin-top:48px; }
 
   .ifm-card {
     position:relative;
@@ -395,6 +412,40 @@
   .ifm-article__links li::before { display:none; }
   .ifm-article__links a { color:#0B6B40; word-break:break-word; }
 
+  /* ---- 常見問題:原生 <details>/<summary> 手風琴。
+         不寫 JS —— 鍵盤(Enter/Space)、螢幕閱讀器的展開狀態、Ctrl+F 搜尋頁內文字全部天生就有。 */
+  .ifm-qa { max-width:860px; }
+  .ifm-qa__list { display:grid; gap:12px; }
+  .ifm-qa__item { border:1px solid #E1EAE4; border-radius:18px; background:#fff; }
+  .ifm-qa__item[open] { border-color:#CFE0D5; box-shadow:0 10px 30px rgba(15,43,26,.06); }
+  .ifm-qa__q {
+    list-style:none; cursor:pointer;
+    display:flex; gap:14px; align-items:flex-start;
+    padding:20px 22px; min-height:44px;
+    font-size:16.5px; line-height:1.6; font-weight:700; color:#0E1A14;
+    border-radius:18px;
+  }
+  .ifm-qa__q::-webkit-details-marker { display:none; }
+  .ifm-qa__q:hover { background:#F7FBF8; }
+  .ifm-qa__q:focus-visible { outline:3px solid #128A54; outline-offset:-3px; }
+  .ifm-qa__q::after {
+    content:''; flex:none; margin-left:auto; margin-top:5px;
+    width:10px; height:10px;
+    border-right:2px solid #128A54; border-bottom:2px solid #128A54;
+    transform:rotate(45deg); transition:transform .18s ease;
+  }
+  .ifm-qa__item[open] .ifm-qa__q::after { transform:rotate(-135deg); margin-top:9px; }
+  .ifm-qa__a { padding:0 22px 22px; font-size:16px; line-height:1.9; color:#3A4A41; }
+  .ifm-qa__a p { margin:0 0 14px; }
+  .ifm-qa__a p:last-child { margin-bottom:0; }
+  /* 答案裡的連結自己獨立一段,撐成 >=44px 的點擊目標(手機體檢的判準);
+     inline-flex 讓它只佔自己那一行,不會變成整列色塊。 */
+  .ifm-qa__a a {
+    display:inline-flex; align-items:center; min-height:44px;
+    color:#0B6B40; font-weight:600; word-break:break-word;
+  }
+  .ifm-qa__cta { margin-top:40px; padding:38px; text-align:center; }
+
   .ifm-eyebrow {
     display:inline-flex; align-items:center; gap:8px;
     font-family:'Space Grotesk','Noto Sans TC',sans-serif;
@@ -436,6 +487,10 @@
     .ifm-news-hero__art { max-width:320px; justify-self:start; }
     .ifm-article__body { font-size:16px; line-height:1.9; }
     .ifm-article__body h2 { font-size:20px; margin:30px 0 12px; }
+    .ifm-qa-title { font-size:32px !important; }
+    .ifm-qa__q { padding:18px; font-size:16px; }
+    .ifm-qa__a { padding:0 18px 20px; font-size:16px; }
+    .ifm-qa__cta { padding:24px; }
     .ifm-bento { grid-template-columns:1fr; gap:16px; }
     .ifm-bento > * { grid-column:1 / -1 !important; }
     .bt-rise, .bt-drop { margin-top:0; }
@@ -516,23 +571,22 @@
   <!-- 依 Claude Design「食材地圖官網」設計稿(食材供應商平台設計/食材地圖官網.dc.html)。
        連結一律用 <a href onClick> 走 routing.js,保留真實網址與 SEO;不用設計稿的 setState 換頁。 -->
   <header class="ifm-v2" ref="{{ headRef }}" style="position:sticky;top:0;z-index:60;background:rgba(255,255,255,.88);backdrop-filter:blur(14px);border-bottom:1px solid #E6EAE7">
-    <div style="max-width:1240px;margin:0 auto;padding:16px 26px;display:flex;align-items:center;gap:26px;flex-wrap:wrap">
-      <a href="{{ hrefHome }}" onClick="{{ goHome }}" aria-current="{{ ariaCurrentHome }}" style="margin-right:auto;display:flex;align-items:center;text-decoration:none;cursor:pointer">
+    <div class="mc-headbar" style="max-width:1240px;margin:0 auto;padding:16px 26px;display:flex;align-items:center;gap:26px;flex-wrap:wrap">
+      <a href="{{ hrefHome }}" class="mc-logo" onClick="{{ goHome }}" aria-current="{{ ariaCurrentHome }}" style="margin-right:auto;display:flex;align-items:center;text-decoration:none;cursor:pointer">
         <img src="/logo.png" alt="{{ L.nav.logoAlt }}" width="137" height="40" style="height:40px;width:auto;display:block">
       </a>
       <sc-if value="{{ isDesktop }}" hint-placeholder-val="{{ true }}">
         <nav aria-label="{{ L.nav.mainNavLabel }}" style="display:flex;gap:22px;flex-wrap:wrap;align-items:center">
           <a href="{{ hrefRestaurants }}" onClick="{{ goRestaurants }}" aria-current="{{ ariaCurrentRestaurants }}" style="padding:6px 0;font-size:14.5px;color:#4B5A52;text-decoration:none;cursor:pointer" style-hover="color:#0E1A14">{{ L.nav.findIngredients }}</a>
           <a href="{{ hrefSuppliers }}" onClick="{{ goSuppliers }}" aria-current="{{ ariaCurrentSuppliers }}" style="padding:6px 0;font-size:14.5px;color:#4B5A52;text-decoration:none;cursor:pointer" style-hover="color:#0E1A14">{{ L.nav.becomeSupplier }}</a>
-          <a href="{{ hrefHow }}" onClick="{{ goHow }}" style="padding:6px 0;font-size:14.5px;color:#4B5A52;text-decoration:none;cursor:pointer" style-hover="color:#0E1A14">{{ L.nav.features }}</a>
-          <a href="{{ hrefContact }}" onClick="{{ goContact }}" aria-current="{{ ariaCurrentContact }}" style="padding:6px 0;font-size:14.5px;color:#4B5A52;text-decoration:none;cursor:pointer" style-hover="color:#0E1A14">{{ L.nav.faq }}</a>
+          <a href="{{ hrefQa }}" onClick="{{ goQa }}" aria-current="{{ ariaCurrentQa }}" style="padding:6px 0;font-size:14.5px;color:#4B5A52;text-decoration:none;cursor:pointer" style-hover="color:#0E1A14">{{ L.nav.faq }}</a>
           <a href="{{ hrefAbout }}" onClick="{{ goAbout }}" aria-current="{{ ariaCurrentAbout }}" style="padding:6px 0;font-size:14.5px;color:#4B5A52;text-decoration:none;cursor:pointer" style-hover="color:#0E1A14">{{ L.nav.about }}</a>
           <a href="{{ hrefNews }}" onClick="{{ goNews }}" style="padding:6px 0;font-size:14.5px;color:#4B5A52;text-decoration:none;cursor:pointer" style-hover="color:#0E1A14">{{ L.nav.news }}</a>
           <a href="{{ hrefContact }}" onClick="{{ goContact }}" aria-current="{{ ariaCurrentContact }}" style="padding:6px 0;font-size:14.5px;color:#4B5A52;text-decoration:none;cursor:pointer" style-hover="color:#0E1A14">{{ L.nav.contact }}</a>
         </nav>
         <!-- 語言切換:指向同一頁的另一個語系網址(中文 /xxx、英文 /en/xxx),
              用真的 <a href> 而不是 button —— 右鍵複製連結、新分頁開啟、爬蟲都正常。 -->
-        <a href="{{ langHref }}" onClick="{{ switchLang }}" lang="{{ langTag }}" aria-label="{{ langAria }}" style="padding:7px 14px;border:1px solid #DCE3DE;border-radius:999px;font-size:13px;font-weight:600;color:#4B5A52;text-decoration:none;cursor:pointer;white-space:nowrap" style-hover="border-color:#128A54;color:#0B6B40">{{ langLabel }}</a>
+        <a href="{{ langHref }}" onClick="{{ switchLang }}" lang="{{ langTag }}" aria-label="{{ langAria }}" style="display:inline-flex;align-items:center;gap:7px;padding:7px 14px;border:1px solid #DCE3DE;border-radius:999px;font-size:13px;font-weight:600;color:#4B5A52;text-decoration:none;cursor:pointer;white-space:nowrap" style-hover="border-color:#128A54;color:#0B6B40"><img src="{{ langFlag }}" alt="" width="20" height="14" loading="lazy" decoding="async" style="display:block;width:20px;height:14px;border-radius:2px;flex:0 0 auto">{{ langLabel }}</a>
         <a href="{{ hrefContact }}" onClick="{{ openAI }}" style="background:#0E1A14;color:#fff;padding:11px 20px;border-radius:999px;font-size:14px;font-weight:700;text-decoration:none;cursor:pointer;box-shadow:0 6px 14px rgba(14,26,20,.18)" style-hover="background:#128A54;transform:translateY(-1px)">{{ L.nav.cta }}</a>
       </sc-if>
       <sc-if value="{{ isMobile }}">
@@ -547,12 +601,11 @@
       <div id="ifm-mobile-menu" style="border-top:1px solid #E6EAE7;background:#fff;padding:14px 20px 20px;display:grid;gap:4px">
         <a href="{{ hrefRestaurants }}" onClick="{{ goRestaurantsMobile }}" aria-current="{{ ariaCurrentRestaurants }}" style="display:block;text-align:left;padding:14px 8px;font-size:16px;color:#0E1A14;text-decoration:none;border-radius:12px;min-height:48px;line-height:20px" style-hover="background:#F3FAF6">{{ L.nav.findIngredients }}</a>
         <a href="{{ hrefSuppliers }}" onClick="{{ goSuppliersMobile }}" aria-current="{{ ariaCurrentSuppliers }}" style="display:block;text-align:left;padding:14px 8px;font-size:16px;color:#0E1A14;text-decoration:none;border-radius:12px;min-height:48px;line-height:20px" style-hover="background:#F3FAF6">{{ L.nav.becomeSupplier }}</a>
-        <a href="{{ hrefHow }}" onClick="{{ goHowMobile }}" style="display:block;text-align:left;padding:14px 8px;font-size:16px;color:#0E1A14;text-decoration:none;border-radius:12px;min-height:48px;line-height:20px" style-hover="background:#F3FAF6">{{ L.nav.features }}</a>
-        <a href="{{ hrefContact }}" onClick="{{ goContactMobile }}" aria-current="{{ ariaCurrentContact }}" style="display:block;text-align:left;padding:14px 8px;font-size:16px;color:#0E1A14;text-decoration:none;border-radius:12px;min-height:48px;line-height:20px" style-hover="background:#F3FAF6">{{ L.nav.faq }}</a>
+        <a href="{{ hrefQa }}" onClick="{{ goQaMobile }}" aria-current="{{ ariaCurrentQa }}" style="display:block;text-align:left;padding:14px 8px;font-size:16px;color:#0E1A14;text-decoration:none;border-radius:12px;min-height:48px;line-height:20px" style-hover="background:#F3FAF6">{{ L.nav.faq }}</a>
         <a href="{{ hrefAbout }}" onClick="{{ goAboutMobile }}" aria-current="{{ ariaCurrentAbout }}" style="display:block;text-align:left;padding:14px 8px;font-size:16px;color:#0E1A14;text-decoration:none;border-radius:12px;min-height:48px;line-height:20px" style-hover="background:#F3FAF6">{{ L.nav.about }}</a>
         <a href="{{ hrefNews }}" onClick="{{ goNewsMobile }}" style="display:block;text-align:left;padding:14px 8px;font-size:16px;color:#0E1A14;text-decoration:none;border-radius:12px;min-height:48px;line-height:20px" style-hover="background:#F3FAF6">{{ L.nav.news }}</a>
         <a href="{{ hrefContact }}" onClick="{{ goContactMobile }}" aria-current="{{ ariaCurrentContact }}" style="display:block;text-align:left;padding:14px 8px;font-size:16px;color:#0E1A14;text-decoration:none;border-radius:12px;min-height:48px;line-height:20px" style-hover="background:#F3FAF6">{{ L.nav.contact }}</a>
-        <a href="{{ langHref }}" onClick="{{ switchLangMobile }}" lang="{{ langTag }}" aria-label="{{ langAria }}" style="display:block;text-align:left;padding:14px 8px;font-size:16px;font-weight:600;color:#0B6B40;text-decoration:none;border-radius:12px;min-height:48px;line-height:20px;border-top:1px solid #E6EAE7;margin-top:6px" style-hover="background:#F3FAF6">{{ langLabel }}</a>
+        <a href="{{ langHref }}" onClick="{{ switchLangMobile }}" lang="{{ langTag }}" aria-label="{{ langAria }}" style="display:flex;align-items:center;gap:10px;text-align:left;padding:14px 8px;font-size:16px;font-weight:600;color:#0B6B40;text-decoration:none;border-radius:12px;min-height:48px;line-height:20px;border-top:1px solid #E6EAE7;margin-top:6px" style-hover="background:#F3FAF6"><img src="{{ langFlag }}" alt="" width="20" height="14" loading="lazy" decoding="async" style="display:block;width:20px;height:14px;border-radius:2px;flex:0 0 auto">{{ langLabel }}</a>
         <a href="{{ hrefContact }}" onClick="{{ openAI }}" style="margin-top:8px;display:block;text-align:center;background:#128A54;color:#fff;padding:16px;border-radius:999px;font-size:16px;font-weight:700;text-decoration:none;box-shadow:0 10px 22px rgba(18,138,84,.26)">{{ L.nav.cta }}</a>
       </div>
     </sc-if>
@@ -568,30 +621,32 @@
       <!-- 世界地圖由 d3 + world-atlas 在 drawMap() 畫進這個容器 -->
       <div ref="{{ mapRef }}" aria-hidden="true" style="position:absolute;inset:0;overflow:hidden;pointer-events:none"></div>
       <div style="position:absolute;top:-220px;right:-140px;width:640px;height:640px;background:radial-gradient(circle,rgba(18,138,84,.09),transparent 68%)"></div>
-      <div style="position:relative;max-width:860px;margin:0 auto;padding:clamp(56px,9vw,92px) 20px clamp(52px,8vw,84px);text-align:center;display:flex;flex-direction:column;align-items:center">
-        <div style="display:inline-flex;align-items:center;gap:9px;border:1px solid #DCE3DE;background:#fff;border-radius:999px;padding:7px 16px;font-family:'Space Grotesk',sans-serif;font-size:11.5px;letter-spacing:.18em;color:#5E6E65">
+      <div class="mc-heroinner" style="position:relative;max-width:860px;margin:0 auto;padding:clamp(56px,9vw,92px) 20px clamp(52px,8vw,84px);text-align:center;display:flex;flex-direction:column;align-items:center">
+        <div class="mc-eyebrow mc-badge" style="display:inline-flex;align-items:center;gap:9px;border:1px solid #DCE3DE;background:#fff;border-radius:999px;padding:7px 16px;font-family:'Space Grotesk',sans-serif;font-size:11.5px;letter-spacing:.18em;color:#5E6E65">
           <span style="width:6px;height:6px;border-radius:50%;background:#128A54;animation:pulseDot 2s ease-in-out infinite"></span>B2B MATCHING ENGINE
         </div>
-        <h1 style="margin-top:26px;font-size:clamp(34px,5.4vw,58px);line-height:1.22;font-weight:900;letter-spacing:-.02em">
-          {{ L.home.heroTitlePre }}<span style="color:#128A54">{{ rotating }}</span>{{ L.home.heroTitlePost }}
+        <h1 class="mc-h1" style="margin-top:26px;font-size:clamp(34px,5.4vw,58px);line-height:1.22;font-weight:900;letter-spacing:-.02em">
+          <!-- 輪播的是「整句」不是「一個詞」—— 三句裡有一句不是「免費找到…」開頭,
+               沒辦法共用前綴。每句自己帶 pre / hl(綠字) / post 三段。 -->
+          {{ rotating.pre }}<span style="color:#128A54">{{ rotating.hl }}</span>{{ rotating.post }}
         </h1>
-        <p style="margin-top:20px;font-size:17px;line-height:1.9;color:#4B5A52;max-width:520px;font-weight:400">{{ L.home.heroSubA }}<br>{{ L.home.heroSubB }}</p>
+        <p class="mc-lead" style="margin-top:20px;font-size:17px;line-height:1.9;color:#4B5A52;max-width:520px;font-weight:400">{{ L.home.heroSubA }}<br>{{ L.home.heroSubB }}</p>
 
         <!-- 搜尋不是真的搜尋:送出後把關鍵字帶進右下角的 AI 採購助手,由它接著訪談
              (數量、頻率、配送區域…),最後引導留下聯絡方式。見 askAI() 與 window.IfmAI -->
-        <form onSubmit="{{ askAI }}" role="search" aria-label="{{ L.home.searchAriaLabel }}" style="margin-top:34px;width:100%;max-width:620px;display:flex;gap:10px;flex-wrap:wrap;background:#fff;border:1px solid #DCE3DE;border-radius:999px;padding:8px 8px 8px 10px;box-shadow:0 14px 34px rgba(14,26,20,.08)">
-          <input name="q" aria-label="{{ L.home.searchAriaLabel }}" autocomplete="off" placeholder="{{ L.home.searchPlaceholder }}" style="flex:1;min-width:190px;border:none;outline:none;background:transparent;color:#0E1A14;font-size:15.5px;padding:12px 14px">
-          <button type="submit" style="border:none;background:#128A54;color:#fff;font-size:15px;font-weight:700;padding:13px 30px;border-radius:999px;cursor:pointer;box-shadow:0 8px 18px rgba(18,138,84,.3)" style-hover="background:#0B6B40">{{ L.home.searchButton }}</button>
+        <form onSubmit="{{ askAI }}" role="search" class="mc-heroform" aria-label="{{ L.home.searchAriaLabel }}" style="margin-top:34px;width:100%;max-width:620px;display:flex;gap:10px;flex-wrap:wrap;background:#fff;border:1px solid #DCE3DE;border-radius:999px;padding:8px 8px 8px 10px;box-shadow:0 14px 34px rgba(14,26,20,.08)">
+          <input name="q" class="mc-searchinput" aria-label="{{ L.home.searchAriaLabel }}" autocomplete="off" placeholder="{{ L.home.searchPlaceholder }}" style="flex:1;min-width:190px;border:none;outline:none;background:transparent;color:#0E1A14;font-size:15.5px;padding:12px 14px">
+          <button type="submit" class="mc-searchbtn" style="border:none;background:#128A54;color:#fff;font-size:15px;font-weight:700;padding:13px 30px;border-radius:999px;cursor:pointer;box-shadow:0 8px 18px rgba(18,138,84,.3)" style-hover="background:#0B6B40">{{ L.home.searchButton }}</button>
         </form>
-        <div style="margin-top:16px;display:flex;gap:8px;flex-wrap:wrap;justify-content:center">
+        <div class="mc-hottags" style="margin-top:16px;display:flex;gap:8px;flex-wrap:wrap;justify-content:center">
           <sc-for list="{{ hotTags }}" as="t" hint-placeholder-count="6">
-            <button type="button" onClick="{{ t.ask }}" style="font-size:12.5px;color:#5E6E65;border:1px solid #E6EAE7;background:#fff;border-radius:999px;padding:6px 14px;cursor:pointer" style-hover="border-color:#128A54;color:#0B6B40">{{ t.label }}</button>
+            <button type="button" onClick="{{ t.ask }}" class="mc-hottag" style="font-size:12.5px;color:#5E6E65;border:1px solid #E6EAE7;background:#fff;border-radius:999px;padding:6px 14px;cursor:pointer" style-hover="border-color:#128A54;color:#0B6B40">{{ t.label }}</button>
           </sc-for>
         </div>
 
-        <div style="margin-top:38px;display:flex;gap:10px;flex-wrap:wrap;justify-content:center">
+        <div class="mc-promises" style="margin-top:38px;display:flex;gap:10px;flex-wrap:wrap;justify-content:center">
           <sc-for list="{{ heroPromises }}" as="p" hint-placeholder-count="3">
-            <span style="display:inline-flex;align-items:center;gap:8px;background:#EAF6F0;color:#0B6B40;border-radius:999px;padding:10px 18px;font-size:14px;font-weight:700">
+            <span class="mc-promise" style="display:inline-flex;align-items:center;gap:8px;background:#EAF6F0;color:#0B6B40;border-radius:999px;padding:10px 18px;font-size:14px;font-weight:700">
               <span style="width:18px;height:18px;border-radius:999px;background:#128A54;color:#fff;font-size:11px;display:flex;align-items:center;justify-content:center">✓</span>{{ p }}
             </span>
           </sc-for>
@@ -600,34 +655,34 @@
     </section>
 
     <section class="ifm-v2" style="border-bottom:1px solid #E6EAE7">
-      <div ref="{{ statsRef }}" style="max-width:1240px;margin:0 auto;padding:0 26px;display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr))">
+      <div class="mc-stats" ref="{{ statsRef }}" style="max-width:1240px;margin:0 auto;padding:0 26px;display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr))">
         <sc-for list="{{ stats }}" as="s" hint-placeholder-count="4">
-          <div style="padding:34px 22px 34px 0">
-            <div style="font-family:'Space Grotesk',sans-serif;font-size:32px;font-weight:700">{{ s.num }}</div>
-            <div style="font-size:13px;color:#4B5A52;margin-top:6px">{{ s.label }}</div>
+          <div class="mc-statcell2" style="padding:34px 22px 34px 0">
+            <div class="mc-statnum" style="font-family:'Space Grotesk',sans-serif;font-size:32px;font-weight:700">{{ s.num }}</div>
+            <div class="mc-statlabel" style="font-size:13px;color:#4B5A52;margin-top:6px">{{ s.label }}</div>
           </div>
         </sc-for>
       </div>
     </section>
 
     <section class="ifm-v2" style="background:#F7F9F8;border-bottom:1px solid #E6EAE7">
-      <div style="max-width:1240px;margin:0 auto;padding:clamp(52px,8vw,88px) 20px">
+      <div class="mc-sec" style="max-width:1240px;margin:0 auto;padding:clamp(52px,8vw,88px) 20px">
         <div style="max-width:560px">
-          <div style="font-family:'Space Grotesk',sans-serif;font-size:11.5px;letter-spacing:.2em;color:#5E6E65">WHO IT'S FOR</div>
+          <div class="mc-eyebrow" style="font-family:'Space Grotesk',sans-serif;font-size:11.5px;letter-spacing:.2em;color:#5E6E65">WHO IT'S FOR</div>
           <h2 style="margin-top:16px;font-size:clamp(26px,3.4vw,38px);line-height:1.4">{{ L.home.audienceTitleA }}<br>{{ L.home.audienceTitleB }}</h2>
           <p style="margin-top:16px;font-size:16px;line-height:1.9;color:#4B5A52;font-weight:300">{{ L.home.audienceSub }}</p>
         </div>
         <!-- 原本是四等分的硬邊框格線(每格等寬等高),改成 bento:寬窄交錯 + 上下位移。
              span 由 renderVals 算出來掛在 a.span,不寫死在模板裡。 -->
-        <div class="ifm-bento" style="margin-top:44px">
+        <div class="ifm-bento mc-aud" style="margin-top:44px">
           <sc-for list="{{ audiences }}" as="a" hint-placeholder-count="4">
-            <div class="ifm-card {{ a.span }}" data-reveal>
+            <div class="ifm-card mc-audcard {{ a.span }}" data-reveal>
               <div style="display:flex;align-items:center;justify-content:space-between;gap:12px">
                 <div style="font-family:'Space Grotesk',sans-serif;font-size:11.5px;letter-spacing:.16em;color:#0B6B40">{{ a.no }}</div>
-                <img src="{{ a.icon }}" alt="" width="160" height="160" loading="lazy" style="width:60px;height:60px;display:block">
+                <img class="mc-audicon" src="{{ a.icon }}" alt="" width="160" height="160" loading="lazy" style="width:60px;height:60px;display:block">
               </div>
-              <h3 style="margin-top:14px;font-size:19px">{{ a.title }}</h3>
-              <p style="margin-top:10px;font-size:14.5px;line-height:1.9;color:#4B5A52;font-weight:300;text-wrap:pretty">{{ a.desc }}</p>
+              <h3 class="mc-cardtitle" style="margin-top:14px;font-size:19px">{{ a.title }}</h3>
+              <p class="mc-cardp" style="margin-top:10px;font-size:14.5px;line-height:1.9;color:#4B5A52;font-weight:300;text-wrap:pretty">{{ a.desc }}</p>
             </div>
           </sc-for>
         </div>
@@ -635,63 +690,62 @@
     </section>
 
     <section class="ifm-v2" id="how-it-works" style="border-bottom:1px solid #E6EAE7;scroll-margin-top:80px">
-      <div style="max-width:1240px;margin:0 auto;padding:clamp(48px,7vw,80px) 20px">
+      <div class="mc-sec" style="max-width:1240px;margin:0 auto;padding:clamp(48px,7vw,80px) 20px">
         <div style="text-align:center">
-          <div style="font-family:'Space Grotesk',sans-serif;font-size:11.5px;letter-spacing:.2em;color:#5E6E65">HOW IT WORKS</div>
+          <div class="mc-eyebrow" style="font-family:'Space Grotesk',sans-serif;font-size:11.5px;letter-spacing:.2em;color:#5E6E65">HOW IT WORKS</div>
           <h2 style="margin-top:14px;font-size:clamp(26px,3.4vw,38px)">{{ L.home.flowTitlePre }}<span style="color:#128A54">{{ L.home.flowTitleHighlight }}</span></h2>
         </div>
-        <div style="margin-top:44px;background:#F3FAF6;border-radius:32px;padding:clamp(24px,4vw,48px)">
-          <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:24px">
+        <div class="mc-flowpanel" style="margin-top:44px;background:#F3FAF6;border-radius:32px;padding:clamp(24px,4vw,48px)">
+          <div class="mc-flowgrid" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:24px">
             <sc-for list="{{ flowA }}" as="s" hint-placeholder-count="3">
-              <div style="background:#fff;border-radius:24px;padding:22px;box-shadow:0 6px 18px rgba(18,138,84,.08)">
+              <div class="mc-flowcard" style="background:#fff;border-radius:24px;padding:22px;box-shadow:0 6px 18px rgba(18,138,84,.08)">
                 <div style="display:flex;align-items:center;gap:10px">
-                  <span style="width:30px;height:30px;border-radius:999px;background:#128A54;color:#fff;font-family:'Space Grotesk',sans-serif;font-size:14px;font-weight:700;display:flex;align-items:center;justify-content:center">{{ s.n }}</span>
-                  <span style="font-size:17px;font-weight:700">{{ s.title }}</span>
+                  <span class="mc-flownum" style="width:30px;height:30px;border-radius:999px;background:#128A54;color:#fff;font-family:'Space Grotesk',sans-serif;font-size:14px;font-weight:700;display:flex;align-items:center;justify-content:center">{{ s.n }}</span>
+                  <span class="mc-flowtitle" style="font-size:17px;font-weight:700">{{ s.title }}</span>
                 </div>
-                <div style="margin-top:16px;height:130px;border-radius:18px;background:#EFF6F2;display:flex;align-items:center;justify-content:center;overflow:hidden">
+                <div class="mc-flowart" style="margin-top:16px;height:130px;border-radius:18px;background:#EFF6F2;display:flex;align-items:center;justify-content:center;overflow:hidden">
                   <img src="{{ s.img }}" alt="" width="240" height="130" loading="lazy" style="height:100%;width:auto;max-width:100%;display:block">
                 </div>
-                <p style="margin-top:14px;font-size:14px;color:#4B5A52;font-weight:400">{{ s.desc }}</p>
+                <p class="mc-flowdesc" style="margin-top:14px;font-size:14px;color:#4B5A52;font-weight:400">{{ s.desc }}</p>
               </div>
             </sc-for>
           </div>
-          <div aria-hidden="true" style="display:flex;justify-content:center;padding:18px 0;color:#7ECBA5;font-size:22px">↓</div>
-          <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:24px">
+          <div class="mc-flowarrow" aria-hidden="true" style="display:flex;justify-content:center;padding:18px 0;color:#7ECBA5;font-size:22px">↓</div>
+          <div class="mc-flowgrid" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:24px">
             <sc-for list="{{ flowB }}" as="s" hint-placeholder-count="3">
-              <div style="background:#fff;border-radius:24px;padding:22px;box-shadow:0 6px 18px rgba(233,168,58,.1)">
+              <div class="mc-flowcard" style="background:#fff;border-radius:24px;padding:22px;box-shadow:0 6px 18px rgba(233,168,58,.1)">
                 <div style="display:flex;align-items:center;gap:10px">
-                  <span style="width:30px;height:30px;border-radius:999px;background:#A85F00;color:#fff;font-family:'Space Grotesk',sans-serif;font-size:14px;font-weight:700;display:flex;align-items:center;justify-content:center">{{ s.n }}</span>
-                  <span style="font-size:17px;font-weight:700">{{ s.title }}</span>
+                  <span class="mc-flownum" style="width:30px;height:30px;border-radius:999px;background:#A85F00;color:#fff;font-family:'Space Grotesk',sans-serif;font-size:14px;font-weight:700;display:flex;align-items:center;justify-content:center">{{ s.n }}</span>
+                  <span class="mc-flowtitle" style="font-size:17px;font-weight:700">{{ s.title }}</span>
                 </div>
-                <div style="margin-top:16px;height:130px;border-radius:18px;background:#FBF3E5;display:flex;align-items:center;justify-content:center;overflow:hidden">
+                <div class="mc-flowart" style="margin-top:16px;height:130px;border-radius:18px;background:#FBF3E5;display:flex;align-items:center;justify-content:center;overflow:hidden">
                   <img src="{{ s.img }}" alt="" width="240" height="130" loading="lazy" style="height:100%;width:auto;max-width:100%;display:block">
                 </div>
-                <p style="margin-top:14px;font-size:14px;color:#4B5A52;font-weight:400">{{ s.desc }}</p>
+                <p class="mc-flowdesc" style="margin-top:14px;font-size:14px;color:#4B5A52;font-weight:400">{{ s.desc }}</p>
               </div>
             </sc-for>
           </div>
         </div>
         <div style="text-align:center">
-          <a href="{{ hrefContact }}" onClick="{{ openAI }}" style="display:inline-block;margin-top:40px;background:#128A54;color:#fff;font-size:16px;font-weight:700;padding:16px 38px;border-radius:999px;text-decoration:none;cursor:pointer;box-shadow:0 10px 22px rgba(18,138,84,.26)" style-hover="background:#0B6B40;transform:translateY(-2px)">{{ L.home.flowCta }}</a>
+          <a href="{{ hrefContact }}" class="mc-flowcta" onClick="{{ openAI }}" style="display:inline-block;margin-top:40px;background:#128A54;color:#fff;font-size:16px;font-weight:700;padding:16px 38px;border-radius:999px;text-decoration:none;cursor:pointer;box-shadow:0 10px 22px rgba(18,138,84,.26)" style-hover="background:#0B6B40;transform:translateY(-2px)">{{ L.home.flowCta }}</a>
         </div>
       </div>
     </section>
 
     <section class="ifm-v2" style="border-bottom:1px solid #E6EAE7">
-      <div style="max-width:1240px;margin:0 auto;padding:clamp(52px,8vw,88px) 20px">
-        <div style="display:flex;align-items:baseline;justify-content:space-between;gap:18px;flex-wrap:wrap">
+      <div class="mc-sec" style="max-width:1240px;margin:0 auto;padding:clamp(52px,8vw,88px) 20px">
+        <div class="mc-cathead" style="display:flex;align-items:baseline;justify-content:space-between;gap:18px;flex-wrap:wrap">
           <h2 style="font-size:clamp(26px,3.4vw,38px)">{{ L.home.categoriesTitle }}</h2>
-          <p style="font-size:14px;color:#4B5A52;font-weight:300">{{ L.home.categoriesSub }}</p>
+          <p class="mc-catsub" style="font-size:14px;color:#4B5A52;font-weight:300">{{ L.home.categoriesSub }}</p>
         </div>
-        <div style="margin-top:34px;display:grid;grid-template-columns:repeat(auto-fill,minmax(168px,1fr));gap:0;border-top:1px solid #E1E7E3;border-left:1px solid #E1E7E3;border-radius:12px;overflow:hidden">
+        <div class="mc-catgrid" style="margin-top:34px;display:grid;grid-template-columns:repeat(auto-fill,minmax(168px,1fr));gap:0;border-top:1px solid #E1E7E3;border-left:1px solid #E1E7E3;border-radius:12px;overflow:hidden">
           <sc-for list="{{ categories }}" as="c" hint-placeholder-count="12">
-            <a href="{{ hrefRestaurants }}" onClick="{{ goRestaurants }}" style="display:block;cursor:pointer;background:#fff;border-right:1px solid #E1E7E3;border-bottom:1px solid #E1E7E3;text-align:left;text-decoration:none;color:inherit" style-hover="background:#F7F9F8">
-              <div style="height:96px;background:#F7F9F8;border-bottom:1px dashed #E1E7E3;display:flex;align-items:center;justify-content:center;overflow:hidden">
-                <img src="{{ c.img }}" alt="" width="96" height="96" loading="lazy" style="height:76px;width:76px;border-radius:14px;display:block">
+            <a href="{{ hrefRestaurants }}" class="mc-catcell" onClick="{{ goRestaurants }}" style="display:block;cursor:pointer;background:#fff;border-right:1px solid #E1E7E3;border-bottom:1px solid #E1E7E3;text-align:left;text-decoration:none;color:inherit" style-hover="background:#F7F9F8">
+              <div class="mc-catart" style="height:96px;background:#F7F9F8;border-bottom:1px dashed #E1E7E3;display:flex;align-items:center;justify-content:center;overflow:hidden">
+                <img class="mc-catimg" src="{{ c.img }}" alt="" width="96" height="96" loading="lazy" style="height:76px;width:76px;border-radius:14px;display:block">
               </div>
-              <div style="padding:14px 16px;display:flex;align-items:center;justify-content:space-between">
-                <span style="font-size:14.5px;color:#0E1A14">{{ c.name }}</span>
-                <span aria-hidden="true" style="color:#128A54;font-size:13px">→</span>
+              <div class="mc-catname" style="padding:14px 16px">
+                <span class="mc-catlabel" style="font-size:14.5px;color:#0E1A14">{{ c.name }}</span>
               </div>
             </a>
           </sc-for>
@@ -700,18 +754,18 @@
     </section>
 
     <section class="ifm-v2" style="background:#0E1A14;color:#E9EFEB">
-      <div style="max-width:1240px;margin:0 auto;padding:clamp(52px,8vw,88px) 20px;display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:56px">
+      <div class="mc-sec mc-problem" style="max-width:1240px;margin:0 auto;padding:clamp(52px,8vw,88px) 20px;display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:56px">
         <div>
-          <div style="font-family:'Space Grotesk',sans-serif;font-size:11.5px;letter-spacing:.2em;color:#7FA490">THE PROBLEM</div>
+          <div class="mc-eyebrow" style="font-family:'Space Grotesk',sans-serif;font-size:11.5px;letter-spacing:.2em;color:#7FA490">THE PROBLEM</div>
           <h2 style="margin-top:16px;font-size:clamp(26px,3.4vw,36px);line-height:1.45;color:#fff">{{ L.home.problemTitleA }}<br>{{ L.home.problemTitleB }}</h2>
-          <p style="margin-top:20px;font-size:15.5px;line-height:1.95;color:#AFC0B6;font-weight:300;max-width:420px;text-wrap:pretty">{{ L.home.problemBody }}</p>
-          <a href="{{ hrefHow }}" onClick="{{ goHow }}" style="display:inline-block;margin-top:26px;border:1px solid rgba(255,255,255,.4);background:transparent;color:#fff;padding:14px 30px;border-radius:999px;font-size:14.5px;font-weight:700;text-decoration:none;cursor:pointer" style-hover="background:#fff;color:#0E1A14">{{ L.home.problemCta }}</a>
+          <p class="mc-problemp" style="margin-top:20px;font-size:15.5px;line-height:1.95;color:#AFC0B6;font-weight:300;max-width:420px;text-wrap:pretty">{{ L.home.problemBody }}</p>
+          <a href="{{ hrefHow }}" class="mc-problemcta" onClick="{{ goHow }}" style="display:inline-block;margin-top:26px;border:1px solid rgba(255,255,255,.4);background:transparent;color:#fff;padding:14px 30px;border-radius:999px;font-size:14.5px;font-weight:700;text-decoration:none;cursor:pointer" style-hover="background:#fff;color:#0E1A14">{{ L.home.problemCta }}</a>
         </div>
         <div>
           <sc-for list="{{ pains }}" as="p" hint-placeholder-count="4">
-            <div style="display:flex;gap:16px;align-items:center;padding:18px 0;border-top:1px solid rgba(255,255,255,.14)">
-              <img src="{{ p.icon }}" alt="" width="120" height="120" loading="lazy" style="width:44px;height:44px;flex:0 0 44px;display:block">
-              <span style="font-size:15px;line-height:1.85;color:#CFDAD3;font-weight:300">{{ p.text }}</span>
+            <div class="mc-painrow" style="display:flex;gap:16px;align-items:center;padding:18px 0;border-top:1px solid rgba(255,255,255,.14)">
+              <img class="mc-painicon" src="{{ p.icon }}" alt="" width="120" height="120" loading="lazy" style="width:44px;height:44px;flex:0 0 44px;display:block">
+              <span class="mc-painline" style="font-size:15px;line-height:1.85;color:#CFDAD3;font-weight:300">{{ p.text }}</span>
             </div>
           </sc-for>
         </div>
@@ -719,13 +773,13 @@
     </section>
 
     <section class="ifm-v2" style="border-bottom:1px solid #E6EAE7">
-      <div style="max-width:1240px;margin:0 auto;padding:clamp(52px,8vw,88px) 20px">
+      <div class="mc-sec" style="max-width:1240px;margin:0 auto;padding:clamp(52px,8vw,88px) 20px">
         <h2 style="font-size:clamp(26px,3.4vw,38px)">{{ L.home.testimonialsTitle }}</h2>
-        <div style="margin-top:44px;display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:20px">
+        <div class="mc-quotegrid" style="margin-top:44px;display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:20px">
           <sc-for list="{{ testimonials }}" as="t" hint-placeholder-count="3">
-            <div style="background:#fff;border:1px solid #E1E7E3;border-radius:20px;padding:28px">
-              <p style="font-size:16px;line-height:1.95;color:#1A2720;font-weight:300;text-wrap:pretty">{{ L.home.quoteOpen }}{{ t.quote }}{{ L.home.quoteClose }}</p>
-              <div style="margin-top:22px;padding-top:16px;border-top:1px solid #EEF1EF;font-size:13px;color:#4B5A52">{{ t.who }}{{ L.home.bylineSep }}{{ t.role }}</div>
+            <div class="mc-quotecard" style="background:#fff;border:1px solid #E1E7E3;border-radius:20px;padding:28px">
+              <p class="mc-quotep" style="font-size:16px;line-height:1.95;color:#1A2720;font-weight:300;text-wrap:pretty">{{ L.home.quoteOpen }}{{ t.quote }}{{ L.home.quoteClose }}</p>
+              <div class="mc-quoteby" style="margin-top:22px;padding-top:16px;border-top:1px solid #EEF1EF;font-size:13px;color:#4B5A52">{{ t.who }}{{ L.home.bylineSep }}{{ t.role }}</div>
             </div>
           </sc-for>
         </div>
@@ -733,34 +787,34 @@
     </section>
 
     <section class="ifm-v2" style="background:#F7F9F8;border-bottom:1px solid #E6EAE7">
-      <div style="max-width:1240px;margin:0 auto;padding:clamp(48px,7vw,78px) 20px;display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:40px">
+      <div class="mc-sec mc-trust" style="max-width:1240px;margin:0 auto;padding:clamp(48px,7vw,78px) 20px;display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:40px">
         <sc-for list="{{ trust }}" as="t" hint-placeholder-count="3">
           <div>
-            <img src="{{ t.icon }}" alt="" width="160" height="160" loading="lazy" style="width:64px;height:64px;display:block;margin-bottom:16px">
+            <img class="mc-trusticon" src="{{ t.icon }}" alt="" width="160" height="160" loading="lazy" style="width:64px;height:64px;display:block;margin-bottom:16px">
             <div style="font-family:'Space Grotesk',sans-serif;font-size:11.5px;letter-spacing:.16em;color:#0B6B40">{{ t.no }}</div>
-            <h3 style="margin-top:14px;font-size:19px">{{ t.title }}</h3>
-            <p style="margin-top:10px;font-size:14.5px;line-height:1.9;color:#4B5A52;font-weight:300">{{ t.desc }}</p>
+            <h3 class="mc-cardtitle" style="margin-top:14px;font-size:19px">{{ t.title }}</h3>
+            <p class="mc-cardp" style="margin-top:10px;font-size:14.5px;line-height:1.9;color:#4B5A52;font-weight:300">{{ t.desc }}</p>
           </div>
         </sc-for>
       </div>
     </section>
 
-    <section class="ifm-v2" id="news" style="max-width:1240px;margin:0 auto;padding:clamp(52px,8vw,88px) 20px;scroll-margin-top:80px">
-      <div style="display:flex;align-items:baseline;justify-content:space-between;gap:16px;flex-wrap:wrap">
+    <section class="ifm-v2 mc-sec" id="news" style="max-width:1240px;margin:0 auto;padding:clamp(52px,8vw,88px) 20px;scroll-margin-top:80px">
+      <div class="mc-newshead" style="display:flex;align-items:baseline;justify-content:space-between;gap:16px;flex-wrap:wrap">
         <h2 style="font-size:clamp(26px,3.4vw,38px)">{{ L.home.newsTitle }}</h2>
-        <a href="{{ hrefNews }}" onClick="{{ goNews }}" style="color:#128A54;font-size:14.5px;text-decoration:none;cursor:pointer">{{ L.home.newsAll }}</a>
+        <a href="{{ hrefNews }}" class="mc-alllink" onClick="{{ goNews }}" style="color:#128A54;font-size:14.5px;text-decoration:none;cursor:pointer">{{ L.home.newsAll }}</a>
       </div>
-      <div style="margin-top:34px;display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:20px">
+      <div class="mc-newsgrid" style="margin-top:34px;display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:20px">
         <sc-for list="{{ articlesTop }}" as="a" hint-placeholder-count="3">
           <article style="border:1px solid #E1E7E3;border-radius:20px;overflow:hidden;background:#fff" style-hover="border-color:#128A54">
             <a href="{{ a.href }}" onClick="{{ a.go }}" style="display:block;color:inherit;text-decoration:none">
-              <div style="height:158px;background:#F7F9F8;border-bottom:1px dashed #E1E7E3;overflow:hidden">
+              <div class="mc-newscover" style="height:158px;background:#F7F9F8;border-bottom:1px dashed #E1E7E3;overflow:hidden">
                 <img src="{{ a.img }}" alt="" width="480" height="300" loading="lazy" style="width:100%;height:100%;object-fit:cover;display:block">
               </div>
               <div style="padding:20px">
-                <div style="font-family:'Space Grotesk',sans-serif;font-size:11px;letter-spacing:.16em;color:#0B6B40">{{ a.tag }}</div>
-                <h3 style="margin-top:10px;font-size:17px;line-height:1.65;font-weight:500;text-wrap:pretty">{{ a.title }}</h3>
-                <div style="margin-top:12px;font-family:'Space Grotesk',sans-serif;font-size:12px;color:#5E6E65">{{ a.date }}</div>
+                <div class="mc-newstag" style="font-family:'Space Grotesk',sans-serif;font-size:11px;letter-spacing:.16em;color:#0B6B40">{{ a.tag }}</div>
+                <h3 class="mc-newstitle" style="margin-top:10px;font-size:17px;line-height:1.65;font-weight:500;text-wrap:pretty">{{ a.title }}</h3>
+                <div class="mc-newsdate" style="margin-top:12px;font-family:'Space Grotesk',sans-serif;font-size:12px;color:#5E6E65">{{ a.date }}</div>
               </div>
             </a>
           </article>
@@ -770,7 +824,7 @@
 
     <!-- 設計稿裡這條 CTA 是全站共用;這裡放在首頁區塊內,其他頁維持各自原有的 CTA -->
     <section class="ifm-v2" style="background:#F7F9F8;border-top:1px solid #E6EAE7">
-      <div style="max-width:1240px;margin:0 auto;padding:clamp(48px,7vw,78px) 20px;display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:32px;align-items:center">
+      <div class="mc-sec mc-finalcta" style="max-width:1240px;margin:0 auto;padding:clamp(48px,7vw,78px) 20px;display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:32px;align-items:center">
         <h2 style="font-size:clamp(24px,3vw,34px);line-height:1.45">{{ L.home.ctaTitleA }}<br>{{ L.home.ctaTitleB }}</h2>
         <div style="display:flex;gap:12px;flex-wrap:wrap;justify-self:end">
           <a href="{{ hrefContact }}" onClick="{{ openAI }}" style="background:#128A54;color:#fff;padding:16px 34px;border-radius:999px;font-size:15.5px;font-weight:700;text-decoration:none;cursor:pointer;box-shadow:0 10px 22px rgba(18,138,84,.26)" style-hover="background:#0B6B40">{{ L.home.ctaPrimary }}</a>
@@ -1310,62 +1364,203 @@
 
   <!-- ============ PAGE: CONTACT ============ -->
   <sc-if value="{{ isContact }}">
-  <div data-screen-label="聯絡我們">
-    <div class="support-wrap contact-grid" style="padding-top:84px;padding-bottom:84px;">
+  <div data-screen-label="異業合作">
+
+    <!-- Hero:左文右圖,沿用 /about 那張「兩端角色 + 中間平台」的插圖 —— 異業合作講的正是
+         「把第三方接到這座橋上」,語意對得上,不另外畫一張。 -->
+    <section class="support-wrap ifm-news-hero" style="padding-top:88px;padding-bottom:72px;">
       <div data-reveal>
-        <div style="font-family:'Space Grotesk','Noto Sans TC',sans-serif;font-size:13px;font-weight:700;color:#166534;letter-spacing:.14em;text-transform:uppercase;margin-bottom:16px;">Contact us</div>
-        <h1 class="support-title" style="font-family:'Space Grotesk','Noto Sans TC',sans-serif;font-size:44px;font-weight:900;color:#0e1a12;margin:0 0 20px;line-height:1.22;letter-spacing:-.01em;">{{ L.contact.heroTitle }}</h1>
-        <p style="font-size:18px;line-height:1.8;color:#5b6b62;margin:0 0 28px;">{{ L.contact.heroBody }}</p>
-
-        <div class="contact-role-grid" aria-label="{{ L.contact.roleGridLabel }}">
-          <a href="{{ restaurantRegistrationUrl }}" style="min-height:88px;padding:18px;border:1px solid #d7e3da;border-radius:16px;color:#17261c;text-decoration:none;background:#f7faf7;">
-            <img src="/assets/home-aud-1.svg" alt="" width="160" height="160" loading="lazy" style="width:40px;height:40px;display:block;margin-bottom:10px">
-            <strong style="display:block;margin-bottom:6px;">{{ L.contact.roleRestaurantTitle }}</strong>
-            <span style="font-size:14px;color:#5b6b62;">{{ L.contact.roleRestaurantAction }}</span>
-          </a>
-          <a href="{{ supplierApplicationUrl }}" style="min-height:88px;padding:18px;border:1px solid #d7e3da;border-radius:16px;color:#17261c;text-decoration:none;background:#f7faf7;">
-            <img src="/assets/home-aud-4.svg" alt="" width="160" height="160" loading="lazy" style="width:40px;height:40px;display:block;margin-bottom:10px">
-            <strong style="display:block;margin-bottom:6px;">{{ L.contact.roleSupplierTitle }}</strong>
-            <span style="font-size:14px;color:#5b6b62;">{{ L.contact.roleSupplierAction }}</span>
-          </a>
-        </div>
-        <div style="display:flex; flex-direction:column; gap:22px;">
-          <div style="display:flex; gap:14px; align-items:center;">
-            <span style="width:46px;height:46px;border-radius:13px;background:#eaf7e4;color:#1f9e4e;font-weight:900;display:flex;align-items:center;justify-content:center;">{{ L.contact.phoneIcon }}</span>
-            <div><div style="font-size:13px;color:#5b6b62;">{{ L.contact.phoneLabel }}</div><div style="font-size:17px;font-weight:700;color:#15231b;">02-7704-5539</div></div>
-          </div>
-          <div style="display:flex; gap:14px; align-items:center;">
-            <span style="width:46px;height:46px;border-radius:13px;background:#eaf7e4;color:#1f9e4e;font-weight:900;display:flex;align-items:center;justify-content:center;">@</span>
-            <div><div style="font-size:13px;color:#5b6b62;">{{ L.contact.emailLabel }}</div><div style="font-size:17px;font-weight:700;color:#15231b;">ifoodmaptw@gmail.com</div></div>
-          </div>
-          <div style="display:flex; gap:14px; align-items:center;">
-            <span style="width:46px;height:46px;border-radius:13px;background:#eaf7e4;color:#1f9e4e;font-weight:900;display:flex;align-items:center;justify-content:center;">{{ L.contact.hoursIcon }}</span>
-            <div><div style="font-size:13px;color:#5b6b62;">{{ L.contact.hoursLabel }}</div><div style="font-size:17px;font-weight:700;color:#15231b;">{{ L.contact.hoursValue }}</div></div>
-          </div>
-          <div style="display:flex; gap:14px; align-items:center;">
-            <span style="width:46px;height:46px;border-radius:13px;background:#06C755;color:#fff;font-weight:900;display:flex;align-items:center;justify-content:center;font-size:13px;">LINE</span>
-            <div><div style="font-size:13px;color:#5b6b62;">{{ L.contact.lineLabel }}</div><div style="font-size:17px;font-weight:700;color:#15231b;">{{ L.contact.lineValue }}</div></div>
-          </div>
-        </div>
+        <div style="font-family:'Space Grotesk','Noto Sans TC',sans-serif;font-size:13px;font-weight:700;color:#166534;letter-spacing:.14em;text-transform:uppercase;margin-bottom:16px;">{{ L.contact.heroEyebrow }}</div>
+        <h1 class="support-title" style="font-family:'Space Grotesk','Noto Sans TC',sans-serif;font-size:46px;font-weight:900;color:#0e1a12;margin:0 0 22px;line-height:1.22;letter-spacing:-.01em;">{{ L.contact.heroTitle }}</h1>
+        <p style="font-size:19px;line-height:1.85;color:#5b6b62;margin:0;">{{ L.contact.heroBody }}</p>
       </div>
+      <img class="ifm-news-hero__art" src="/assets/about-hero.svg" alt="" width="560" height="400" loading="lazy">
+    </section>
 
-      <!-- 需求單表單已移除(2026-09-23)。所有「送出媒合」現在一律交給右下角的 AI 採購助手 ——
-           助手本來就會問完品項/數量/配送區域/時程再收聯絡方式,比一張靜態表單問得清楚,
-           而且它自己會把 lead 寫進 landing_leads,沒有少收單。
-           這張卡仍然帶 id="demand-form-title",因為頁面上方的 aria 與錨點還指著它。 -->
-      <div class="ifm-card ifm-card--tint" data-reveal style="padding:38px;">
-        <h2 id="demand-form-title" style="font-family:'Space Grotesk','Noto Sans TC',sans-serif;font-size:24px;font-weight:800;color:#15231b;margin:0 0 10px;">{{ L.contact.aiTitle }}</h2>
-        <p style="font-size:15px;line-height:1.85;color:#4B5A52;margin:0 0 22px;">{{ L.contact.aiHelp }}</p>
-        <div style="font-size:12.5px;font-weight:700;letter-spacing:.1em;color:#0B6B40;text-transform:uppercase;margin-bottom:10px;">{{ L.contact.aiQuickLabel }}</div>
-        <ul class="ifm-chips" style="margin:0 0 26px;">
-          <sc-for list="{{ hotTags }}" as="t" hint-placeholder-count="6">
-            <li><button type="button" onClick="{{ t.ask }}" style="all:unset;cursor:pointer;">{{ t.label }}</button></li>
-          </sc-for>
-        </ul>
-        <button class="contact-submit" type="button" onClick="{{ openAI }}" style="width:100%;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,#46c138,#1f9e4e);color:#fff;font-weight:700;font-size:16px;padding:16px;border-radius:100px;text-align:center;cursor:pointer;box-shadow:0 12px 30px rgba(61,174,43,.24);">{{ L.contact.aiCta }}</button>
-        <p style="font-size:13px;line-height:1.7;color:#5b6b62;margin:16px 0 0;text-align:center;">{{ L.contact.aiHint }}</p>
+    <!-- 四種合作類型:bento 不規則排版(5/7 交錯 + bt-drop / bt-rise 上下推開),
+         窄螢幕會自己塌成單欄、位移歸零。 -->
+    <section class="support-wrap" aria-labelledby="partner-types-title" style="padding-bottom:88px;">
+      <div data-reveal style="max-width:720px;margin-bottom:36px;">
+        <div class="ifm-eyebrow">{{ L.contact.typesEyebrow }}</div>
+        <h2 id="partner-types-title" style="font-size:34px;line-height:1.35;color:#17261c;margin:14px 0 12px;">{{ L.contact.typesTitle }}</h2>
+        <p style="font-size:16px;line-height:1.8;color:#5b6b62;margin:0;">{{ L.contact.typesBody }}</p>
       </div>
-    </div>
+      <div class="ifm-bento">
+        <article class="ifm-card bt-5" data-reveal>
+          <img class="ifm-art ifm-art--pad" src="/assets/partner-channel.svg" alt="" width="160" height="160" loading="lazy" style="width:76px;height:76px;padding:10px;margin-bottom:16px;">
+          <h3 style="font-size:20px;line-height:1.4;color:#0E1A14;margin:0 0 10px;">{{ L.contact.typeChannelTitle }}</h3>
+          <p style="font-size:15px;line-height:1.8;color:#4B5A52;margin:0;">{{ L.contact.typeChannelDesc }}</p>
+        </article>
+        <article class="ifm-card bt-7 bt-drop" data-reveal>
+          <img class="ifm-art ifm-art--pad" src="/assets/partner-integration.svg" alt="" width="160" height="160" loading="lazy" style="width:76px;height:76px;padding:10px;margin-bottom:16px;">
+          <h3 style="font-size:20px;line-height:1.4;color:#0E1A14;margin:0 0 10px;">{{ L.contact.typeIntegrationTitle }}</h3>
+          <p style="font-size:15px;line-height:1.8;color:#4B5A52;margin:0;">{{ L.contact.typeIntegrationDesc }}</p>
+        </article>
+        <article class="ifm-card bt-7 bt-rise" data-reveal>
+          <img class="ifm-art ifm-art--pad" src="/assets/partner-logistics.svg" alt="" width="160" height="160" loading="lazy" style="width:76px;height:76px;padding:10px;margin-bottom:16px;">
+          <h3 style="font-size:20px;line-height:1.4;color:#0E1A14;margin:0 0 10px;">{{ L.contact.typeLogisticsTitle }}</h3>
+          <p style="font-size:15px;line-height:1.8;color:#4B5A52;margin:0;">{{ L.contact.typeLogisticsDesc }}</p>
+        </article>
+        <article class="ifm-card bt-5" data-reveal>
+          <img class="ifm-art ifm-art--pad" src="/assets/partner-branding.svg" alt="" width="160" height="160" loading="lazy" style="width:76px;height:76px;padding:10px;margin-bottom:16px;">
+          <h3 style="font-size:20px;line-height:1.4;color:#0E1A14;margin:0 0 10px;">{{ L.contact.typeBrandingTitle }}</h3>
+          <p style="font-size:15px;line-height:1.8;color:#4B5A52;margin:0;">{{ L.contact.typeBrandingDesc }}</p>
+        </article>
+      </div>
+    </section>
+
+    <!-- 合作怎麼開始:三步,編號球用既有的 .ifm-eyebrow__no -->
+    <section class="support-wrap" aria-labelledby="partner-flow-title" style="padding-bottom:88px;">
+      <div data-reveal style="max-width:720px;margin-bottom:30px;">
+        <div class="ifm-eyebrow">{{ L.contact.flowEyebrow }}</div>
+        <h2 id="partner-flow-title" style="font-size:34px;line-height:1.35;color:#17261c;margin:14px 0 0;">{{ L.contact.flowTitle }}</h2>
+      </div>
+      <div class="ifm-bento">
+        <article class="ifm-card ifm-card--tint bt-4" data-reveal>
+          <div class="ifm-eyebrow"><span class="ifm-eyebrow__no">1</span></div>
+          <h3 style="font-size:18.5px;margin:14px 0 8px;color:#0E1A14;">{{ L.contact.step1Title }}</h3>
+          <p style="font-size:15px;line-height:1.75;color:#4B5A52;margin:0;">{{ L.contact.step1Desc }}</p>
+        </article>
+        <article class="ifm-card ifm-card--tint bt-4 bt-drop" data-reveal>
+          <div class="ifm-eyebrow"><span class="ifm-eyebrow__no">2</span></div>
+          <h3 style="font-size:18.5px;margin:14px 0 8px;color:#0E1A14;">{{ L.contact.step2Title }}</h3>
+          <p style="font-size:15px;line-height:1.75;color:#4B5A52;margin:0;">{{ L.contact.step2Desc }}</p>
+        </article>
+        <article class="ifm-card ifm-card--tint bt-4" data-reveal>
+          <div class="ifm-eyebrow"><span class="ifm-eyebrow__no">3</span></div>
+          <h3 style="font-size:18.5px;margin:14px 0 8px;color:#0E1A14;">{{ L.contact.step3Title }}</h3>
+          <p style="font-size:15px;line-height:1.75;color:#4B5A52;margin:0;">{{ L.contact.step3Desc }}</p>
+        </article>
+      </div>
+    </section>
+
+    <!-- 異業合作洽詢表單。
+         ⚠️ 這不是被移除的那張「食材需求單」—— 沒有 items_text / detail,也沒有 demand-form-title,
+         送出走框架的 onSubmit 綁定({{ submitPartnership }}),不是全域 document 的 submit 委派。
+         取值一律用 name,欄位加減不會錯位。所有輸入框 font-size:16px —— 低於 16 時 iOS Safari
+         會在 focus 的瞬間自動放大整頁,回不去。 -->
+    <section aria-labelledby="partner-form-title" style="background:#F6FBF7;border-top:1px solid #E6EAE7;border-bottom:1px solid #E6EAE7;">
+      <div class="support-wrap" style="padding-top:80px;padding-bottom:80px;">
+        <form data-reveal onSubmit="{{ submitPartnership }}" aria-labelledby="partner-form-title" novalidate="novalidate" style="max-width:780px;margin:0 auto;background:#fff;border:1px solid #e8efe6;border-radius:24px;padding:42px;box-shadow:0 20px 60px rgba(20,60,30,.08);">
+          <div class="ifm-eyebrow">{{ L.contact.formEyebrow }}</div>
+          <h2 id="partner-form-title" style="font-family:'Space Grotesk','Noto Sans TC',sans-serif;font-size:26px;font-weight:800;color:#15231b;margin:14px 0 8px;">{{ L.contact.formTitle }}</h2>
+          <p id="partner-form-help" style="font-size:14px;line-height:1.65;color:#5b6b62;margin:0 0 26px;">{{ L.contact.formHelp }}</p>
+          <div style="display:flex; flex-direction:column; gap:18px;">
+            <div>
+              <label for="partner-company-name" style="display:block;font-size:14px;font-weight:600;color:#3c4d42;margin-bottom:8px;">{{ L.contact.labelCompany }} <span aria-hidden="true" style="color:#C0392B;">*</span></label>
+              <input class="contact-field" id="partner-company-name" type="text" name="company_name" required="required" autocomplete="organization" aria-describedby="partner-form-help" placeholder="{{ L.contact.placeholderCompany }}" style="width:100%;padding:14px 16px;border:1.5px solid #dde5dc;border-radius:12px;font-size:16px;font-family:inherit;" />
+            </div>
+            <div class="contact-fields-two">
+              <div>
+                <label for="partner-contact-name" style="display:block;font-size:14px;font-weight:600;color:#3c4d42;margin-bottom:8px;">{{ L.contact.labelName }} <span aria-hidden="true" style="color:#C0392B;">*</span></label>
+                <input class="contact-field" id="partner-contact-name" type="text" name="contact_name" required="required" autocomplete="name" placeholder="{{ L.contact.placeholderName }}" style="width:100%;padding:14px 16px;border:1.5px solid #dde5dc;border-radius:12px;font-size:16px;font-family:inherit;" />
+              </div>
+              <div>
+                <label for="partner-job-title" style="display:block;font-size:14px;font-weight:600;color:#3c4d42;margin-bottom:8px;">{{ L.contact.labelJobTitle }}</label>
+                <input class="contact-field" id="partner-job-title" type="text" name="job_title" autocomplete="organization-title" placeholder="{{ L.contact.placeholderJobTitle }}" style="width:100%;padding:14px 16px;border:1.5px solid #dde5dc;border-radius:12px;font-size:16px;font-family:inherit;" />
+              </div>
+            </div>
+            <div class="contact-fields-two">
+              <div>
+                <label for="partner-contact-email" style="display:block;font-size:14px;font-weight:600;color:#3c4d42;margin-bottom:8px;">{{ L.contact.labelEmail }} <span aria-hidden="true" style="color:#C0392B;">*</span></label>
+                <input class="contact-field" id="partner-contact-email" type="email" name="contact_email" required="required" autocomplete="email" inputmode="email" placeholder="{{ L.contact.placeholderEmail }}" style="width:100%;padding:14px 16px;border:1.5px solid #dde5dc;border-radius:12px;font-size:16px;font-family:inherit;" />
+              </div>
+              <div>
+                <label for="partner-contact-phone" style="display:block;font-size:14px;font-weight:600;color:#3c4d42;margin-bottom:8px;">{{ L.contact.labelPhone }}</label>
+                <input class="contact-field" id="partner-contact-phone" type="tel" name="contact_phone" autocomplete="tel" inputmode="tel" placeholder="{{ L.contact.placeholderPhone }}" style="width:100%;padding:14px 16px;border:1.5px solid #dde5dc;border-radius:12px;font-size:16px;font-family:inherit;" />
+              </div>
+            </div>
+            <div>
+              <label for="partner-website" style="display:block;font-size:14px;font-weight:600;color:#3c4d42;margin-bottom:8px;">{{ L.contact.labelWebsite }}</label>
+              <input class="contact-field" id="partner-website" type="url" name="website" autocomplete="url" inputmode="url" placeholder="{{ L.contact.placeholderWebsite }}" style="width:100%;padding:14px 16px;border:1.5px solid #dde5dc;border-radius:12px;font-size:16px;font-family:inherit;" />
+            </div>
+            <div>
+              <label for="partner-type" style="display:block;font-size:14px;font-weight:600;color:#3c4d42;margin-bottom:8px;">{{ L.contact.labelPartnerType }} <span aria-hidden="true" style="color:#C0392B;">*</span></label>
+              <!-- option 的 value 一律是英文常數 —— 存進 partner_type 的值不能隨語系變,
+                   否則後台會同時收到「通路與門市合作」與 "Channel & retail partnerships" 兩種寫法。
+                   顯示文字才綁字典。options 擠成一行是刻意的:換行會在 <select> 裡留下空白文字節點。 -->
+              <select class="contact-field" id="partner-type" name="partner_type" required="required" style="width:100%;padding:14px 16px;border:1.5px solid #dde5dc;border-radius:12px;font-size:16px;font-family:inherit;background:#fff;color:#15231b;appearance:auto;"><option value="">{{ L.contact.partnerTypePlaceholder }}</option><option value="channel">{{ L.contact.partnerTypeChannel }}</option><option value="integration">{{ L.contact.partnerTypeIntegration }}</option><option value="logistics">{{ L.contact.partnerTypeLogistics }}</option><option value="branding">{{ L.contact.partnerTypeBranding }}</option><option value="other">{{ L.contact.partnerTypeOther }}</option></select>
+            </div>
+            <div>
+              <label for="partner-message" style="display:block;font-size:14px;font-weight:600;color:#3c4d42;margin-bottom:8px;">{{ L.contact.labelMessage }} <span aria-hidden="true" style="color:#C0392B;">*</span></label>
+              <textarea class="contact-field" id="partner-message" name="message" required="required" rows="5" placeholder="{{ L.contact.placeholderMessage }}" style="width:100%;padding:14px 16px;border:1.5px solid #dde5dc;border-radius:12px;font-size:16px;font-family:inherit;resize:vertical;"></textarea>
+            </div>
+            <button class="contact-submit" type="submit" aria-live="polite" style="display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,#46c138,#1f9e4e);color:#fff;font-weight:700;font-size:16px;padding:16px;border-radius:100px;text-align:center;cursor:pointer;box-shadow:0 12px 30px rgba(61,174,43,.24);">{{ L.contact.submit }}</button>
+          </div>
+        </form>
+      </div>
+    </section>
+
+    <!-- 聯絡資訊:四條原樣保留(font-size:13px;color:#5b6b62 有 WCAG 測試釘住,不要改)。
+         底色必須維持白色 —— 那條測試是拿 #5b6b62 對 #ffffff 算對比的。
+         電話 / Email / LINE 三列整列包成 <a>(圖示也包進去),整列才有 >=44px 的點擊區;
+         只包那一小行字的話熱區只剩 17px 高。服務時間沒有可以連過去的地方,維持 <div>。
+         三個 <a> 都補 aria-label —— 圖示欄位是「電」/「@」/「LINE」這種字元,
+         不覆寫可及名稱的話螢幕閱讀器會把它跟著唸出來。 -->
+    <section class="support-wrap" aria-labelledby="partner-info-title" style="padding-top:80px;padding-bottom:80px;">
+      <div data-reveal style="max-width:720px;margin-bottom:32px;">
+        <div class="ifm-eyebrow">{{ L.contact.infoEyebrow }}</div>
+        <h2 id="partner-info-title" style="font-size:30px;line-height:1.35;color:#17261c;margin:14px 0 0;">{{ L.contact.infoTitle }}</h2>
+      </div>
+      <div data-reveal style="display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:22px;">
+        <a class="contact-line" href="tel:+886277045539" aria-label="{{ L.contact.phoneAria }}">
+          <span style="width:46px;height:46px;border-radius:13px;background:#eaf7e4;color:#1f9e4e;font-weight:900;display:flex;align-items:center;justify-content:center;flex:0 0 auto;">{{ L.contact.phoneIcon }}</span>
+          <div><div style="font-size:13px;color:#5b6b62;">{{ L.contact.phoneLabel }}</div><div style="font-size:17px;font-weight:700;color:#15231b;">02-7704-5539</div></div>
+        </a>
+        <a class="contact-line" href="mailto:ifoodmaptw@gmail.com" aria-label="{{ L.contact.emailAria }}">
+          <span style="width:46px;height:46px;border-radius:13px;background:#eaf7e4;color:#1f9e4e;font-weight:900;display:flex;align-items:center;justify-content:center;flex:0 0 auto;">@</span>
+          <div><div style="font-size:13px;color:#5b6b62;">{{ L.contact.emailLabel }}</div><div style="font-size:17px;font-weight:700;color:#15231b;">ifoodmaptw@gmail.com</div></div>
+        </a>
+        <div class="contact-line">
+          <span style="width:46px;height:46px;border-radius:13px;background:#eaf7e4;color:#1f9e4e;font-weight:900;display:flex;align-items:center;justify-content:center;flex:0 0 auto;">{{ L.contact.hoursIcon }}</span>
+          <div><div style="font-size:13px;color:#5b6b62;">{{ L.contact.hoursLabel }}</div><div style="font-size:17px;font-weight:700;color:#15231b;">{{ L.contact.hoursValue }}</div></div>
+        </div>
+        <a class="contact-line" href="https://line.me/R/ti/p/@750yvxki?oat_content=url" target="_blank" rel="noopener noreferrer" aria-label="{{ L.contact.lineAria }}">
+          <span style="width:46px;height:46px;border-radius:13px;background:#06C755;color:#fff;font-weight:900;display:flex;align-items:center;justify-content:center;font-size:13px;flex:0 0 auto;">LINE</span>
+          <div><div style="font-size:13px;color:#5b6b62;">{{ L.contact.lineLabel }}</div><div style="font-size:17px;font-weight:700;color:#15231b;">{{ L.contact.lineValue }}</div></div>
+        </a>
+      </div>
+    </section>
+
+    <!-- 出口卡:走錯路的人在這裡接住。
+         食材需求不走這張表單 —— 那條路已經整條交給右下角的 AI 採購助手了。
+         「開始對話」按鈕沒有 href 可退:助手沒載好時 openAI() 會直接 return,按了沒反應,
+         所以旁邊另外給了兩個真的連結(建立餐廳帳號 / 申請供應商上架)當替代出口。 -->
+    <section class="support-wrap" aria-labelledby="partner-exit-title" style="padding-bottom:96px;">
+      <div class="ifm-bento">
+        <article class="ifm-card ifm-card--tint bt-7" data-reveal style="padding:38px;">
+          <div class="ifm-eyebrow">{{ L.contact.exitEyebrow }}</div>
+          <h2 id="partner-exit-title" style="font-family:'Space Grotesk','Noto Sans TC',sans-serif;font-size:26px;font-weight:800;color:#15231b;margin:14px 0 10px;">{{ L.contact.exitTitle }}</h2>
+          <p style="font-size:15.5px;line-height:1.85;color:#4B5A52;margin:0 0 20px;">{{ L.contact.exitBody }}</p>
+          <h3 style="font-size:18px;color:#0E1A14;margin:0 0 8px;">{{ L.contact.aiTitle }}</h3>
+          <p style="font-size:15px;line-height:1.85;color:#4B5A52;margin:0 0 22px;">{{ L.contact.aiHelp }}</p>
+          <div style="font-size:12.5px;font-weight:700;letter-spacing:.1em;color:#0B6B40;text-transform:uppercase;margin-bottom:10px;">{{ L.contact.aiQuickLabel }}</div>
+          <ul class="ifm-chips" style="margin:0 0 26px;">
+            <sc-for list="{{ hotTags }}" as="t" hint-placeholder-count="6">
+              <li><button type="button" onClick="{{ t.ask }}" style="all:unset;cursor:pointer;">{{ t.label }}</button></li>
+            </sc-for>
+          </ul>
+          <button class="contact-submit" type="button" onClick="{{ openAI }}" style="width:100%;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,#46c138,#1f9e4e);color:#fff;font-weight:700;font-size:16px;padding:16px;border-radius:100px;text-align:center;cursor:pointer;box-shadow:0 12px 30px rgba(61,174,43,.24);">{{ L.contact.aiCta }}</button>
+          <p style="font-size:13px;line-height:1.7;color:#5b6b62;margin:16px 0 0;text-align:center;">{{ L.contact.aiHint }}</p>
+        </article>
+        <article class="ifm-card bt-5 bt-drop" data-reveal style="padding:38px;">
+          <h3 style="font-size:18px;color:#0E1A14;margin:0 0 16px;">{{ L.contact.roleGridLabel }}</h3>
+          <div style="display:grid;grid-template-columns:1fr;gap:12px;">
+            <a href="{{ restaurantRegistrationUrl }}" style="min-height:88px;padding:18px;border:1px solid #d7e3da;border-radius:16px;color:#17261c;text-decoration:none;background:#f7faf7;display:block;">
+              <img src="/assets/home-aud-1.svg" alt="" width="160" height="160" loading="lazy" style="width:40px;height:40px;display:block;margin-bottom:10px">
+              <strong style="display:block;margin-bottom:6px;">{{ L.contact.roleRestaurantTitle }}</strong>
+              <span style="font-size:14px;color:#5b6b62;">{{ L.contact.roleRestaurantAction }}</span>
+            </a>
+            <a href="{{ supplierApplicationUrl }}" style="min-height:88px;padding:18px;border:1px solid #d7e3da;border-radius:16px;color:#17261c;text-decoration:none;background:#f7faf7;display:block;">
+              <img src="/assets/home-aud-4.svg" alt="" width="160" height="160" loading="lazy" style="width:40px;height:40px;display:block;margin-bottom:10px">
+              <strong style="display:block;margin-bottom:6px;">{{ L.contact.roleSupplierTitle }}</strong>
+              <span style="font-size:14px;color:#5b6b62;">{{ L.contact.roleSupplierAction }}</span>
+            </a>
+          </div>
+        </article>
+      </div>
+    </section>
+
   </div>
   </sc-if>
 
@@ -1453,6 +1648,47 @@
   </div>
   </sc-if>
 
+  <!-- ============ PAGE: QA(常見問題) ============ -->
+  <sc-if value="{{ isQa }}">
+  <div data-screen-label="常見問題">
+    <section class="ifm-v2" style="border-bottom:1px solid #E6EAE7;background:linear-gradient(180deg,#F6FBF7 0%,#fff 100%);">
+      <div class="restaurant-wrap" style="padding-top:76px;padding-bottom:56px;">
+        <div data-reveal style="max-width:720px;">
+          <div class="ifm-eyebrow">{{ L.qa.heroEyebrow }}</div>
+          <h1 class="ifm-qa-title" style="font-size:42px;line-height:1.28;color:#0E1A14;margin:14px 0 16px;">{{ L.qa.heroTitle }}</h1>
+          <p style="font-size:17px;line-height:1.8;color:#4B5A52;margin:0;">{{ L.qa.heroSub }}</p>
+          <p style="font-size:14px;color:#5b6b62;margin:18px 0 0;">{{ qaCount }} {{ L.qa.countLabel }}</p>
+        </div>
+      </div>
+    </section>
+
+    <section class="restaurant-wrap ifm-qa" style="padding-top:52px;padding-bottom:88px;">
+      <div class="ifm-qa__list" data-reveal>
+        <sc-for list="{{ qaItems }}" as="q" hint-placeholder-count="2">
+          <details class="ifm-qa__item">
+            <summary class="ifm-qa__q">{{ q.question }}</summary>
+            <div class="ifm-qa__a">
+              <sc-for list="{{ q.paras }}" as="para" hint-placeholder-count="2">
+                <p>{{ para }}</p>
+              </sc-for>
+              <sc-if value="{{ q.hasLink }}">
+                <p><a href="{{ q.linkHref }}" target="_blank" rel="noopener noreferrer">{{ q.linkText }}</a></p>
+              </sc-if>
+            </div>
+          </details>
+        </sc-for>
+      </div>
+
+      <div class="ifm-card ifm-card--tint ifm-qa__cta" data-reveal>
+        <h2 style="font-family:'Space Grotesk','Noto Sans TC',sans-serif;font-size:24px;font-weight:800;color:#15231b;margin:0 0 10px;">{{ L.qa.ctaTitle }}</h2>
+        <p style="font-size:15px;line-height:1.85;color:#4B5A52;margin:0 auto 22px;max-width:520px;">{{ L.qa.ctaBody }}</p>
+        <a class="platform-action" href="{{ hrefContact }}" onClick="{{ openAI }}" style="background:#128A54;color:#fff;">{{ L.qa.ctaButton }}</a>
+        <p style="font-size:13px;line-height:1.7;color:#5b6b62;margin:16px 0 0;">{{ L.qa.ctaHint }}</p>
+      </div>
+    </section>
+  </div>
+  </sc-if>
+
   </main>
 
   <!-- ============ FOOTER ============ -->
@@ -1464,6 +1700,17 @@
           <div style="font-weight:900;font-size:19px;color:#fff">iFoodmap <span style="font-weight:500;color:#9FB0A6;font-size:14px">{{ L.footer.brandTagline }}</span></div>
         </div>
         <p style="margin-top:18px;font-size:13.5px;line-height:2;font-weight:300">{{ L.footer.phoneLabel }}{{ L.footer.sep }}<a href="tel:0277045539" style="color:inherit;text-decoration:none">02-7704-5539</a><br>E-MAIL{{ L.footer.sep }}<a href="mailto:ifoodmaptw@gmail.com" style="color:inherit;text-decoration:none">ifoodmaptw@gmail.com</a><br>{{ L.footer.hoursLabel }}{{ L.footer.sep }}{{ L.footer.hoursValue }}</p>
+        <!-- 社群:客服 LINE@ 與 Facebook,從舊站搬過來。
+             舊站另外還有兩個 LINE 帳號,是「成為使用者 / 成為供應商」的導流帳號 ——
+             新站已經有兩個產品端 CTA,刻意不搬(帳號代號連註解都不寫,測試會擋);
+             舊站首頁那支影片連結是宣傳片、不是社群頻道,同樣不搬(平台名連註解都不寫,測試會擋)。
+             品牌色塊是「商標」不是內文 —— WCAG 1.4.3 對 logotype 沒有對比要求,
+             所以白字配 LINE 綠 / FB 藍照官方配色用,但它 aria-hidden,
+             可及名稱一律由 <a> 自己的 aria-label(綁字典)負責。 -->
+        <div class="footer-social" style="margin-top:20px;display:grid;gap:6px;justify-items:start">
+          <a href="https://line.me/R/ti/p/@750yvxki?oat_content=url" target="_blank" rel="noopener noreferrer" aria-label="{{ L.footer.socialLineAria }}" style="display:inline-flex;align-items:center;gap:12px;min-height:44px;padding:0 4px;border-radius:12px;color:#9FB0A6;font-size:13.5px;font-weight:300;text-decoration:none">{{ L.footer.socialLineLabel }}<span aria-hidden="true" style="width:52px;height:30px;border-radius:9px;background:#06C755;color:#fff;font-weight:900;font-size:13px;display:flex;align-items:center;justify-content:center;flex:0 0 auto">LINE</span></a>
+          <a href="https://www.facebook.com/iFoodmap" target="_blank" rel="noopener noreferrer" aria-label="{{ L.footer.socialFacebookAria }}" style="display:inline-flex;align-items:center;gap:12px;min-height:44px;padding:0 4px;border-radius:12px;color:#9FB0A6;font-size:13.5px;font-weight:300;text-decoration:none">{{ L.footer.socialFollowLabel }}<span aria-hidden="true" style="width:52px;height:30px;border-radius:9px;background:#1877F2;color:#fff;font-weight:900;font-size:17px;font-family:Georgia,serif;display:flex;align-items:center;justify-content:center;flex:0 0 auto">f</span></a>
+        </div>
       </div>
       <div>
         <div style="color:#fff;font-family:'Space Grotesk',sans-serif;font-size:11.5px;letter-spacing:.18em;margin-bottom:16px">SERVICE</div>
@@ -1486,7 +1733,7 @@
       <div>
         <div style="color:#fff;font-family:'Space Grotesk',sans-serif;font-size:11.5px;letter-spacing:.18em;margin-bottom:16px">SUPPORT</div>
         <ul style="display:grid;gap:11px;padding:0;margin:0;list-style:none">
-            <li><a href="{{ hrefContact }}" onClick="{{ goContact }}" style="color:#9FB0A6;font-size:13.5px;text-decoration:none;font-weight:300;cursor:pointer" style-hover="color:#fff">{{ L.footer.supportFaq }}</a></li>
+            <li><a href="{{ hrefQa }}" onClick="{{ goQa }}" style="color:#9FB0A6;font-size:13.5px;text-decoration:none;font-weight:300;cursor:pointer" style-hover="color:#fff">{{ L.footer.supportFaq }}</a></li>
             <li><a href="{{ hrefAbout }}" onClick="{{ goAbout }}" style="color:#9FB0A6;font-size:13.5px;text-decoration:none;font-weight:300;cursor:pointer" style-hover="color:#fff">{{ L.footer.supportTerms }}</a></li>
             <li><a href="{{ hrefAbout }}" onClick="{{ goAbout }}" style="color:#9FB0A6;font-size:13.5px;text-decoration:none;font-weight:300;cursor:pointer" style-hover="color:#fff">{{ L.footer.supportPrivacy }}</a></li>
         </ul>
@@ -1851,6 +2098,134 @@ class Component extends DCLogic {
     if (this.state.menuOpen) this.setState({ menuOpen: false });
   }
 
+  // ---------- 異業合作洽詢表單 ----------
+  // 狀態訊息一律「每次呼叫才查字典」—— 存成變數的話,使用者切語系之後訊息會停在舊語言。
+  // 「現在是哪個語系」的真相是網址前綴,所以跟 IfmI18n 現拿,不讀 this.state.lang ——
+  // 按鈕的字是在 React 外面直接改 textContent 的,state 不保證跟畫面同步。
+  partnerText(key) {
+    const api = typeof window !== 'undefined' ? window.IfmI18n : null;
+    const d = api && typeof api.dict === 'function' ? api.dict(api.current(window)) : null;
+    const m = (d && d.contact) || {};
+    return typeof m[key] === 'string' ? m[key] : '';
+  }
+
+  // 異業合作洽詢 → public.partnership_leads(匿名只寫不讀)。
+  // 走框架自己的 onSubmit 綁定,不是 document 的全域 submit 委派:
+  // 那個寫法靠 fields[0..4] 位置索引取值,欄位一加就整排錯位,而且測試已經整類擋掉。
+  submitPartnership(event) {
+    if (event && typeof event.preventDefault === 'function') event.preventDefault();
+    // currentTarget 只在事件派送當下有效,所以同步先拿下來再進 closure
+    const form = event && event.currentTarget;
+    if (!form || typeof form.querySelector !== 'function') return;
+
+    const btn = form.querySelector('.contact-submit');
+    if (!btn) return;
+    // data-busy:送出中;data-done:成功後永久鎖住。兩個旗標任一個在,重複點擊就進不來。
+    if (btn.getAttribute('data-busy') === '1' || btn.getAttribute('data-done') === '1') return;
+
+    // 取值一律靠 name,不用位置索引 —— 欄位順序改了、中間插一格都不會錯位。
+    // NAMES 就是 partnership_leads 的可填欄位,一字不差。
+    const NAMES = ['company_name', 'contact_name', 'job_title', 'contact_email', 'contact_phone', 'website', 'partner_type', 'message'];
+    const field = (name) => form.querySelector('[name="' + name + '"]');
+    const data = {};
+    for (const name of NAMES) {
+      const el = field(name);
+      data[name] = el ? String(el.value || '').trim() : '';
+    }
+
+    const original = btn.textContent;
+    // 還原時再查一次字典:2.2 秒內切了語系的話,不該把舊語言的字塞回去
+    const restore = () => { btn.textContent = this.partnerText('submit') || original; };
+
+    // 必填 = partnership_leads 的四個 NOT NULL 欄位,外加合作類型(要靠它分流到對的窗口)。
+    // email 只做「有 @、有網域」的粗檢查 —— 真正的驗證是那封回信寄不寄得到,
+    // 在前端寫一條嚴格的 RFC regex 只會把正常信箱擋在外面。
+    const emailOk = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(data.contact_email);
+    const invalid = ['company_name', 'contact_name', 'contact_email', 'partner_type', 'message']
+      .filter((name) => (name === 'contact_email' ? !emailOk : !data[name]));
+
+    for (const name of NAMES) {
+      const el = field(name);
+      if (!el) continue;
+      if (invalid.indexOf(name) >= 0) el.setAttribute('aria-invalid', 'true');
+      else el.removeAttribute('aria-invalid');
+    }
+
+    if (invalid.length) {
+      btn.textContent = this.partnerText('formRequire');
+      // focus 跳到第一個有問題的欄位 —— 只改按鈕上的字,用鍵盤的人不知道要回去哪裡補
+      const first = field(invalid[0]);
+      if (first && typeof first.focus === 'function') first.focus();
+      clearTimeout(this._partnerTimer);
+      this._partnerTimer = setTimeout(restore, 2200);
+      return;
+    }
+
+    const supa = (typeof window !== 'undefined' && window.IFM_SUPA) || {};
+    if (!supa.url || !supa.anon) {
+      btn.textContent = this.partnerText('formFailure');
+      clearTimeout(this._partnerTimer);
+      this._partnerTimer = setTimeout(restore, 2600);
+      return;
+    }
+
+    clearTimeout(this._partnerTimer);
+    btn.setAttribute('data-busy', '1');
+    btn.setAttribute('aria-disabled', 'true');
+    btn.disabled = true;
+    btn.textContent = this.partnerText('formSubmitting');
+
+    const i18n = typeof window !== 'undefined' ? window.IfmI18n : null;
+
+    // ⚠️ partnership_leads 只開 anon INSERT,沒有 SELECT policy。
+    // PostgREST 預設 RETURNING *,不帶 return=minimal 整筆會被 RLS 擋成 42501(實測過)。
+    fetch(supa.url + '/rest/v1/partnership_leads', {
+      method: 'POST',
+      headers: {
+        'apikey': supa.anon,
+        'Authorization': 'Bearer ' + supa.anon,
+        'Content-Type': 'application/json',
+        'Prefer': 'return=minimal'
+      },
+      body: JSON.stringify({
+        company_name: data.company_name,
+        contact_name: data.contact_name,
+        job_title: data.job_title || null,
+        contact_email: data.contact_email,
+        contact_phone: data.contact_phone || null,
+        website: data.website || null,
+        partner_type: data.partner_type || null,
+        message: data.message,
+        // source / status 有 DB 預設值,刻意不從前端送 —— 前端送得進去的欄位就改得掉
+        lang: i18n && typeof i18n.current === 'function' ? i18n.current(window) : 'zh',
+        user_agent: (navigator.userAgent || '').slice(0, 300)
+      })
+    }).then((r) => {
+      btn.removeAttribute('data-busy');
+      btn.removeAttribute('aria-disabled');
+      if (r.status === 201 || r.ok) {
+        // 成功之後永久鎖住:同一個人手滑連按兩次會變成兩筆一模一樣的 lead
+        btn.setAttribute('data-done', '1');
+        btn.textContent = this.partnerText('formSuccess');
+        btn.style.opacity = '0.85';
+        for (const name of NAMES) {
+          const el = field(name);
+          if (el) el.value = '';
+        }
+      } else {
+        btn.disabled = false;
+        btn.textContent = this.partnerText('formFailure');
+        this._partnerTimer = setTimeout(restore, 2600);
+      }
+    }).catch(() => {
+      btn.removeAttribute('data-busy');
+      btn.removeAttribute('aria-disabled');
+      btn.disabled = false;
+      btn.textContent = this.partnerText('formFailure');
+      this._partnerTimer = setTimeout(restore, 2600);
+    });
+  }
+
   // 關鍵字交棒給 AI 助手。開場句要跟著語系走,否則英文使用者會看到自己「說」了一句中文。
   handToAI(keyword) {
     const value = String(keyword || '').trim();
@@ -1919,12 +2294,20 @@ class Component extends DCLogic {
       go: this.go('article', a.slug),
     }));
 
+    /* 常見問題。字典只放文字,型別旗標在這裡攤平 —— 模板只有 sc-if 沒有 switch。
+       注意 L.qa.items 是陣列,不能在 markup 直接綁 {{ L.qa.items }}:
+       tests/i18n.test.cjs 規定每個 {{ L.* }} 綁定都必須解析成字串。 */
+    const qaItems = ((L.qa && L.qa.items) || []).map((item) => ({
+      ...item,
+      hasLink: !!item.linkHref,
+    }));
+
     const href = (target, targetLang) =>
       (window.IfmRouting ? window.IfmRouting.pageToPath(target, targetLang || lang) : '/');
     const anchorHref = (id) => href('home') + '#' + id;
 
     const phrases = list('rotating');
-    const rotating = phrases.length ? phrases[tick % phrases.length] : '';
+    const rotating = phrases.length ? phrases[tick % phrases.length] : { pre: '', hl: '', post: '' };
 
     return {
       rootRef: (el) => { this.rootEl = el; },
@@ -1938,6 +2321,7 @@ class Component extends DCLogic {
       isAbout: page === 'about',
       isContact: page === 'contact',
       isNews: page === 'news',
+      isQa: page === 'qa',
       isArticle: page === 'article',
       hasArticle: page === 'article' && !!article,
       articleMissing: page === 'article' && !article,
@@ -1955,6 +2339,8 @@ class Component extends DCLogic {
       },
       articles: articleList,
       articleCount: newsApi ? newsApi.count : 0,
+      qaItems,
+      qaCount: qaItems.length,
       hrefNewsList: href('news'),
       goHome: g('home'),
       goRestaurants: g('restaurants'),
@@ -1965,13 +2351,14 @@ class Component extends DCLogic {
       goHow: this.goAnchor('how-it-works'),
       // 以前沒有新聞頁,「最新消息」只能捲到首頁的文章區塊;現在有 /news 了就走真的頁面
       goNews: g('news'),
+      goQa: g('qa'),
       /* 手機選單版:先收合選單再換頁 */
       goRestaurantsMobile: closeMenuThen(g('restaurants')),
       goSuppliersMobile: closeMenuThen(g('suppliers')),
       goAboutMobile: closeMenuThen(g('about')),
       goContactMobile: closeMenuThen(g('contact')),
-      goHowMobile: closeMenuThen(this.goAnchor('how-it-works')),
       goNewsMobile: closeMenuThen(g('news')),
+      goQaMobile: closeMenuThen(g('qa')),
       ariaCurrentHome: page === 'home' ? 'page' : null,
       ariaCurrentRestaurants: page === 'restaurants' ? 'page' : null,
       ariaCurrentSuppliers: page === 'suppliers' ? 'page' : null,
@@ -1979,6 +2366,7 @@ class Component extends DCLogic {
       ariaCurrentAbout: page === 'about' ? 'page' : null,
       ariaCurrentContact: page === 'contact' ? 'page' : null,
       ariaCurrentNews: page === 'news' || page === 'article' ? 'page' : null,
+      ariaCurrentQa: page === 'qa' ? 'page' : null,
       restaurantRegistrationUrl: productBaseUrl + '/register/restaurant',
       supplierApplicationUrl: productBaseUrl + '/join',
       loginUrl: productBaseUrl + '/',
@@ -1999,10 +2387,14 @@ class Component extends DCLogic {
       hrefContact: href('contact'),
       hrefHow: anchorHref('how-it-works'),
       hrefNews: anchorHref('news'),
+      hrefQa: href('qa'),
       langHref: href(page, otherLang),
       langLabel: otherLang === 'en' ? (L.meta && L.meta.langSwitchToEn) : (L.meta && L.meta.langSwitchToZh),
       langAria: L.meta && L.meta.langSwitchLabel,
       langTag: otherLang === 'en' ? 'en' : 'zh-Hant',
+      // 旗子畫的是「按下去會切到的語言」。用 SVG 檔不用 emoji 國旗 ——
+      // Windows 的 Chrome/Edge 不畫 regional indicator,台灣那面會顯示成「TW」兩個字母。
+      langFlag: otherLang === 'en' ? '/assets/flag-gb.svg' : '/assets/flag-tw.svg',
       switchLang: this.switchLang(otherLang),
       switchLangMobile: closeMenuThen(this.switchLang(otherLang)),
 
@@ -2011,6 +2403,7 @@ class Component extends DCLogic {
       hotTags: list('hotTags').map((label) => ({ label, ask: () => this.handToAI(label) })),
       askAI: (event) => this.askAI(event),
       openAI: (event) => this.openAI(event),
+      submitPartnership: (event) => this.submitPartnership(event),
       heroPromises: list('heroPromises'),
       stats: [
         { target: 3000, suffix: '+' },
@@ -2161,6 +2554,190 @@ class Component extends DCLogic {
     .m-menu,
     .m-scrim,
     .m-hamburger span { transition: none !important; }
+  }
+</style>
+
+
+<!-- ============ 手機版緊湊排版（2026-09-23）============ -->
+<style id="m-compact">
+  /* ===================================================================
+     只在 <=768px 生效；桌機（>768px）一個像素都不動。
+     四個目標：
+       ① 內文字級一律 >= 16px（Google 行動裝置可用性判準）
+       ② 點擊目標一律 >= 44x44 CSS px
+       ③ 手機上「圖大、字小、留白多」的區塊改成緊湊格狀
+       ④ 首頁總高從 12.9 螢幕壓到 8 螢幕以內
+     放在 #m-rwd 之後，是因為 m-rwd 有一組泛用的 .m-grid-1 / .ifm-bento
+     !important 規則（由 tag() 自動掛 class），同分時要靠「後面的贏」蓋掉。
+     =================================================================== */
+  @media (max-width: 768px) {
+
+  /* ---------- ① 內文字級下限 16px --------------------------------------
+     這個站的字級幾乎都寫在 inline style 上（框架把版型和樣式綁在 markup 裡），
+     沒有 class 可掛。與其在 60+ 個元素上各加一個 class，這裡直接用屬性選擇器
+     比對 inline style 裡的字級宣告，一次把所有 <16px 的內文抬到 16px。
+     好處是新增的區塊只要沿用同樣寫法就自動被涵蓋，不會漏。
+     有空格 / 無空格兩種寫法都列，免得框架輸出格式一變就失效。
+     只掃 main，header/footer 不動（導覽在手機上本來就是另一套選單）。 */
+  main [style*="font-size: 11px"],   main [style*="font-size:11px"],
+  main [style*="font-size: 11.5px"], main [style*="font-size:11.5px"],
+  main [style*="font-size: 12px"],   main [style*="font-size:12px"],
+  main [style*="font-size: 12.5px"], main [style*="font-size:12.5px"],
+  main [style*="font-size: 13px"],   main [style*="font-size:13px"],
+  main [style*="font-size: 13.5px"], main [style*="font-size:13.5px"],
+  main [style*="font-size: 14px"],   main [style*="font-size:14px"],
+  main [style*="font-size: 14.5px"], main [style*="font-size:14.5px"],
+  main [style*="font-size: 15px"],   main [style*="font-size:15px"],
+  main [style*="font-size: 15.5px"], main [style*="font-size:15.5px"] {
+    font-size: 16px !important;
+  }
+
+  /* 字級寫在 CSS（不是 inline）的幾處，個別補 */
+  .ifm-chips li             { font-size: 16px !important; line-height: 1.45 !important; }
+  .ifm-eyebrow              { font-size: 16px !important; letter-spacing: .05em !important; }
+  .ifm-article__links       { font-size: 16px !important; }
+  .ifm-article__links-title { font-size: 16px !important; }
+  .case-visual-row          { font-size: 16px !important; }
+  .restaurant-mock-bar,
+  .supplier-mock-bar        { font-size: 16px !important; }
+  .restaurant-detail-list li,
+  .supplier-detail-list li  { font-size: 16px !important; }
+  /* 圓圈裡的序號是裝飾性數字（"1"~"4"），跟著放大會撐破圓圈 */
+  .ifm-eyebrow__no { font-size: 13px !important; width: 24px !important; height: 24px !important; }
+  /* 首頁四個純裝飾的英文 kicker(B2B MATCHING ENGINE / WHO IT'S FOR / HOW IT WORKS /
+     THE PROBLEM)手機版整個隱藏。它們沒帶任何下方標題沒說的資訊,為了通過字級體檢被放大到
+     16px 之後跟內文一樣大,階層反而被壓平,還多吃約 90px 高度。
+     .mc-eyebrow 這個 class 全站只有那四處在用,所以一條規則就夠。
+     帶資訊的 eyebrow 一律保留:.ifm-eyebrow__no 的編號球、/restaurants 與 /suppliers 的
+     「01 · MENU ANALYSIS」那種「編號 + 分類」、以及各頁用使用者語言寫的區段標籤。 */
+  .mc-eyebrow { display: none !important; }
+
+  /* ---------- ② 點擊目標 >= 44x44 ---------- */
+  .mc-logo   { min-height: 44px !important; }
+  .mc-hottag { min-height: 44px !important; padding: 10px 16px !important; }
+  .mc-alllink {
+    display: inline-flex !important; align-items: center;
+    min-height: 44px !important; min-width: 44px;
+  }
+  /* 聯絡頁的快捷籤：<li> 是膠囊外框、<button style="all:unset"> 在裡面。
+     把 padding 移到 button 上，整顆膠囊才是可點區，而不是外框大、熱區小。 */
+  .ifm-chips li:has(> button) { padding: 0 !important; }
+  .ifm-chips li > button {
+    display: flex !important; align-items: center !important; justify-content: center !important;
+    min-height: 44px !important; min-width: 44px !important; padding: 0 16px !important;
+    font: inherit !important; font-size: 16px !important; line-height: 1.35 !important;
+    color: inherit !important; cursor: pointer !important;
+  }
+
+  /* ---------- ③ 首頁：把留白換成內容 ---------- */
+
+  /* 區塊共用的上下留白 clamp(48~52px) -> 34px */
+  .mc-sec { padding-top: 34px !important; padding-bottom: 34px !important; }
+
+  /* 導覽列 */
+  .mc-headbar { padding: 10px 16px !important; gap: 12px !important; }
+
+  /* Hero：標題與各段之間的距離全部收一半 */
+  .mc-heroinner  { padding: 28px 18px 30px !important; }
+  .mc-badge      { padding: 6px 13px !important; }
+  .mc-h1         { margin-top: 16px !important; font-size: clamp(28px, 7.6vw, 34px) !important; line-height: 1.26 !important; }
+  .mc-lead       { margin-top: 12px !important; font-size: 17px !important; line-height: 1.65 !important; }
+  .mc-heroform   { margin-top: 18px !important; }
+  .mc-searchinput{ font-size: 16px !important; padding: 11px 12px !important; }  /* <16px 會讓 iOS 對焦時自動放大 */
+  .mc-searchbtn  { min-height: 44px !important; padding: 12px 24px !important; }
+  .mc-hottags    { margin-top: 12px !important; }
+  .mc-promises   { margin-top: 18px !important; gap: 8px !important; }
+  .mc-promise    { padding: 9px 14px !important; }
+
+  /* 統計數字：原本被 .m-grid-1 塌成 1 欄（4 格 = 0.7 螢幕），改回 2 欄 */
+  .mc-stats      { grid-template-columns: 1fr 1fr !important; padding: 0 18px !important; }
+  .mc-statcell2  { padding: 16px 10px 16px 0 !important; }
+  .mc-statnum    { font-size: 26px !important; }
+  .mc-statlabel  { margin-top: 2px !important; line-height: 1.4 !important; }
+
+  /* 「任何有食材需求的人」：bento 在手機上塌成 1 欄，4 張卡就吃掉 1.4 螢幕。
+     改 2 欄，圖示 60 -> 40px。 */
+  .mc-aud        { grid-template-columns: 1fr 1fr !important; gap: 12px !important; margin-top: 20px !important; }
+  .mc-aud > *    { grid-column: auto !important; }   /* 蓋掉 .ifm-bento > *{grid-column:1/-1} */
+  .mc-audcard    { padding: 14px !important; border-radius: 16px !important; }
+  .mc-audicon    { width: 40px !important; height: 40px !important; }
+  .mc-cardtitle  { margin-top: 10px !important; font-size: 17px !important; line-height: 1.35 !important; }
+  .mc-cardp      { margin-top: 6px !important; line-height: 1.6 !important; }
+
+  /* 「從需求到進貨，一條龍」：六步各配一張 130px 高的插圖，1 欄排下來 2.4 螢幕。
+     改 2 欄 + 插圖框 130 -> 74px。插圖還在，只是不再主宰版面。 */
+  .mc-flowpanel  { margin-top: 14px !important; padding: 10px !important; border-radius: 18px !important; }
+  .mc-flowgrid   { grid-template-columns: 1fr 1fr !important; gap: 10px !important; }
+  /* 每組三步排成 2 欄會剩一格空的；讓落單的第三張橫跨整列，右下角就不會開天窗 */
+  .mc-flowgrid > *:nth-child(3):last-child { grid-column: 1 / -1 !important; }
+  .mc-flowcard   { padding: 10px !important; border-radius: 14px !important; }
+  .mc-flowcard > div:first-child { gap: 7px !important; }
+  .mc-flownum    { width: 24px !important; height: 24px !important; flex: 0 0 24px; font-size: 13px !important; }
+  .mc-flowtitle  { font-size: 16px !important; line-height: 1.3 !important; }
+  .mc-flowart    { margin-top: 8px !important; height: 60px !important; border-radius: 12px !important; }
+  .mc-flowdesc   { margin-top: 8px !important; line-height: 1.55 !important; }
+  .mc-flowarrow  { padding: 5px 0 !important; }
+  .mc-flowcta    { margin-top: 16px !important; padding: 14px 26px !important; }
+
+  /* 「食材分類」：12 格 x（96px 圖框 + 一行字）= 2.5 螢幕，整頁最糟的一塊。
+     改 3 欄 + 圖框 96 -> 54px。整格 ~100px 高，仍遠大於 44px 觸控下限。 */
+  .mc-cathead    { gap: 6px !important; }
+  .mc-catsub     { line-height: 1.5 !important; }
+  .mc-catgrid    { grid-template-columns: repeat(3, minmax(0, 1fr)) !important; margin-top: 16px !important; gap: 0 !important; }
+  .mc-catcell    { text-align: center !important; }
+  .mc-catart     { height: 54px !important; }
+  .mc-catimg     { height: 40px !important; width: 40px !important; border-radius: 10px !important; }
+  .mc-catname    { padding: 8px 4px 10px !important; min-height: 44px; display: flex; align-items: center; justify-content: center; }
+  .mc-catlabel   { line-height: 1.3 !important; }
+
+  /* 「過去找食材」深色區 */
+  .mc-problem    { gap: 24px !important; }
+  .mc-problemp   { margin-top: 12px !important; line-height: 1.7 !important; }
+  .mc-problemcta { display: inline-flex !important; align-items: center; min-height: 44px !important; margin-top: 18px !important; padding: 12px 24px !important; }
+  .mc-painrow    { padding: 12px 0 !important; gap: 12px !important; }
+  .mc-painicon   { width: 34px !important; height: 34px !important; flex: 0 0 34px !important; }
+  .mc-painline   { line-height: 1.55 !important; }
+
+  /* 「使用者怎麼說」 */
+  .mc-quotegrid  { margin-top: 18px !important; gap: 12px !important; }
+  .mc-quotecard  { padding: 16px !important; border-radius: 14px !important; }
+  .mc-quotep     { line-height: 1.7 !important; }
+  .mc-quoteby    { margin-top: 12px !important; padding-top: 10px !important; }
+
+  /* 信任機制 */
+  .mc-trust      { gap: 18px !important; }
+  .mc-trusticon  { width: 44px !important; height: 44px !important; margin-bottom: 8px !important; }
+
+  /* 「餐飲相關資訊」：封面 158 -> 118px，卡內留白 20 -> 14px */
+  .mc-newshead   { gap: 8px !important; }
+  .mc-newsgrid   { margin-top: 16px !important; gap: 12px !important; }
+  .mc-newscover  { height: 118px !important; }
+  .mc-newsgrid article > a > div:last-child { padding: 14px !important; }
+  .mc-newstitle  { margin-top: 6px !important; font-size: 16px !important; line-height: 1.5 !important; }
+  .mc-newsdate   { margin-top: 6px !important; }
+
+  /* 結尾 CTA */
+  .mc-finalcta       { gap: 16px !important; }
+  .mc-finalcta > div { justify-self: start !important; }
+
+  /* ---------- ④ 其他頁：字級放大之後，用留白換回高度 ----------
+     /restaurants、/suppliers、/cases、/about、/news 沒有改結構，
+     只把卡片留白、區塊間距收緊，抵銷字放大帶來的增高。 */
+  .m-pady { padding-top: 36px !important; padding-bottom: 36px !important; }
+  .restaurant-wrap, .supplier-wrap, .support-wrap { padding-left: 16px !important; padding-right: 16px !important; }
+  .ifm-bento { gap: 12px !important; }
+  .ifm-card  { padding: 16px !important; }
+  .ifm-art--bleed { margin: -16px -16px 12px !important; width: calc(100% + 32px) !important; }
+  .ifm-chips { margin-top: 12px !important; gap: 6px !important; }
+  .restaurant-capability, .supplier-capability { padding: 32px 0 !important; }
+  .restaurant-hero-grid, .supplier-hero-grid,
+  .restaurant-capability, .supplier-capability { gap: 22px !important; }
+  .cases-grid { gap: 14px !important; }
+  .case-stats { padding-top: 14px !important; gap: 10px !important; }
+  .case-visual { padding: 16px !important; }
+  .about-value-card { padding: 18px !important; }
+  .contact-role-grid { margin-bottom: 20px !important; }
+  .ifm-news-hero { gap: 18px !important; }
   }
 </style>
 
@@ -2532,6 +3109,36 @@ class Component extends DCLogic {
   }
   .ai-fab.ai-open { transform: rotate(45deg) scale(.9); }
 
+  /* 泡泡上方的小標題:讓人一眼看得出這顆泡泡是做什麼的(業主:「主要目的是讓大家容易辨識」)。
+     放正上方、靠同一條右邊界 —— 放左邊的話 390px 的手機上會橫跨半個畫面。
+     面板打開就收起來(.ai-tip-hide),免得壓在面板頂端。
+     aria-hidden + tabindex=-1:它跟泡泡是同一個動作,鍵盤與螢幕閱讀器走泡泡那一顆就好,
+     不要在 Tab 序列裡出現兩個「開啟 AI 採購助手」。 */
+  .ai-fab-tip {
+    position: fixed; z-index: 65;
+    right: calc(28px + env(safe-area-inset-right));
+    bottom: calc(100px + env(safe-area-inset-bottom));
+    display: inline-flex; align-items: center;
+    min-height: 44px; padding: 0 16px;
+    border: 1px solid #DCE7DE; border-radius: 999px;
+    background: #fff; color: #0B6B40;
+    font-family: inherit; font-size: 14px; font-weight: 700; line-height: 1.3;
+    white-space: nowrap; cursor: pointer;
+    box-shadow: 0 8px 20px rgba(18,138,84,.18);
+    transition: opacity .2s ease, transform .2s ease;
+  }
+  .ai-fab-tip:hover { border-color: #128A54; transform: translateY(-1px); }
+  .ai-fab-tip::after {
+    content: ''; position: absolute; right: 20px; bottom: -5px;
+    width: 8px; height: 8px; background: #fff;
+    border-right: 1px solid #DCE7DE; border-bottom: 1px solid #DCE7DE;
+    transform: rotate(45deg);
+  }
+  .ai-fab-tip.ai-tip-hide { opacity: 0; pointer-events: none; transform: translateY(8px); }
+  @media (max-width: 520px) {
+    .ai-fab-tip { font-size: 13px; padding: 0 14px; right: calc(24px + env(safe-area-inset-right)); }
+  }
+
   .ai-backdrop {
     position: fixed; inset: 0; z-index: 64; background: rgba(8,18,12,.4);
     opacity: 0; pointer-events: none; transition: opacity .25s ease;
@@ -2610,6 +3217,8 @@ class Component extends DCLogic {
     .ai-fab { transition: none !important; }
     .ai-fab:hover,
     .ai-fab.ai-open { transform: rotate(45deg) !important; }
+    .ai-fab-tip { transition: none !important; }
+    .ai-fab-tip:hover { transform: none !important; }
     .ai-fab::after { animation: none !important; }
     .ai-dot { animation: none !important; opacity: .6 !important; }
     .ai-panel { transition: opacity .15s ease !important; transform: none !important; }
@@ -2618,8 +3227,8 @@ class Component extends DCLogic {
 </style>
 <script>
 (function () {
-  var SUPA_URL  = 'https://cwvpehqcvbfuynabpqop.supabase.co';
-  var SUPA_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImN3dnBlaHFjdmJmdXluYWJwcW9wIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzk5NzQ5NjgsImV4cCI6MjA5NTU1MDk2OH0.QMkcOlGjRTP5XeddI4IAzSkGJoUjaRtcjI_Tjl6rj2k';
+  var SUPA_URL  = (window.IFM_SUPA || {}).url;
+  var SUPA_ANON = (window.IFM_SUPA || {}).anon;
   // 語系:一律呼叫時才查字典。存成 var 的話,使用者切語系後會停在舊語言。
   // 「現在是哪個語系」的真相是網址前綴,所以每次都跟 IfmI18n 現拿,不在 boot 時抓一次。
   function curLang() {
@@ -2655,6 +3264,13 @@ class Component extends DCLogic {
   fab.setAttribute('aria-expanded', 'false');
   fab.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.38 8.38 0 0 1-8.5 8.5 8.5 8.5 0 0 1-3.9-.9L3 21l1.9-5.6A8.5 8.5 0 1 1 21 11.5z"/><circle cx="8.5" cy="11.5" r="1"/><circle cx="12" cy="11.5" r="1"/><circle cx="15.5" cy="11.5" r="1"/></svg>';
 
+  // 泡泡的小標題。字一樣交給 applyStaticStrings() 填(boot + 每次切語系)。
+  var fabTip = document.createElement('button');
+  fabTip.type = 'button';
+  fabTip.className = 'ai-fab-tip';
+  fabTip.setAttribute('aria-hidden', 'true');
+  fabTip.setAttribute('tabindex', '-1');
+
   var backdrop = document.createElement('div'); backdrop.className = 'ai-backdrop';
 
   var panel = document.createElement('div'); panel.className = 'ai-panel'; panel.setAttribute('role', 'dialog');
@@ -2679,6 +3295,7 @@ class Component extends DCLogic {
   document.body.appendChild(backdrop);
   document.body.appendChild(panel);
   document.body.appendChild(fab);
+  document.body.appendChild(fabTip);
 
   var appRoot = document.getElementById('dc-root');
   var appRootWasInert = false;
@@ -2700,6 +3317,7 @@ class Component extends DCLogic {
   // 已經送出的對話訊息不在這裡 —— 那是歷史紀錄,回頭翻譯是錯的。
   function applyStaticStrings() {
     fab.setAttribute('aria-label', txt('fabLabel'));
+    fabTip.textContent = txt('fabTitle');
     panel.querySelector('.ai-tt').textContent = txt('title');
     panel.querySelector('.ai-sub').textContent = txt('subtitle');
     panel.querySelector('.ai-x').setAttribute('aria-label', txt('closeLabel'));
@@ -2955,6 +3573,7 @@ class Component extends DCLogic {
     fab.setAttribute('aria-expanded', 'true');
     panel.classList.add('ai-open');
     fab.classList.add('ai-open');
+    fabTip.classList.add('ai-tip-hide');
     backdrop.classList.add('ai-show');
     setTimeout(function () {
       if (panel.classList.contains('ai-open')) textInput.focus();
@@ -2965,6 +3584,8 @@ class Component extends DCLogic {
     persistConversation();
     panel.classList.remove('ai-open');
     fab.classList.remove('ai-open');
+    fabTip.classList.remove('ai-tip-hide');
+    if (typeof syncTipOnScroll === 'function') syncTipOnScroll();   // 關閉後照目前捲動位置再判一次
     backdrop.classList.remove('ai-show');
     document.body.style.overflow = previousBodyOverflow;
     if (appRoot) {
@@ -2997,6 +3618,21 @@ class Component extends DCLogic {
     }
   });
   fab.addEventListener('click', function () { panel.classList.contains('ai-open') ? closePanel() : openPanel(); });
+  fabTip.addEventListener('click', function () { if (!panel.classList.contains('ai-open')) openPanel(); });
+
+  // 小標題只在「剛到這一頁」時出現。捲過第一個畫面之後就收起來 ——
+  // 它是固定定位的,不收的話在 390px 的手機上會一路壓在內文右下角。
+  // 辨識度的目的在落地那一刻就達成了,泡泡本身仍然一直在。
+  var tipHiddenByScroll = false;
+  function syncTipOnScroll() {
+    if (panel.classList.contains('ai-open')) return;          // 面板開著時由 openPanel 管
+    var past = (window.scrollY || window.pageYOffset || 0) > window.innerHeight * 0.6;
+    if (past === tipHiddenByScroll) return;
+    tipHiddenByScroll = past;
+    fabTip.classList.toggle('ai-tip-hide', past);
+  }
+  window.addEventListener('scroll', syncTipOnScroll, { passive: true });
+  syncTipOnScroll();
 
   // ---- 對外 API:首頁搜尋列 / 分類籤把關鍵字直接帶進對話 ----
   // ask(text):打開面板並把 text 當成使用者的一句話送出,AI 會接著訪談。

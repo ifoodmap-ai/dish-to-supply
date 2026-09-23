@@ -114,10 +114,11 @@ test('every {{ L.* }} binding in index.html resolves to a string in both languag
     assert.deepEqual(broken, [], `dict('${lang}') 查不到字串: ${broken.join(', ')}`);
   }
 
-  // 空字串是允許的,但必須是刻意的:zh 的 heroTitlePost 就是空的(標題結尾沒有字)
-  assert.equal(dict('zh').home.heroTitlePost, '');
+  // markup 綁定不准是空字串 —— 空的就是畫面上那行字消失了。
+  // (標題輪播那三句的 pre/post 允許空,但它們住在 home.data.*,由 JS 取用不是 markup 綁定,
+  //  不在 keys 裡。那一組的檢查在「home data arrays」那條。)
   const emptyInZh = keys.filter((key) => lookup(dict('zh'), key) === '');
-  assert.deepEqual(emptyInZh, ['home.heroTitlePost']);
+  assert.deepEqual(emptyInZh, [], `這些綁定在中文版是空字串,畫面上會直接不見:${emptyInZh.join(', ')}`);
 });
 
 test('rendering index.html in English leaves no Chinese in the markup', () => {
@@ -152,7 +153,7 @@ test('English SEO metadata is translated for every page, not just the markup', (
   // 全靠 syncSeo() 換。字典裡沒有英文版的話,英文頁的分頁標題會一路是中文。
   const en = dict('en').meta;
   assert.ok(en && en.pages, 'en dict must carry meta.pages');
-  for (const page of ['home', 'restaurants', 'suppliers', 'cases', 'about', 'contact']) {
+  for (const page of ['home', 'restaurants', 'suppliers', 'cases', 'about', 'contact', 'news', 'qa']) {
     assert.ok(en.pages[page], `missing en meta for ${page}`);
     assert.doesNotMatch(en.pages[page].title, CJK, `${page} title still Chinese`);
     assert.doesNotMatch(en.pages[page].description, CJK, `${page} description still Chinese`);
@@ -165,7 +166,7 @@ test('English SEO metadata is translated for every page, not just the markup', (
 test('home data arrays match the counts the component renders', () => {
   // 長度對不上的症狀:首頁少一格或多一格空白卡片
   const expected = {
-    rotating: 4,
+    rotating: 3,   // 三句完整標題,每句是 { pre, hl, post }
     hotTags: 6,
     heroPromises: 3,
     stats: 4,
@@ -182,6 +183,18 @@ test('home data arrays match the counts the component renders', () => {
     for (const [key, count] of Object.entries(expected)) {
       assert.ok(Array.isArray(data[key]), `dict('${lang}').home.data.${key} must be an array`);
       assert.equal(data[key].length, count, `dict('${lang}').home.data.${key}`);
+    }
+  }
+
+  // 輪播標題是物件不是字串:三段都要在、hl(綠色強調)不可為空,
+  // 而且兩個語系的每一句都要能拼回完整的一行字
+  for (const lang of LANGS) {
+    for (const r of dict(lang).home.data.rotating) {
+      for (const part of ['pre', 'hl', 'post']) {
+        assert.equal(typeof r[part], 'string', `${lang} rotating 缺少 ${part}:${JSON.stringify(r)}`);
+      }
+      assert.ok(r.hl.trim(), `${lang} rotating 的強調段是空的:${JSON.stringify(r)}`);
+      assert.ok((r.pre + r.hl + r.post).trim().length > 4, `${lang} rotating 太短:${JSON.stringify(r)}`);
     }
   }
 
@@ -257,8 +270,10 @@ test('internal links are language-aware bindings, never hard-coded paths', () =>
     assert.match(
       href,
       // a.href 是文章列表在 sc-for 裡逐篇算出來的網址(已經帶語系前綴),
-      // 跟 hrefXxx 一樣是綁定,不是寫死的路徑
-      /^\{\{ (href[A-Za-z]*|langHref|loginUrl|restaurantRegistrationUrl|supplierApplicationUrl|a\.href|lk\.href) \}\}$/,
+      // 跟 hrefXxx 一樣是綁定,不是寫死的路徑。
+      // q.linkHref 是常見問題答案裡的外連(值來自字典,是完整的 https:// 網址);
+      // 它會落進這條檢查只是因為 markup 上寫的是綁定而不是字面網址,不是寫死的內部路徑。
+      /^\{\{ (href[A-Za-z]*|langHref|loginUrl|restaurantRegistrationUrl|supplierApplicationUrl|a\.href|lk\.href|q\.linkHref) \}\}$/,
       `internal link must be a binding, got ${href}`,
     );
   }

@@ -22,6 +22,7 @@
   var pageByPath = {
     '/': 'home',
     '/news': 'news',
+    '/qa': 'qa',
     '/restaurants': 'restaurants',
     '/suppliers': 'suppliers',
     '/cases': 'cases',
@@ -32,6 +33,7 @@
   var pathByPage = {
     home: '/',
     news: '/news',
+    qa: '/qa',
     restaurants: '/restaurants',
     suppliers: '/suppliers',
     cases: '/cases',

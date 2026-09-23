@@ -17,7 +17,7 @@ const {
 const projectRoot = path.resolve(__dirname, '..');
 
 const BASE = 'https://ifoodmap-landing.vercel.app';
-const PAGES = ['home', 'restaurants', 'suppliers', 'cases', 'about', 'contact', 'news'];
+const PAGES = ['home', 'restaurants', 'suppliers', 'cases', 'about', 'contact', 'news', 'qa'];
 
 function createFakeWindow(pathname = '/') {
   const listeners = new Map();
@@ -118,11 +118,11 @@ function createFakeElement(document, name) {
 
 test('pathToPage maps every public path to its page', () => {
   assert.deepEqual(
-    ['/', '/restaurants', '/suppliers', '/cases', '/about', '/contact', '/news'].map(pathToPage),
+    ['/', '/restaurants', '/suppliers', '/cases', '/about', '/contact', '/news', '/qa'].map(pathToPage),
     PAGES,
   );
   assert.deepEqual(
-    ['/en', '/en/restaurants', '/en/suppliers', '/en/cases', '/en/about', '/en/contact', '/en/news'].map(pathToPage),
+    ['/en', '/en/restaurants', '/en/suppliers', '/en/cases', '/en/about', '/en/contact', '/en/news', '/en/qa'].map(pathToPage),
     PAGES,
   );
 });
@@ -166,20 +166,20 @@ test('only a real /en segment counts as English', () => {
 test('pageToPath maps every page to its canonical public path', () => {
   assert.deepEqual(
     PAGES.map((page) => pageToPath(page)),
-    ['/', '/restaurants', '/suppliers', '/cases', '/about', '/contact', '/news'],
+    ['/', '/restaurants', '/suppliers', '/cases', '/about', '/contact', '/news', '/qa'],
   );
   assert.deepEqual(
     PAGES.map((page) => pageToPath(page, 'zh')),
-    ['/', '/restaurants', '/suppliers', '/cases', '/about', '/contact', '/news'],
+    ['/', '/restaurants', '/suppliers', '/cases', '/about', '/contact', '/news', '/qa'],
   );
   assert.deepEqual(
     PAGES.map((page) => pageToPath(page, 'en')),
-    ['/en', '/en/restaurants', '/en/suppliers', '/en/cases', '/en/about', '/en/contact', '/en/news'],
+    ['/en', '/en/restaurants', '/en/suppliers', '/en/cases', '/en/about', '/en/contact', '/en/news', '/en/qa'],
   );
 });
 
 test('pathToRoute and pageToPath round-trip every page in every language', () => {
-  const pages = ['home', 'restaurants', 'suppliers', 'cases', 'about', 'contact', 'news'];
+  const pages = ['home', 'restaurants', 'suppliers', 'cases', 'about', 'contact', 'news', 'qa'];
   for (const lang of ['zh', 'en']) {
     for (const page of pages) {
       const path = pageToPath(page, lang);
@@ -605,14 +605,16 @@ test('public route controls use anchors and navigation exposes accessibility hoo
 
 test('Vercel rewrites each public route to index without catching API paths', () => {
   const config = JSON.parse(fs.readFileSync(path.join(projectRoot, 'vercel.json'), 'utf8'));
-  // 中文 6 條 + 文章參數路由 + /en + 英文 6 條 + 英文文章參數路由 = 15。
+  // 中文 6 條 + 文章參數路由 + /qa + /en + 英文 6 條 + 英文文章參數路由 + /en/qa = 17。
   // 中文首頁 / 就是 index 本身,不需要 rewrite。
   const expectedSources = [
     '/restaurants', '/suppliers', '/cases', '/about', '/contact', '/news',
     '/news/:slug',
+    '/qa',
     '/en',
     '/en/restaurants', '/en/suppliers', '/en/cases', '/en/about', '/en/contact', '/en/news',
     '/en/news/:slug',
+    '/en/qa',
   ];
   assert.deepEqual(config.rewrites.map(({ source }) => source), expectedSources);
 

@@ -25,7 +25,6 @@
         "menuLabel": "選單",
         "findIngredients": "找食材",
         "becomeSupplier": "成為供應商",
-        "features": "平台功能",
         "faq": "常見問題",
         "about": "關於我們",
         "news": "最新消息",
@@ -34,8 +33,6 @@
         "skipToContent": "跳到主要內容"
       },
       "home": {
-        "heroTitlePre": "免費找到",
-        "heroTitlePost": "",
         "heroSubA": "餐廳、團膳、學校、團購主都適用。",
         "heroSubB": "填一次需求，供應商主動來找你。",
         "searchAriaLabel": "搜尋食材",
@@ -65,10 +62,21 @@
         "ctaSecondary": "免費註冊會員",
         "data": {
           "rotating": [
-            "所有食材",
-            "對的供應商",
-            "第二家報價",
-            "產地直送的好貨"
+            {
+              "pre": "免費找到",
+              "hl": "所有食材",
+              "post": ""
+            },
+            {
+              "pre": "免費找到",
+              "hl": "合適的供應商",
+              "post": ""
+            },
+            {
+              "pre": "",
+              "hl": "多家供應商",
+              "post": "主動聯繫報價"
+            }
           ],
           "hotTags": [
             "蔬菜",
@@ -76,7 +84,7 @@
             "豬肉",
             "牛肉",
             "火鍋料",
-            "米麵"
+            "雜貨"
           ],
           "heroPromises": [
             "完全免費",
@@ -439,26 +447,83 @@
         "value3Body": "串接台灣在地供應鏈，縮短產地、供應端與餐桌之間的資訊距離。"
       },
       "contact": {
-        "heroTitle": "找到適合你的平台入口或聯絡方式",
-        "heroBody": "餐廳可以直接建立帳號，供應商可以申請上架；一般商務諮詢與食材需求也可以由客服協助。",
-        "roleGridLabel": "平台角色入口",
-        "roleRestaurantTitle": "我是餐廳",
-        "roleRestaurantAction": "建立餐廳帳號 →",
-        "roleSupplierTitle": "我是供應商",
-        "roleSupplierAction": "申請供應商上架 →",
+        "heroEyebrow": "異業合作",
+        "heroTitle": "一起把台灣的食材供應鏈，做得更好",
+        "heroBody": "通路、系統商、物流業者與品牌方，都可以在這裡談合作。留下你想談的方向，我們會安排對的人回覆你。",
+        "typesEyebrow": "合作方向",
+        "typesTitle": "我們在找什麼樣的合作",
+        "typesBody": "不限於下面四種，但這四種我們已經有明確的做法與對接經驗，推進起來最快。",
+        "typeChannelTitle": "通路與門市合作",
+        "typeChannelDesc": "連鎖餐飲、團膳、食材行與量販通路，把 iFoodmap 的供應商網絡接進你既有的採購流程，不用換掉現在的做法。",
+        "typeIntegrationTitle": "系統串接（API / ERP / POS）",
+        "typeIntegrationDesc": "POS、ERP、進銷存與訂貨系統的雙向串接，讓需求、報價與訂單在兩邊流動，不用再重打一次。",
+        "typeLogisticsTitle": "物流倉儲與冷鏈",
+        "typeLogisticsDesc": "常溫、冷藏與冷凍配送、集貨倉與最後一哩。一起把出貨時效與品溫穩定下來，讓餐廳敢把量交出來。",
+        "typeBrandingTitle": "品牌聯名與行銷合作",
+        "typeBrandingDesc": "產地故事、聯名商品、活動與內容合作，把值得被看見的供應端，介紹給更多餐飲業者。",
+        "flowEyebrow": "合作怎麼開始",
+        "flowTitle": "三步，從送出表單到坐下來談",
+        "step1Title": "填寫合作洽詢",
+        "step1Desc": "留下公司、聯絡方式與想談的方向。寫得愈具體，我們愈能在回覆前先做完功課。",
+        "step2Title": "我們在三個工作天內回覆",
+        "step2Desc": "由負責該類型合作的窗口用 Email 回你，附上初步評估，以及還需要你補充的資訊。",
+        "step3Title": "安排線上或實地洽談",
+        "step3Desc": "談合作範圍、分工與時程。方向確認之後就進入試行，或直接進到正式合約。",
+        "formEyebrow": "合作洽詢",
+        "formTitle": "異業合作洽詢表單",
+        "formHelp": "標示 * 的欄位為必填。送出後我們會用 Email 與你聯繫，填寫的資料僅供合作評估使用。",
+        "labelCompany": "公司名稱",
+        "placeholderCompany": "例：好食材股份有限公司",
+        "labelName": "聯絡人姓名",
+        "placeholderName": "例：王小明",
+        "labelJobTitle": "職稱",
+        "placeholderJobTitle": "例：業務發展經理",
+        "labelEmail": "Email",
+        "placeholderEmail": "name@company.com",
+        "labelPhone": "聯絡電話",
+        "placeholderPhone": "02-0000-0000 或 0900-000-000",
+        "labelWebsite": "公司網站 / 相關連結",
+        "placeholderWebsite": "https://",
+        "labelPartnerType": "合作類型",
+        "partnerTypePlaceholder": "請選擇合作類型",
+        "partnerTypeChannel": "通路與門市合作",
+        "partnerTypeIntegration": "系統串接（API / ERP / POS）",
+        "partnerTypeLogistics": "物流倉儲與冷鏈",
+        "partnerTypeBranding": "品牌聯名與行銷合作",
+        "partnerTypeOther": "其他合作提案",
+        "labelMessage": "合作內容說明",
+        "placeholderMessage": "想談的合作方向、目前的規模與時程，以及希望 iFoodmap 這邊提供什麼。",
+        "submit": "送出合作洽詢",
+        "formRequire": "請填寫必填欄位，並確認 Email 格式",
+        "formSubmitting": "送出中…",
+        "formSuccess": "✓ 已收到，我們會盡快與您聯繫",
+        "formFailure": "送出失敗，請稍後再試或改寄 Email",
+        "infoEyebrow": "其他聯絡方式",
+        "infoTitle": "不想填表，直接找我們也可以",
         "phoneIcon": "電",
         "phoneLabel": "服務專線",
+        "phoneAria": "撥打服務專線 02-7704-5539",
         "emailLabel": "電子信箱",
+        "emailAria": "寄信到 ifoodmaptw@gmail.com",
         "hoursIcon": "時",
         "hoursLabel": "服務時間",
         "hoursValue": "週一至週五 9:00 – 18:00",
         "lineLabel": "官方 LINE",
         "lineValue": "加入好友即時諮詢",
+        "lineAria": "加入 iFoodmap 官方 LINE 好友（另開新視窗）",
+        "exitEyebrow": "不是要談合作？",
+        "exitTitle": "你是要找食材嗎？",
+        "exitBody": "這一頁的表單是給異業合作洽詢用的。如果你要找的是供應商與報價，不用填表，右下角的 AI 採購助手會直接幫你問清楚。",
         "aiTitle": "直接跟 AI 採購助手說",
         "aiHelp": "不用填表。說一句你要找什麼，助手會問清楚品項、數量、配送區域與時程，再把需求送給合適的供應商。",
         "aiCta": "開始對話，免費媒合 →",
         "aiHint": "也可以直接上傳菜單照片，讓它幫你整理採購清單。",
-        "aiQuickLabel": "常見需求，點一下開始"
+        "aiQuickLabel": "常見需求，點一下開始",
+        "roleGridLabel": "平台角色入口",
+        "roleRestaurantTitle": "我是餐廳",
+        "roleRestaurantAction": "建立餐廳帳號 →",
+        "roleSupplierTitle": "我是供應商",
+        "roleSupplierAction": "申請供應商上架 →"
       },
       "footer": {
         "brandTagline": "食材地圖",
@@ -476,6 +541,10 @@
         "supportFaq": "常見問題",
         "supportTerms": "使用條款",
         "supportPrivacy": "隱私權政策",
+        "socialLineLabel": "客服 LINE@",
+        "socialLineAria": "加入 iFoodmap 客服 LINE@（另開新視窗）",
+        "socialFollowLabel": "追蹤我們",
+        "socialFacebookAria": "在 Facebook 追蹤 iFoodmap（另開新視窗）",
         "sep": "｜"
       },
       "meta": {
@@ -507,8 +576,8 @@
             "description": "iFoodmap 是連結餐廳與食材供應商的雙邊 B2B 食材採購平台，讓資訊沿著採購流程流動。"
           },
           "contact": {
-            "title": "聯絡我們｜跟 AI 採購助手說需求，或申請供應商上架 - iFoodmap 食材地圖",
-            "description": "餐廳可以直接建立帳號、供應商可以申請上架。食材需求交給 AI 採購助手問清楚，平台再送給合適的供應商，需求方完全免費。"
+            "title": "異業合作｜通路、系統串接、物流冷鏈與品牌聯名洽詢 - iFoodmap 食材地圖",
+            "description": "iFoodmap 開放異業合作洽詢：通路與門市、系統串接（API / ERP / POS）、物流倉儲與冷鏈、品牌聯名與行銷。填一張表，我們會在三個工作天內由對應窗口回覆。"
           },
           "news": {
             "title": "最新消息｜餐飲採購與食安的第一手整理 - iFoodmap 食材地圖",
@@ -517,6 +586,10 @@
           "article": {
             "title": "最新消息｜餐飲採購與食安的第一手整理 - iFoodmap 食材地圖",
             "description": "從食材採購、產銷履歷到市場趨勢，整理餐飲與團膳業者實際會用到的資訊。"
+          },
+          "qa": {
+            "title": "常見問題｜加入、審核與收費怎麼運作 - iFoodmap 食材地圖",
+            "description": "供應商加入食材地圖的流程、平台審核與收費方案，最常被問到的問題都整理在這裡。找不到答案可以直接問 AI 採購助手。"
           }
         }
       },
@@ -533,8 +606,37 @@
         "notFoundBody": "這個網址可能已經變更或被移除。你可以回到最新消息列表看看其他內容。",
         "coverAlt": "文章封面"
       },
+      "qa": {
+        "heroEyebrow": "常見問題",
+        "heroTitle": "加入、審核與收費，最常被問到的問題",
+        "heroSub": "這裡整理供應商在加入食材地圖前後最常問的問題。沒有找到答案，右下角的 AI 採購助手可以直接回答你。",
+        "countLabel": "個問題",
+        "ctaTitle": "還是沒找到答案？",
+        "ctaBody": "把問題直接告訴 AI 採購助手。它會依照你的品項、配送區域與時程回答，也能幫你把需求送到合適的供應商手上。",
+        "ctaButton": "開始對話，免費媒合 →",
+        "ctaHint": "需求方完全免費，不需要註冊就能開始對話。",
+        "items": [
+          {
+            "question": "我是食材供應商，該如何加入食材地圖，成為合作供應商？",
+            "paras": [
+              "註冊帳號後，填妥供應商資料，通過平台審核後，即可開通上接受食材需求轉單服務。"
+            ],
+            "linkHref": "",
+            "linkText": ""
+          },
+          {
+            "question": "請問成為合作供應商需要費用嗎？",
+            "paras": [
+              "註冊供應商資訊並審核開通後，及可以收到符合供應商販售食材和配送區域的食材需求單，但如果想要近一步與買家聯繫報價洽談後續，則需成為付費合作供應商。"
+            ],
+            "linkHref": "https://www.ifoodmap.com.tw/how/pointRule",
+            "linkText": "查看收費方案"
+          }
+        ]
+      },
       "ai": {
         "fabLabel": "開啟 AI 採購助手",
+        "fabTitle": "找食材嗎？",
         "title": "iFoodMap AI 採購助手",
         "subtitle": "上傳菜單或描述需求，立即整理採購清單",
         "closeLabel": "關閉",
@@ -569,7 +671,6 @@
         "menuLabel": "Menu",
         "findIngredients": "Find Ingredients",
         "becomeSupplier": "Become a Supplier",
-        "features": "How It Works",
         "faq": "FAQ",
         "about": "About",
         "news": "News",
@@ -578,8 +679,6 @@
         "skipToContent": "Skip to main content"
       },
       "home": {
-        "heroTitlePre": "Find ",
-        "heroTitlePost": " at no cost",
         "heroSubA": "For restaurants, catering operations, schools, and group-buying hosts.",
         "heroSubB": "Submit one request and suppliers come to you.",
         "searchAriaLabel": "Search ingredients",
@@ -609,10 +708,21 @@
         "ctaSecondary": "Create an Account",
         "data": {
           "rotating": [
-            "every ingredient",
-            "the right supplier",
-            "a second quote",
-            "farm-direct quality"
+            {
+              "pre": "Find ",
+              "hl": "every ingredient",
+              "post": " at no cost"
+            },
+            {
+              "pre": "Find ",
+              "hl": "the right supplier",
+              "post": " at no cost"
+            },
+            {
+              "pre": "",
+              "hl": "Multiple suppliers",
+              "post": " come to you with quotes"
+            }
           ],
           "hotTags": [
             "Vegetables",
@@ -620,7 +730,7 @@
             "Pork",
             "Beef",
             "Hot Pot",
-            "Rice & Noodles"
+            "Dry Goods"
           ],
           "heroPromises": [
             "No cost to buyers",
@@ -983,26 +1093,83 @@
         "value3Body": "We connect local supply chains nationwide (Taiwan) to shorten the distance between farm, supplier, and table."
       },
       "contact": {
-        "heroTitle": "Find the right entry point, or just contact us",
-        "heroBody": "Restaurants can create an account directly and suppliers can apply to list. For general business inquiries or ingredient requests, our team is here to help.",
-        "roleGridLabel": "Platform entry points by role",
-        "roleRestaurantTitle": "I'm a restaurant",
-        "roleRestaurantAction": "Create a restaurant account →",
-        "roleSupplierTitle": "I'm a supplier",
-        "roleSupplierAction": "Apply to list as a supplier →",
+        "heroEyebrow": "Partnerships",
+        "heroTitle": "Let's build a better ingredient supply chain, together",
+        "heroBody": "Channel operators, software vendors, logistics providers and brands — this is where partnership conversations start. Tell us what you have in mind and the right person will come back to you.",
+        "typesEyebrow": "Where we partner",
+        "typesTitle": "The partnerships we're looking for",
+        "typesBody": "We're open to more than these four, but these are the ones we already have a playbook for — they move fastest.",
+        "typeChannelTitle": "Channel & retail partnerships",
+        "typeChannelDesc": "Restaurant groups, institutional caterers, food distributors and retail chains: bring the iFoodmap supplier network into the purchasing process you already run, without replacing it.",
+        "typeIntegrationTitle": "System integration (API, ERP, POS)",
+        "typeIntegrationDesc": "Two-way integration with POS, ERP, inventory and ordering systems, so requests, quotes and orders move between both sides instead of being keyed in twice.",
+        "typeLogisticsTitle": "Logistics, warehousing & cold chain",
+        "typeLogisticsDesc": "Ambient, chilled and frozen delivery, consolidation warehousing and last-mile. Make delivery windows and temperature control dependable enough that kitchens commit real volume.",
+        "typeBrandingTitle": "Brand collaborations & marketing",
+        "typeBrandingDesc": "Producer stories, co-branded products, events and content — put supply worth noticing in front of far more operators.",
+        "flowEyebrow": "How it works",
+        "flowTitle": "Three steps from enquiry to a real conversation",
+        "step1Title": "Send the enquiry",
+        "step1Desc": "Your company, how to reach you, and the direction you'd like to explore. The more specific it is, the more homework we can do before replying.",
+        "step2Title": "We reply within three business days",
+        "step2Desc": "The lead for that type of partnership emails you back with an initial assessment and anything else we need from your side.",
+        "step3Title": "Meet online or on site",
+        "step3Desc": "Scope, ownership and timeline. Once the direction is agreed we move to a pilot, or straight to an agreement.",
+        "formEyebrow": "Partnership enquiry",
+        "formTitle": "Partnership enquiry form",
+        "formHelp": "Fields marked * are required. We'll reply by email, and what you enter here is used only to assess the partnership.",
+        "labelCompany": "Company name",
+        "placeholderCompany": "e.g. Good Harvest Foods Co., Ltd.",
+        "labelName": "Contact name",
+        "placeholderName": "e.g. Jamie Chen",
+        "labelJobTitle": "Job title",
+        "placeholderJobTitle": "e.g. Business Development Manager",
+        "labelEmail": "Email",
+        "placeholderEmail": "name@company.com",
+        "labelPhone": "Phone",
+        "placeholderPhone": "+886 2 0000 0000",
+        "labelWebsite": "Company website / relevant link",
+        "placeholderWebsite": "https://",
+        "labelPartnerType": "Partnership type",
+        "partnerTypePlaceholder": "Select a partnership type",
+        "partnerTypeChannel": "Channel & retail partnerships",
+        "partnerTypeIntegration": "System integration (API, ERP, POS)",
+        "partnerTypeLogistics": "Logistics, warehousing & cold chain",
+        "partnerTypeBranding": "Brand collaborations & marketing",
+        "partnerTypeOther": "Something else",
+        "labelMessage": "Tell us about the partnership",
+        "placeholderMessage": "What you have in mind, the scale and timing you're working with, and what you'd need from iFoodmap.",
+        "submit": "Send enquiry",
+        "formRequire": "Please complete the required fields and check your email address",
+        "formSubmitting": "Sending…",
+        "formSuccess": "✓ Got it — we'll be in touch shortly",
+        "formFailure": "Couldn't send — please try again or email us",
+        "infoEyebrow": "Other ways to reach us",
+        "infoTitle": "Skip the form and contact us directly",
         "phoneIcon": "T",
         "phoneLabel": "Service line",
+        "phoneAria": "Call our service line on 02-7704-5539",
         "emailLabel": "Email",
+        "emailAria": "Email ifoodmaptw@gmail.com",
         "hoursIcon": "H",
         "hoursLabel": "Business hours",
         "hoursValue": "Mon–Fri 9:00 – 18:00",
         "lineLabel": "Official LINE",
         "lineValue": "Add us for instant support",
+        "lineAria": "Add the iFoodmap official LINE account (opens in a new window)",
+        "exitEyebrow": "Not here about a partnership?",
+        "exitTitle": "Looking for ingredients instead?",
+        "exitBody": "This form is for partnership enquiries. If what you actually need is suppliers and quotes, skip the form — the AI sourcing assistant in the bottom-right corner will take it from there.",
         "aiTitle": "Just tell our AI assistant",
         "aiHelp": "No forms. Say what you need and the assistant will work through the items, volume, delivery area and timing, then send your request to suppliers that fit.",
         "aiCta": "Start chatting — free →",
         "aiHint": "You can also upload a photo of your menu and let it build the sourcing list for you.",
-        "aiQuickLabel": "Common requests — tap to start"
+        "aiQuickLabel": "Common requests — tap to start",
+        "roleGridLabel": "Platform entry points by role",
+        "roleRestaurantTitle": "I'm a restaurant",
+        "roleRestaurantAction": "Create a restaurant account →",
+        "roleSupplierTitle": "I'm a supplier",
+        "roleSupplierAction": "Apply to list as a supplier →"
       },
       "footer": {
         "brandTagline": "Food Sourcing Map",
@@ -1020,6 +1187,10 @@
         "supportFaq": "FAQ",
         "supportTerms": "Terms of Service",
         "supportPrivacy": "Privacy Policy",
+        "socialLineLabel": "Customer LINE@",
+        "socialLineAria": "Add the iFoodmap customer-service LINE@ account (opens in a new window)",
+        "socialFollowLabel": "Follow us",
+        "socialFacebookAria": "Follow iFoodmap on Facebook (opens in a new window)",
         "sep": ": "
       },
       "meta": {
@@ -1051,8 +1222,8 @@
             "description": "iFoodmap is a two-sided B2B sourcing platform connecting restaurants with ingredient suppliers, keeping information moving through the sourcing process."
           },
           "contact": {
-            "title": "Contact | Tell our AI assistant what you need - iFoodmap",
-            "description": "Restaurants can create an account and suppliers can apply to list. Tell our AI assistant what ingredients you need and we will send your request to suppliers that fit, at no cost to buyers."
+            "title": "Partnerships | Channel, Integration, Logistics and Brand Collaborations - iFoodmap",
+            "description": "iFoodmap partners with channel operators, system integrators, logistics providers and brands. Send a partnership enquiry and the right team replies within three business days."
           },
           "news": {
             "title": "News | Sourcing and Food Safety, Sorted Out - iFoodmap",
@@ -1061,6 +1232,10 @@
           "article": {
             "title": "News | Sourcing and Food Safety, Sorted Out - iFoodmap",
             "description": "From ingredient procurement and traceability to market trends — what restaurants and catering operations actually need to know."
+          },
+          "qa": {
+            "title": "FAQ | How joining, review and pricing work - iFoodmap",
+            "description": "How suppliers join iFoodmap, how the review works and what the paid plans cover — the questions we are asked most. Can't find your answer? Ask our AI sourcing assistant."
           }
         }
       },
@@ -1077,8 +1252,37 @@
         "notFoundBody": "This link may have changed or been removed. Head back to the news list to see what else is there.",
         "coverAlt": "Article cover"
       },
+      "qa": {
+        "heroEyebrow": "FAQ",
+        "heroTitle": "Joining, review and pricing — the questions we get most",
+        "heroSub": "The questions suppliers ask most often, before and after joining iFoodmap. If your answer isn't here, the AI sourcing assistant in the corner can answer it directly.",
+        "countLabel": "questions",
+        "ctaTitle": "Still not finding your answer?",
+        "ctaBody": "Tell the AI sourcing assistant what you need. It answers around your products, delivery areas and timing, and can send your request to the suppliers that fit.",
+        "ctaButton": "Start chatting — free →",
+        "ctaHint": "Free for buyers, and no account needed to start a conversation.",
+        "items": [
+          {
+            "question": "I'm an ingredient supplier. How do I join iFoodmap and become a listed supplier?",
+            "paras": [
+              "Create an account, fill in your supplier details, and once it clears our review your account is opened up to receive forwarded ingredient requests."
+            ],
+            "linkHref": "",
+            "linkText": ""
+          },
+          {
+            "question": "Is there a fee to become a listed supplier?",
+            "paras": [
+              "Once your supplier details are registered and approved, you start receiving ingredient requests that match what you sell and the areas you deliver to. To go further — contacting the buyer, quoting and working out the details — you need to move onto a paid supplier plan."
+            ],
+            "linkHref": "https://www.ifoodmap.com.tw/how/pointRule",
+            "linkText": "See the pricing plans"
+          }
+        ]
+      },
       "ai": {
         "fabLabel": "Open the AI sourcing assistant",
+        "fabTitle": "Looking for ingredients?",
         "title": "iFoodMap AI Sourcing Assistant",
         "subtitle": "Upload a menu or describe your needs",
         "closeLabel": "Close",

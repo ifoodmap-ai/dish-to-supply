@@ -1,4 +1,4 @@
-// 12 條公開網址 × 真實瀏覽器,逐條檢查:語系、title、有沒有未解析的 {{ }}、有沒有橫向溢出、
+// 16 條公開網址 × 真實瀏覽器,逐條檢查:語系、title、有沒有未解析的 {{ }}、有沒有橫向溢出、
 // 英文頁有沒有殘留中文、內部連結前綴對不對
 import { spawn } from 'node:child_process';
 const BASE = process.argv[2];
@@ -6,6 +6,7 @@ const ROUTES = [
   ['/', 'zh'], ['/restaurants', 'zh'], ['/suppliers', 'zh'], ['/cases', 'zh'], ['/about', 'zh'], ['/contact', 'zh'],
   ['/en', 'en'], ['/en/restaurants', 'en'], ['/en/suppliers', 'en'], ['/en/cases', 'en'], ['/en/about', 'en'], ['/en/contact', 'en'],
   ['/news', 'zh'], ['/en/news', 'en'],
+  ['/qa', 'zh'], ['/en/qa', 'en'],
 ];
 const port = 9700 + Math.floor(Math.random() * 200);
 const chrome = spawn('/Applications/Google Chrome.app/Contents/MacOS/Google Chrome', [

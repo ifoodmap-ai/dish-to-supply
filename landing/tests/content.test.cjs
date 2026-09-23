@@ -36,7 +36,9 @@ const contact = source.slice(contactStart, contactEnd);
 const newsStart = source.indexOf('<!-- ============ PAGE: NEWS');
 const articleStart = source.indexOf('<!-- ============ PAGE: ARTICLE');
 const news = source.slice(newsStart, articleStart);
-const article = source.slice(articleStart, source.indexOf('<!-- ============ FOOTER ============ -->'));
+const qaStart = source.indexOf('<!-- ============ PAGE: QA');
+const article = source.slice(articleStart, qaStart);
+const qa = source.slice(qaStart, source.indexOf('<!-- ============ FOOTER ============ -->'));
 const footerStart = source.indexOf('<!-- ============ FOOTER ============ -->');
 const footerEnd = source.indexOf('</footer>', footerStart) + '</footer>'.length;
 const footer = source.slice(footerStart, footerEnd);
@@ -268,12 +270,18 @@ const mobileMenu = header.slice(mobileMenuStart, header.indexOf('</sc-if>', mobi
 test('homepage presents the design-approved hero: rotating headline, subtitle, search and promises', () => {
   assert.ok(homeStart >= 0 && homeEnd > homeStart);
   assert.match(home, /B2B MATCHING ENGINE/);
-  assert.match(home, /<h1[^>]*>\s*免費找到<span[^>]*>\{\{\s*rotating\s*\}\}<\/span>\s*<\/h1>/);
-  assert.deepEqual(homeData.rotating, ['所有食材', '對的供應商', '第二家報價', '產地直送的好貨']);
+  // 輪播的是整句,不是共用前綴 + 一個詞 —— 三句裡有一句不是「免費找到…」開頭
+  assert.match(home, /\{\{ rotating\.pre \}\}<span[^>]*>\{\{ rotating\.hl \}\}<\/span>\{\{ rotating\.post \}\}/);
+  assert.deepEqual(
+    homeData.rotating.map((r) => r.pre + r.hl + r.post),
+    ['免費找到所有食材', '免費找到合適的供應商', '多家供應商主動聯繫報價'],
+  );
+  // 綠色強調的那一段不可以是空的,否則整句都是深色、失去設計上的重點
+  for (const r of homeData.rotating) assert.ok(r.hl, `rotating 缺少強調段:${JSON.stringify(r)}`);
   assert.match(home, /餐廳、團膳、學校、團購主都適用。<br>填一次需求，供應商主動來找你。/);
   assert.match(home, /placeholder="搜尋食材，例如：有機葉菜、火鍋肉片"/);
   assert.deepEqual(homeData.heroPromises, ['完全免費', '成交不抽成', '平均 4 小時有回覆']);
-  assert.deepEqual(homeData.hotTags, ['蔬菜', '水果', '豬肉', '牛肉', '火鍋料', '米麵']);
+  assert.deepEqual(homeData.hotTags, ['蔬菜', '水果', '豬肉', '牛肉', '火鍋料', '雜貨']);
   assert.match(component, /hotTags: list\('hotTags'\)\.map\(/);
   // 搜尋列與分類籤都要接進 AI 助手,不能是死的裝飾
   assert.match(home, /<form onSubmit="\{\{\s*askAI\s*\}\}" role="search"/);
@@ -377,12 +385,13 @@ test('homepage shows three testimonials and three articles, then the closing CTA
 
 test('mobile menu mirrors desktop destinations and the legacy drawer is no longer mounted', () => {
   // 內部連結的 href 現在一律是 {{ href* }} 綁定(才會帶語系前綴),所以比對「綁定名 + 文字」
-  const linkPattern = /<a href="\{\{ (\w+) \}\}"[^>]*>([^<]+)<\/a>/g;
+  const linkPattern = /<a href="\{\{ (\w+) \}\}"[^>]*>(?:\s*<img[^>]*>)?\s*([^<\s][^<]*?)\s*<\/a>/g;
   const desktopLinks = Array.from(header.slice(0, mobileMenuStart).matchAll(linkPattern))
     .filter((m) => m[2] !== '食材地圖');
   const mobileLinks = Array.from(mobileMenu.matchAll(linkPattern));
-  assert.equal(desktopLinks.length, 9); // 7 nav + 語言切換 + CTA
-  assert.equal(mobileLinks.length, 9);
+  // 「平台功能」2026-09-23 從 menu 拿掉(頁尾那條保留),所以 nav 從 7 條變 6 條
+  assert.equal(desktopLinks.length, 8); // 6 nav + 語言切換 + CTA
+  assert.equal(mobileLinks.length, 8);
   assert.deepEqual(desktopLinks.map((m) => m[1] + m[2]), mobileLinks.map((m) => m[1] + m[2]));
   assert.match(header, /aria-expanded="\{\{\s*menuOpen\s*\}\}"/);
   assert.match(header, /aria-controls="ifm-mobile-menu"/);
@@ -771,46 +780,196 @@ test('about page explains the two-sided platform and retains exactly three appro
   assert.doesNotMatch(about, /成立於|團隊成員|合作夥伴|媒體報導/);
 });
 
-test('contact page hands every request to the AI assistant instead of a form', () => {
-  // 需求單表單 2026-09-23 移除,所有「送出媒合」一律開右下角的 AI 採購助手。
-  // 表單不該以任何形式復活 —— 這幾條同時擋住「不小心把 markup 貼回來」。
-  assert.doesNotMatch(contact, /<form/);
-  assert.doesNotMatch(contact, /class="contact-field"/);
-  assert.doesNotMatch(contact, /name="(?:company_name|contact_phone|items_text)"/);
+test('contact page is now the partnership enquiry page, and the demand form stays dead', () => {
+  // 🔴 這一組擋的是「那張被移除的食材需求單復活」,不是「這一頁不准有任何表單」。
+  //    2026-09-23 之後 /contact 改成異業合作頁,它自己有一張 partnership_leads 的表單,
+  //    所以原本 `assert.doesNotMatch(contact, /<form/)` 那條過寬了 —— 換成盯住需求單自己的特徵:
+  //      ① 需求單專屬欄位 items_text / detail
+  //      ② 需求單那張卡的 id="demand-form-title"
+  //      ③ 靠 document 全域 submit 委派 + fields[0..4] 位置索引取值的那支 script
+  //    異業合作表單三樣都沒有:欄位一律靠 name 取,送出綁的是框架自己的 onSubmit。
+  assert.doesNotMatch(contact, /name="(?:items_text|detail)"/);
+  assert.doesNotMatch(source, /id="demand-form-title"/);
+  assert.doesNotMatch(source, /function findDemandCard/);
+  assert.doesNotMatch(source, /document\.addEventListener\('submit'/);
 
-  // 上方的 aria / 錨點仍然指著這個標題,id 不能掉
-  assert.match(contact, /id="demand-form-title"/);
-  // 注意:contact 是 renderMarkup('zh') 的結果,L.* 綁定已經被代成中文了,
-  // 只有非 L 的綁定(openAI / hotTags)還是原樣。所以這裡比對「渲染後的按鈕文字」。
-  const { dict } = require('../i18n.js');
-  const aiCta = dict('zh').contact.aiCta;
-  assert.match(contact, new RegExp(`onClick="\\{\\{ openAI \\}\\}"[^>]*>${aiCta.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}`));
-  // 英文版也要指到同一個 handler(不是各自寫死一顆按鈕)
-  const { renderMarkup } = require('./helpers/render.cjs');
+  // 異業合作表單:走框架的 onSubmit 綁定
+  assert.match(contact, /<form data-reveal onSubmit="\{\{ submitPartnership \}\}"/);
+  assert.match(component, /submitPartnership\(event\) \{/);
+  assert.match(component, /submitPartnership: \(event\) => this\.submitPartnership\(event\)/);
+  // 🔴 required / novalidate 一定要寫成有值的屬性。React 對 BOOLEAN 型 prop 的規則是
+  //    `return !value`,無值屬性解析出來是空字串 → falsy → 整個屬性被丟掉。
+  //    只有 required 生效而 novalidate 沒生效的話,瀏覽器會在 submit 派送「之前」跑原生驗證,
+  //    onSubmit 根本不會被呼叫,自訂錯誤訊息與 focus 行為全部失效。
+  assert.match(contact, /novalidate="novalidate"/);
+  assert.doesNotMatch(contact, /<(?:form|input|textarea|select)[^>]*\s(?:required|novalidate)[\s>]/);
+  for (const name of ['company_name', 'contact_name', 'contact_email', 'partner_type', 'message']) {
+    assert.match(contact, new RegExp(`name="${name}"[^>]*required="required"`), `${name} 應該是必填`);
+  }
+  // 合作類型的 option value 必須是英文常數 —— 隨語系變的話後台會同時收到兩種寫法
+  for (const value of ['channel', 'integration', 'logistics', 'branding', 'other']) {
+    assert.match(contact, new RegExp(`<option value="${value}">`));
+  }
   const contactEn = (() => {
     const en = renderMarkup('en');
-    return en.slice(en.indexOf('PAGE: CONTACT'), en.indexOf('FOOTER ====='));
+    return en.slice(en.indexOf('PAGE: CONTACT'), en.indexOf('PAGE: NEWS'));
   })();
+  for (const value of ['channel', 'integration', 'logistics', 'branding', 'other']) {
+    assert.match(contactEn, new RegExp(`<option value="${value}">`), `英文版的 ${value} value 也不能被翻譯`);
+  }
+
+  // 🔴 按鈕還原時要「重查字典」,不能還原送出前存下來的 original。
+  //    那段字是在 React 外面直接改 textContent 的,切語系時框架不會重繪它,
+  //    還原舊字串的話英文頁上會永遠卡著中文的「送出合作洽詢」。
+  assert.match(component, /const restore = \(\) => \{ btn\.textContent = this\.partnerText\('submit'\) \|\| original; \};/);
+  assert.match(component, /partnerText\(key\) \{/);
+  assert.match(component, /api\.dict\(api\.current\(window\)\)/);
+
+  // 出口卡:走錯路的人仍然被 AI 採購助手接住
+  const aiCta = dict('zh').contact.aiCta;
+  assert.match(contact, new RegExp(`onClick="\\{\\{ openAI \\}\\}"[^>]*>${aiCta.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}`));
   assert.match(contactEn, new RegExp(`onClick="\\{\\{ openAI \\}\\}"[^>]*>${dict('en').contact.aiCta.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}`));
-  // 常見需求快捷籤沿用首頁那組,點下去直接把關鍵字丟進助手
   assert.match(contact, /<sc-for list="\{\{ hotTags \}\}" as="t"/);
   assert.match(contact, /onClick="\{\{ t\.ask \}\}"/);
 });
 
-test('lead capture now flows only through the AI assistant, and still reaches Supabase', () => {
-  // 表單那條寫入路徑已經移除,現在只剩 AI 助手自己那一條。
-  // 匿名寫入一定要 return=minimal:landing_leads 沒有 SELECT 政策,
-  // 帶 RETURNING 會被 RLS 擋成 42501。
-  assert.equal((source.match(/\/rest\/v1\/landing_leads/g) || []).length, 1);
-  assert.equal((source.match(/'Prefer': 'return=minimal'/g) || []).length, 1);
+test('contact details are real links, and every new-tab link is opener-safe', () => {
+  // 四列聯絡資訊原本都是死的純文字。整列包成 <a>(圖示也包進去),整列才有 >=44px 的點擊區。
+  assert.match(contact, /<a class="contact-line" href="tel:\+886277045539"/);
+  assert.match(contact, /<a class="contact-line" href="mailto:ifoodmaptw@gmail\.com"/);
+  // LINE 的 ?oat_content=url 是官方帶的來源參數,不可以清掉
+  assert.match(contact, /href="https:\/\/line\.me\/R\/ti\/p\/@750yvxki\?oat_content=url"/);
+  // 服務時間沒有可以連過去的地方,維持純文字
+  assert.doesNotMatch(contact, /<a class="contact-line"[^>]*>\s*<span[^>]*>時</);
+  // 三個 <a> 都要有可及名稱(圖示欄位是「電」/「@」/「LINE」這種字元,不覆寫會被一起唸出來)
+  for (const key of ['phoneAria', 'emailAria', 'lineAria']) {
+    assert.ok(dict('zh').contact[key] && dict('en').contact[key], `缺少 contact.${key}`);
+  }
+  assert.equal((contact.match(/<a class="contact-line"/g) || []).length, 3);
+  // hover / focus 必須是真的 CSS —— style-hover 是設計稿留下來的裝飾屬性,support.js 沒有實作
+  assert.match(source, /a\.contact-line:hover \{/);
+  assert.match(source, /a\.contact-line:focus-visible \{/);
 
-  // 死掉的表單 script 不可以留著
-  assert.doesNotMatch(source, /function findDemandCard/);
-  assert.doesNotMatch(source, /document\.addEventListener\('submit'/);
+  // 🔴 全站規則:target="_blank" 一律要帶 rel 含 noopener(否則新分頁拿得到 window.opener)
+  const blanks = source.match(/<a\b[^>]*target="_blank"[^>]*>/g) || [];
+  assert.ok(blanks.length >= 2, `找不到 target="_blank" 的連結,這條檢查可能已經失效`);
+  for (const tag of blanks) {
+    assert.match(tag, /rel="[^"]*noopener[^"]*"/, `target="_blank" 少了 rel noopener:${tag.slice(0, 120)}`);
+  }
+});
+
+test('lead capture reaches Supabase from both forms, and both write-only tables use return=minimal', () => {
+  // 兩張表都只開 anon INSERT、沒有 SELECT policy;PostgREST 預設 RETURNING *,
+  // 不帶 return=minimal 整筆會被 RLS 擋成 42501。
+  assert.equal((source.match(/\/rest\/v1\/landing_leads/g) || []).length, 1);
+  assert.equal((source.match(/\/rest\/v1\/partnership_leads/g) || []).length, 1);
+  assert.equal((source.match(/'Prefer': 'return=minimal'/g) || []).length, 2);
+  // 每一筆都要帶 lang,否則後台分不出這筆 lead 是哪個語系的訪客留的
+  assert.match(component, /lang: i18n && typeof i18n\.current === 'function' \? i18n\.current\(window\) : 'zh'/);
 
   // 🔴 整類「靠畫面文字找元素」的寫法一律擋掉 —— 中英雙語之下那種 hook 會靜默失效
-  const textMatchers = source.match(/textContent\.indexOf\('[^']*[\u4e00-\u9fff][^']*'\)/g) || [];
+  const textMatchers = source.match(/textContent\.indexOf\('[^']*[一-鿿][^']*'\)/g) || [];
   assert.deepEqual(textMatchers, [], `不可用中文字面值定位元素:${textMatchers.join(', ')}`);
+});
+
+test('FAQ page ships only the two answers the owner approved and uses a native accordion', () => {
+  // 業主裁決:舊站的第三題在推「月費方案」,但定價頁只賣季/半年/年/點數四種,
+  // 照搬會叫供應商去買買不到的東西 —— 所以只上 Q1、Q2。原文留在素材的 raw.txt。
+  for (const lang of ['zh', 'en']) {
+    assert.equal(dict(lang).qa.items.length, 2, `${lang} 的常見問題應該只有 2 題`);
+  }
+  assert.doesNotMatch(JSON.stringify(dict('zh').qa), /月費/);
+  assert.doesNotMatch(JSON.stringify(dict('en').qa), /monthly plan/i);
+
+  // 手風琴走原生 <details>/<summary>:鍵盤、螢幕閱讀器的展開狀態、Ctrl+F 全部天生就有
+  assert.match(qa, /<details class="ifm-qa__item">/);
+  assert.match(qa, /<summary class="ifm-qa__q">/);
+  assert.equal((qa.match(/<h1\b/g) || []).length, 1, 'QA 頁只能有一個 H1');
+  // 🔴 L.qa.items 是陣列,不可以直接綁 —— 要經 renderVals() 變成 {{ qaItems }}
+  const markupOnly = source.slice(source.indexOf('<x-dc>'), source.indexOf('</x-dc>'));
+  assert.doesNotMatch(markupOnly, /\{\{ L\.qa\.items \}\}/);
+  assert.match(qa, /<sc-for list="\{\{ qaItems \}\}" as="q"/);
+  assert.match(component, /const qaItems = \(\(L\.qa && L\.qa\.items\) \|\| \[\]\)\.map/);
+  // 題數是 qaItems.length 算出來的,不是寫死的數字
+  assert.match(component, /qaCount: qaItems\.length,/);
+  // 底部卡片把沒找到答案的人交給 AI 助手
+  assert.match(qa, /onClick="\{\{ openAI \}\}"/);
+});
+
+test('the FAQ nav entries all point at /qa, and 平台功能 is gone from the menus', () => {
+  // 🔴 href 與 onClick 都要改。只改 onClick 的話,右鍵開新分頁、cmd+click 與爬蟲
+  //    仍然走 href 跑到聯絡頁,英文使用者還會被踢回中文站。
+  const faqZh = dict('zh').nav.faq;
+  const faqLinks = source.match(new RegExp(`<a href="\\{\\{ hrefQa \\}\\}"[^>]*>`, 'g')) || [];
+  assert.equal(faqLinks.length, 3, '桌機導覽 + 手機抽屜 + 頁尾 SUPPORT 共三處');
+  assert.match(header, new RegExp(`<a href="\\{\\{ hrefQa \\}\\}" onClick="\\{\\{ goQa \\}\\}"[^>]*>${faqZh}</a>`));
+  assert.match(header, new RegExp(`<a href="\\{\\{ hrefQa \\}\\}" onClick="\\{\\{ goQaMobile \\}\\}"[^>]*>${faqZh}</a>`));
+  assert.match(footer, /<a href="\{\{ hrefQa \}\}" onClick="\{\{ goQa \}\}"/);
+  // hrefQa 是真的頁面路徑,不是首頁錨點
+  assert.match(component, /hrefQa: href\('qa'\),/);
+
+  // 「平台功能」從 menu 拿掉(桌機 + 手機抽屜);字典 key 與只有那顆手機選項在用的
+  // goHowMobile 一起刪掉,不留死碼。
+  assert.doesNotMatch(source, /\{\{ L\.nav\.features \}\}/);
+  assert.doesNotMatch(source, /goHowMobile/);
+  assert.equal(dict('zh').nav.features, undefined);
+  assert.equal(dict('en').nav.features, undefined);
+  // 🔴 hrefHow / goHow 要留著 —— 首頁深色區的 problemCta 與頁尾那條還在用
+  assert.match(component, /hrefHow: anchorHref\('how-it-works'\),/);
+  assert.match(component, /goHow: this\.goAnchor\('how-it-works'\),/);
+  assert.match(home, /onClick="\{\{ goHow \}\}"/);
+  assert.match(footer, /<a href="\{\{ hrefHow \}\}" onClick="\{\{ goHow \}\}"/);
+});
+
+test('the language switch shows the flag of the language it switches to, as an image', () => {
+  // 🔴 絕對不可以用 emoji 國旗:Windows 的 Chrome / Edge 不畫 regional indicator,
+  //    🇹🇼 會顯示成「TW」兩個字母。
+  assert.doesNotMatch(source, /[\u{1F1E6}-\u{1F1FF}]/u);   // 連註解都不要放,免得有人複製貼上
+  // 旗子純裝飾:旁邊有文字,外層 <a> 又有 aria-label,所以 alt 留空
+  assert.equal((source.match(/<img src="\{\{ langFlag \}\}" alt="" width="20" height="14"/g) || []).length, 2);
+  // loading="lazy":瀏覽器的 preload scanner 在框架換掉 src 之前會照字面去抓 "{{ langFlag }}",
+  // 每次開頁都多兩發 404。標成 lazy 之後改由版面階段載入,那時 src 已經是真的檔名了。
+  assert.equal((source.match(/<img src="\{\{ langFlag \}\}"[^>]*loading="lazy"/g) || []).length, 2);
+  assert.match(component, /langFlag: otherLang === 'en' \? '\/assets\/flag-gb\.svg' : '\/assets\/flag-tw\.svg',/);
+  for (const file of ['flag-gb.svg', 'flag-tw.svg']) {
+    assert.ok(fs.existsSync(path.join(__dirname, '..', 'assets', file)), `缺少 assets/${file}`);
+  }
+});
+
+test('the AI bubble carries a label so people can tell what it is', () => {
+  // 這個 widget 整個活在 React 外面,字一律靠 applyStaticStrings() 填(boot + 每次切語系)
+  assert.match(source, /fabTip\.textContent = txt\('fabTitle'\);/);
+  assert.ok(dict('zh').ai.fabTitle && dict('en').ai.fabTitle);
+  assert.doesNotMatch(dict('en').ai.fabTitle, /[一-鿿]/);
+  // 點小標題跟點泡泡一樣會開面板;面板開著時收起來,不壓在面板上
+  assert.match(source, /fabTip\.addEventListener\('click', function \(\) \{ if \(!panel\.classList\.contains\('ai-open'\)\) openPanel\(\); \}\);/);
+  assert.match(source, /fabTip\.classList\.add\('ai-tip-hide'\);/);
+  assert.match(source, /fabTip\.classList\.remove\('ai-tip-hide'\);/);
+  // 跟泡泡是同一個動作,所以不進 Tab 序列、也不重複報給螢幕閱讀器
+  assert.match(source, /fabTip\.setAttribute\('aria-hidden', 'true'\);/);
+  assert.match(source, /fabTip\.setAttribute\('tabindex', '-1'\);/);
+  // 點擊目標 >= 44px
+  assert.match(source, /\.ai-fab-tip \{[^}]*min-height: 44px;/);
+  // 它是 position:fixed,不收的話在手機上會一路壓在內文右下角 —— 捲過第一屏就收起來。
+  // 泡泡本身不收,辨識度的目的在落地那一刻就達成了。
+  assert.match(source, /window\.addEventListener\('scroll', syncTipOnScroll, \{ passive: true \}\);/);
+  assert.match(source, /window\.innerHeight \* 0\.6/);
+});
+
+test('the four decorative English kickers are hidden on mobile only', () => {
+  // 它們沒帶任何下方標題沒說的資訊,為了字級體檢被放大到 16px 之後階層反而被壓平。
+  // .mc-eyebrow 全站只有首頁那四處在用。
+  assert.equal((source.match(/class="mc-eyebrow/g) || []).length, 4);
+  const compactStart = source.indexOf('<style id="m-compact">');
+  const compact = source.slice(compactStart, source.indexOf('</style>', compactStart));
+  assert.match(compact, /@media \(max-width: 768px\)/);
+  assert.match(compact, /\.mc-eyebrow \{ display: none !important; \}/);
+  // 桌機完全不動:主要 <style> 裡不准出現隱藏 kicker 的規則
+  const mainStyle = source.slice(source.indexOf('<x-dc>'), source.indexOf('</x-dc>'));
+  assert.doesNotMatch(mainStyle, /\.mc-eyebrow[^{]*\{[^}]*display:\s*none/);
+  // 帶資訊的 eyebrow 一律留著:編號球與「01 · MENU ANALYSIS」那種編號+分類
+  assert.ok((source.match(/class="ifm-eyebrow__no"/g) || []).length >= 8);
+  assert.match(restaurants, /01 · MENU ANALYSIS/);
 });
 
 test('AI assistant calls all three proxy endpoints and always tells them the language', () => {
@@ -935,7 +1094,7 @@ test('every page section lives inside the main landmark', () => {
   const mainOpen = source.indexOf('<main id="main-content"');
   const mainClose = source.indexOf('</main>');
   assert.ok(mainOpen !== -1 && mainClose > mainOpen, '找不到 main');
-  for (const marker of ['HOME', 'RESTAURANTS', 'SUPPLIERS', 'CASES', 'ABOUT', 'CONTACT', 'NEWS', 'ARTICLE']) {
+  for (const marker of ['HOME', 'RESTAURANTS', 'SUPPLIERS', 'CASES', 'ABOUT', 'CONTACT', 'NEWS', 'ARTICLE', 'QA']) {
     const at = source.indexOf(`<!-- ============ PAGE: ${marker}`);
     assert.ok(at !== -1, `找不到 ${marker} 區段`);
     assert.ok(at > mainOpen && at < mainClose, `${marker} 區段跑到 <main> 外面了`);
@@ -982,6 +1141,26 @@ test('footer has three design columns with real internal and product destination
   assert.doesNotMatch(footer, /<span[^>]*>(?:常見問題|使用條款)<\/span>/); // 不留假連結
   assert.match(footer, /href="tel:0277045539"/);
   assert.match(footer, /href="mailto:ifoodmaptw@gmail\.com"/);
+});
+
+test('footer carries exactly the two approved social accounts', () => {
+  // 客服 LINE@ 與 Facebook。舊站那兩個導流用的 LINE 帳號與那支 YouTube 宣傳影片刻意不搬。
+  assert.match(footer, /href="https:\/\/line\.me\/R\/ti\/p\/@750yvxki\?oat_content=url"/);
+  assert.match(footer, /href="https:\/\/www\.facebook\.com\/iFoodmap"/);
+  assert.doesNotMatch(source, /@694xprvx|@988wsmli/);
+  assert.doesNotMatch(footer, /youtube|youtu\.be/i);
+  // 兩條都是外部連結
+  assert.equal((footer.match(/target="_blank"/g) || []).length, 2);
+  // 品牌色塊是商標,aria-hidden;可及名稱一律走 <a> 自己的 aria-label(綁字典,zh/en 都有)
+  assert.equal((footer.match(/<span aria-hidden="true"[^>]*background:#(?:06C755|1877F2)/g) || []).length, 2);
+  for (const key of ['socialLineLabel', 'socialLineAria', 'socialFollowLabel', 'socialFacebookAria']) {
+    assert.ok(dict('zh').footer[key] && dict('en').footer[key], `缺少 footer.${key}`);
+    assert.doesNotMatch(dict('en').footer[key], /[\u4e00-\u9fff]/, `footer.${key} 英文版還是中文`);
+  }
+  // 點擊目標 >= 44px,而且深色底上的焦點框要看得見(#166534 對 #0E1A14 只有 2.5:1)
+  assert.match(footer, /min-height:44px/);
+  assert.match(source, /footer a:focus-visible \{ outline-color:#C3D543; \}/);
+  assert.ok(contrastRatio('#C3D543', '#0E1A14') >= 3);
 });
 
 test('AI dialog closed and open states are keyboard-safe with mutation-sensitive guards', () => {

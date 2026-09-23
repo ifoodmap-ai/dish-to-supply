@@ -17,4 +17,13 @@
     <path d="M14 -12 q2 -8 8 -10" stroke="#1f9e4e" stroke-width="3" fill="none" stroke-linecap="round"/>
     <path d="M20 -14 q8 -2 12 4" fill="#46c138"/>
   </g>
+  <!-- coconut -->
+  <g transform="translate(140 132)">
+    <circle cx="0" cy="0" r="24" fill="#8a5a34"/>
+    <path d="M0 -24 a24 24 0 0 1 0 48 a17 24 0 0 0 0 -48 Z" fill="#6b421f" opacity="0.45"/>
+    <path d="M-24 0 a24 24 0 0 1 17 -23 a19 23 0 0 0 0 46 a24 24 0 0 1 -17 -23 Z" fill="#a4703f" opacity="0.5"/>
+    <ellipse cx="-7" cy="-6" rx="3.4" ry="4" fill="#5e3a20" opacity="0.75"/>
+    <ellipse cx="4" cy="-8" rx="3.4" ry="4" fill="#5e3a20" opacity="0.75"/>
+    <ellipse cx="-1" cy="2" rx="3.4" ry="4" fill="#5e3a20" opacity="0.75"/>
+  </g>
 </svg>
