@@ -1195,11 +1195,7 @@
 
       <div class="cases-grid">
         <article class="case-card" data-reveal>
-          <div class="case-visual" aria-label="{{ L.cases.case1.visualAlt }}">
-            <div class="case-visual-row"><span>{{ L.cases.case1.step1 }}</span><span class="case-visual-track"><span class="case-visual-fill" style="width:38%;"></span></span></div>
-            <div class="case-visual-row"><span>{{ L.cases.case1.step2 }}</span><span class="case-visual-track"><span class="case-visual-fill" style="width:68%;"></span></span></div>
-            <div class="case-visual-row"><span>{{ L.cases.case1.step3 }}</span><span class="case-visual-track"><span class="case-visual-fill" style="width:100%;"></span></span></div>
-          </div>
+          <img class="ifm-art" src="/assets/case-1.svg" alt="" width="480" height="300" loading="lazy" style="aspect-ratio:8/5;object-fit:cover;background:#F3FAF6;">
           <div style="padding:28px;">
             <div style="font-size:13px;font-weight:700;color:#166534;margin-bottom:10px;">{{ L.cases.case1.eyebrow }}</div>
             <h3 style="font-size:20px;line-height:1.45;color:#17261c;margin:0 0 12px;">{{ L.cases.case1.title }}</h3>
@@ -1212,11 +1208,7 @@
         </article>
 
         <article class="case-card" data-reveal>
-          <div class="case-visual" aria-label="{{ L.cases.case2.visualAlt }}">
-            <div class="case-visual-row"><span>{{ L.cases.case2.step1 }}</span><span class="case-visual-track"><span class="case-visual-fill" style="width:92%;"></span></span></div>
-            <div class="case-visual-row"><span>{{ L.cases.case2.step2 }}</span><span class="case-visual-track"><span class="case-visual-fill" style="width:78%;"></span></span></div>
-            <div class="case-visual-row"><span>{{ L.cases.case2.step3 }}</span><span class="case-visual-track"><span class="case-visual-fill" style="width:84%;"></span></span></div>
-          </div>
+          <img class="ifm-art" src="/assets/case-2.svg" alt="" width="480" height="300" loading="lazy" style="aspect-ratio:8/5;object-fit:cover;background:#F3FAF6;">
           <div style="padding:28px;">
             <div style="font-size:13px;font-weight:700;color:#166534;margin-bottom:10px;">{{ L.cases.case2.eyebrow }}</div>
             <h3 style="font-size:20px;line-height:1.45;color:#17261c;margin:0 0 12px;">{{ L.cases.case2.title }}</h3>
@@ -1229,11 +1221,7 @@
         </article>
 
         <article class="case-card" data-reveal>
-          <div class="case-visual" aria-label="{{ L.cases.case3.visualAlt }}">
-            <div class="case-visual-row"><span>{{ L.cases.case3.step1 }}</span><span class="case-visual-track"><span class="case-visual-fill" style="width:88%;"></span></span></div>
-            <div class="case-visual-row"><span>{{ L.cases.case3.step2 }}</span><span class="case-visual-track"><span class="case-visual-fill" style="width:100%;"></span></span></div>
-            <div class="case-visual-row"><span>{{ L.cases.case3.step3 }}</span><span class="case-visual-track"><span class="case-visual-fill" style="width:94%;"></span></span></div>
-          </div>
+          <img class="ifm-art" src="/assets/case-3.svg" alt="" width="480" height="300" loading="lazy" style="aspect-ratio:8/5;object-fit:cover;background:#F3FAF6;">
           <div style="padding:28px;">
             <div style="font-size:13px;font-weight:700;color:#166534;margin-bottom:10px;">{{ L.cases.case3.eyebrow }}</div>
             <h3 style="font-size:20px;line-height:1.45;color:#17261c;margin:0 0 12px;">{{ L.cases.case3.title }}</h3>
@@ -1257,12 +1245,13 @@
   <!-- ============ PAGE: ABOUT ============ -->
   <sc-if value="{{ isAbout }}">
   <div data-screen-label="關於我們">
-    <section class="support-wrap" style="padding-top:88px;padding-bottom:76px;">
-      <div data-reveal style="max-width:850px;">
+    <section class="support-wrap ifm-news-hero" style="padding-top:88px;padding-bottom:76px;">
+      <div data-reveal>
         <div style="font-family:'Space Grotesk','Noto Sans TC',sans-serif;font-size:13px;font-weight:700;color:#166534;letter-spacing:.14em;text-transform:uppercase;margin-bottom:16px;">About iFoodmap</div>
         <h1 class="support-title" style="font-family:'Space Grotesk','Noto Sans TC',sans-serif;font-size:48px;font-weight:900;color:#0e1a12;margin:0 0 24px;line-height:1.22;letter-spacing:-.01em;">{{ L.about.heroTitle }}</h1>
         <p style="font-size:19px;line-height:1.85;color:#5b6b62;margin:0;">{{ L.about.heroBody }}</p>
       </div>
+      <img class="ifm-news-hero__art" src="/assets/about-hero.svg" alt="" width="560" height="400" loading="lazy">
     </section>
 
     <section style="background:#0f2418;color:#fff;">
@@ -1294,17 +1283,17 @@
       </div>
       <div class="about-value-grid">
         <article class="about-value-card" data-reveal>
-          <div style="width:48px;height:4px;border-radius:999px;background:#166534;margin-bottom:24px;"></div>
+          <img class="ifm-art ifm-art--pad" src="/assets/about-value-1.svg" alt="" width="160" height="160" loading="lazy" style="width:72px;height:72px;padding:10px;margin-bottom:20px;">
           <h3 style="font-size:21px;color:#17261c;margin:0 0 12px;">{{ L.about.value1Title }}</h3>
           <p style="font-size:15px;line-height:1.8;color:#5b6b62;margin:0;">{{ L.about.value1Body }}</p>
         </article>
         <article class="about-value-card" data-reveal>
-          <div style="width:48px;height:4px;border-radius:999px;background:#166534;margin-bottom:24px;"></div>
+          <img class="ifm-art ifm-art--pad" src="/assets/about-value-2.svg" alt="" width="160" height="160" loading="lazy" style="width:72px;height:72px;padding:10px;margin-bottom:20px;">
           <h3 style="font-size:21px;color:#17261c;margin:0 0 12px;">{{ L.about.value2Title }}</h3>
           <p style="font-size:15px;line-height:1.8;color:#5b6b62;margin:0;">{{ L.about.value2Body }}</p>
         </article>
         <article class="about-value-card" data-reveal>
-          <div style="width:48px;height:4px;border-radius:999px;background:#166534;margin-bottom:24px;"></div>
+          <img class="ifm-art ifm-art--pad" src="/assets/about-value-3.svg" alt="" width="160" height="160" loading="lazy" style="width:72px;height:72px;padding:10px;margin-bottom:20px;">
           <h3 style="font-size:21px;color:#17261c;margin:0 0 12px;">{{ L.about.value3Title }}</h3>
           <p style="font-size:15px;line-height:1.8;color:#5b6b62;margin:0;">{{ L.about.value3Body }}</p>
         </article>
@@ -1371,7 +1360,6 @@
     </div>
   </div>
   </sc-if>
-  </main>
 
   <!-- ============ PAGE: NEWS(列表) ============ -->
   <sc-if value="{{ isNews }}">
@@ -1456,6 +1444,8 @@
     </sc-if>
   </div>
   </sc-if>
+
+  </main>
 
   <!-- ============ FOOTER ============ -->
   <footer class="ifm-v2" style="background:#0E1A14;color:#9FB0A6">

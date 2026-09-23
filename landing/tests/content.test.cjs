@@ -929,6 +929,23 @@ test('every news image referenced by the data module exists on disk', () => {
   assert.deepEqual(missing, [], `資料指到不存在的圖片:${missing.join(', ')}`);
 });
 
+test('every page section lives inside the main landmark', () => {
+  // 我自己踩過:新聞頁的 markup 被插在 </main> 後面,結果跳過導覽的 skip link
+  // 與螢幕閱讀器的 main 地標都摸不到那兩頁,但畫面看起來完全正常。
+  const mainOpen = source.indexOf('<main id="main-content"');
+  const mainClose = source.indexOf('</main>');
+  assert.ok(mainOpen !== -1 && mainClose > mainOpen, '找不到 main');
+  for (const marker of ['HOME', 'RESTAURANTS', 'SUPPLIERS', 'CASES', 'ABOUT', 'CONTACT', 'NEWS', 'ARTICLE']) {
+    const at = source.indexOf(`<!-- ============ PAGE: ${marker}`);
+    assert.ok(at !== -1, `找不到 ${marker} 區段`);
+    assert.ok(at > mainOpen && at < mainClose, `${marker} 區段跑到 <main> 外面了`);
+  }
+  // header 與 footer 反過來,必須在 main 外面
+  assert.ok(source.indexOf('<!-- ============ HEADER') < mainOpen);
+  assert.ok(source.indexOf('<!-- ============ FOOTER') > mainClose);
+  assert.equal((source.match(/<\/main>/g) || []).length, 1);
+});
+
 test('metadata consistently describes the approved two-sided platform', () => {
   const title = 'iFoodmap 食材地圖｜餐廳與供應商的 B2B 食材採購平台';
   const description = 'iFoodmap 以 AI 串接餐廳需求與全台食材供應商，整合智慧媒合、報價比較、訂單、出貨與採購管理。';

@@ -392,10 +392,6 @@
         "resultsTitle": "依角色與改善層級比較",
         "resultsNote": "數據為個別案例結果，用來說明採購情境，不代表所有使用者都會得到相同成果。",
         "case1": {
-          "visualAlt": "供應商比較流程示意",
-          "step1": "提出需求",
-          "step2": "取得報價",
-          "step3": "完成比較",
           "eyebrow": "餐廳端成果 · 採購效率與成本",
           "title": "單店餐廳，告別到處問價的日子",
           "body": "透過一次需求媒合，快速對接三家蔬果供應商，穩定取得當季食材。",
@@ -404,10 +400,6 @@
           "stat2Label": "食材採購成本"
         },
         "case2": {
-          "visualAlt": "多來源供應狀態示意",
-          "step1": "蔬果供應",
-          "step2": "肉品供應",
-          "step3": "備援來源",
           "eyebrow": "餐廳端成果 · 供應穩定度",
           "title": "大量供餐，採購來源更穩定",
           "body": "同時對接多家供應商，降低單一來源斷貨風險，供餐更有保障。",
@@ -415,10 +407,6 @@
           "stat2Label": "斷貨次數"
         },
         "case3": {
-          "visualAlt": "履歷資訊與顧客信任示意",
-          "step1": "產地資訊",
-          "step2": "履歷資料",
-          "step3": "顧客回饋",
           "eyebrow": "供應商合作成果 · 履歷與信任",
           "title": "產地直送，建立消費者信任",
           "body": "對接具產銷履歷的產地供應商，商品故事與品質都更有說服力。",
@@ -948,10 +936,6 @@
         "resultsTitle": "Compared by role and level of improvement",
         "resultsNote": "Figures are individual case results, shown to illustrate sourcing scenarios. They are not a guarantee that every user will see the same outcome.",
         "case1": {
-          "visualAlt": "Illustration of the supplier comparison process",
-          "step1": "Post request",
-          "step2": "Receive quotes",
-          "step3": "Finish comparison",
           "eyebrow": "Restaurant outcome · Sourcing speed and cost",
           "title": "A single-site restaurant stops chasing quotes",
           "body": "One matching request connected them with three produce suppliers and a steady supply of seasonal ingredients.",
@@ -960,10 +944,6 @@
           "stat2Label": "Ingredient sourcing cost"
         },
         "case2": {
-          "visualAlt": "Illustration of multi-source supply status",
-          "step1": "Produce supply",
-          "step2": "Meat supply",
-          "step3": "Backup sources",
           "eyebrow": "Restaurant outcome · Supply reliability",
           "title": "Institutional catering with steadier sourcing",
           "body": "Working with several suppliers at once cut the risk of a single source running out, so every service stayed covered.",
@@ -971,10 +951,6 @@
           "stat2Label": "Stockouts"
         },
         "case3": {
-          "visualAlt": "Illustration of traceability data and customer trust",
-          "step1": "Origin details",
-          "step2": "Traceability records",
-          "step3": "Customer feedback",
           "eyebrow": "Supplier outcome · Traceability and trust",
           "title": "Farm-direct supply that earns customer trust",
           "body": "Sourcing from farms with traceability certification (TAP) made both the product story and the quality claim more convincing.",
