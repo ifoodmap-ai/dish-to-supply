@@ -18,10 +18,13 @@
 
   // 文章頁是動態路由 /news/<slug>,不在這張靜態表裡,由 pathToRoute 另外處理。
   var ARTICLE_RE = /^\/news\/([^/]+)$/;
+  // 法律文件也是參數路由 /legal/<slug>,中英共用同一個 slug,hreflang 才指得對。
+  var LEGAL_RE = /^\/legal\/([^/]+)$/;
 
   var pageByPath = {
     '/': 'home',
     '/news': 'news',
+    '/legal': 'legal',
     '/qa': 'qa',
     '/restaurants': 'restaurants',
     '/suppliers': 'suppliers',
@@ -33,6 +36,7 @@
   var pathByPage = {
     home: '/',
     news: '/news',
+    legal: '/legal',
     qa: '/qa',
     restaurants: '/restaurants',
     suppliers: '/suppliers',
@@ -69,14 +73,20 @@
     return splitLang(pathname).lang;
   }
 
+  // slug 可能被編碼過(雖然我們只產 a-z0-9- 的 slug,但使用者可能手打或貼到編碼過的網址)
+  function decodeSlug(raw) {
+    try { return decodeURIComponent(raw); } catch (e) { return raw; }
+  }
+
   function pathToRoute(pathname) {
     var split = splitLang(pathname);
     var article = ARTICLE_RE.exec(split.path);
     if (article) {
-      // slug 可能被編碼過(雖然我們只產 a-z0-9- 的 slug,但使用者可能手打或貼到編碼過的網址)
-      var slug;
-      try { slug = decodeURIComponent(article[1]); } catch (e) { slug = article[1]; }
-      return { page: 'article', lang: split.lang, slug: slug };
+      return { page: 'article', lang: split.lang, slug: decodeSlug(article[1]) };
+    }
+    var legal = LEGAL_RE.exec(split.path);
+    if (legal) {
+      return { page: 'legal', lang: split.lang, slug: decodeSlug(legal[1]) };
     }
     return { page: pageByPath[split.path] || 'home', lang: split.lang, slug: null };
   }
@@ -86,6 +96,9 @@
     if (page === 'article') {
       // 沒有 slug 的文章頁沒有意義,退回列表頁 —— 免得產出 /news/undefined 這種連結
       path = slug ? '/news/' + encodeURIComponent(slug) : pathByPage.news;
+    } else if (page === 'legal') {
+      // 沒有 slug 的 /legal 是有意義的(文件索引),所以退回 /legal 而不是丟掉這一頁
+      path = slug ? '/legal/' + encodeURIComponent(slug) : pathByPage.legal;
     } else {
       path = pathByPage[page] || '/';
     }

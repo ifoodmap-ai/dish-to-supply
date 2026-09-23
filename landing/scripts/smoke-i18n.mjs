@@ -1,12 +1,17 @@
-// 16 條公開網址 × 真實瀏覽器,逐條檢查:語系、title、有沒有未解析的 {{ }}、有沒有橫向溢出、
+// 22 條公開網址 × 真實瀏覽器,逐條檢查:語系、title、有沒有未解析的 {{ }}、有沒有橫向溢出、
 // 英文頁有沒有殘留中文、內部連結前綴對不對
 import { spawn } from 'node:child_process';
+import { rmSync } from 'node:fs';
 const BASE = process.argv[2];
 const ROUTES = [
   ['/', 'zh'], ['/restaurants', 'zh'], ['/suppliers', 'zh'], ['/cases', 'zh'], ['/about', 'zh'], ['/contact', 'zh'],
   ['/en', 'en'], ['/en/restaurants', 'en'], ['/en/suppliers', 'en'], ['/en/cases', 'en'], ['/en/about', 'en'], ['/en/contact', 'en'],
   ['/news', 'zh'], ['/en/news', 'en'],
   ['/qa', 'zh'], ['/en/qa', 'en'],
+  // 法律文件是參數路由 /legal/:slug —— 裸索引與兩份文件中英各跑一次。
+  // 英文版的文件內容是譯本,所以「殘中」那一欄對 /en/legal/* 是真的有意義的檢查。
+  ['/legal', 'zh'], ['/legal/terms', 'zh'], ['/legal/privacy', 'zh'],
+  ['/en/legal', 'en'], ['/en/legal/terms', 'en'], ['/en/legal/privacy', 'en'],
 ];
 const port = 9700 + Math.floor(Math.random() * 200);
 const chrome = spawn('/Applications/Google Chrome.app/Contents/MacOS/Google Chrome', [
@@ -65,4 +70,8 @@ for (const [path, wantLang] of ROUTES) {
 }
 console.log(fails ? `\n❌ ${fails}/${ROUTES.length} 條不合格` : `\n✅ ${ROUTES.length}/${ROUTES.length} 全過`);
 ws.close(); chrome.kill();
+// 無頭 Chrome 的暫存 profile 會一直累積(一次上百 MB),跑完一定要清掉,不然磁碟遲早被塞爆。
+// 要等 Chrome 真的收工再刪 —— 它關閉時還會回寫 profile,刪太早會被它重新建出來。
+await sleep(600);
+try { rmSync(`/tmp/smoke-${port}`, { recursive: true, force: true }); } catch (e) { /* 清不掉就算了 */ }
 process.exit(fails ? 1 : 0);

@@ -17,7 +17,7 @@ const {
 const projectRoot = path.resolve(__dirname, '..');
 
 const BASE = 'https://ifoodmap-landing.vercel.app';
-const PAGES = ['home', 'restaurants', 'suppliers', 'cases', 'about', 'contact', 'news', 'qa'];
+const PAGES = ['home', 'restaurants', 'suppliers', 'cases', 'about', 'contact', 'news', 'qa', 'legal'];
 
 function createFakeWindow(pathname = '/') {
   const listeners = new Map();
@@ -118,11 +118,11 @@ function createFakeElement(document, name) {
 
 test('pathToPage maps every public path to its page', () => {
   assert.deepEqual(
-    ['/', '/restaurants', '/suppliers', '/cases', '/about', '/contact', '/news', '/qa'].map(pathToPage),
+    ['/', '/restaurants', '/suppliers', '/cases', '/about', '/contact', '/news', '/qa', '/legal'].map(pathToPage),
     PAGES,
   );
   assert.deepEqual(
-    ['/en', '/en/restaurants', '/en/suppliers', '/en/cases', '/en/about', '/en/contact', '/en/news', '/en/qa'].map(pathToPage),
+    ['/en', '/en/restaurants', '/en/suppliers', '/en/cases', '/en/about', '/en/contact', '/en/news', '/en/qa', '/en/legal'].map(pathToPage),
     PAGES,
   );
 });
@@ -166,20 +166,20 @@ test('only a real /en segment counts as English', () => {
 test('pageToPath maps every page to its canonical public path', () => {
   assert.deepEqual(
     PAGES.map((page) => pageToPath(page)),
-    ['/', '/restaurants', '/suppliers', '/cases', '/about', '/contact', '/news', '/qa'],
+    ['/', '/restaurants', '/suppliers', '/cases', '/about', '/contact', '/news', '/qa', '/legal'],
   );
   assert.deepEqual(
     PAGES.map((page) => pageToPath(page, 'zh')),
-    ['/', '/restaurants', '/suppliers', '/cases', '/about', '/contact', '/news', '/qa'],
+    ['/', '/restaurants', '/suppliers', '/cases', '/about', '/contact', '/news', '/qa', '/legal'],
   );
   assert.deepEqual(
     PAGES.map((page) => pageToPath(page, 'en')),
-    ['/en', '/en/restaurants', '/en/suppliers', '/en/cases', '/en/about', '/en/contact', '/en/news', '/en/qa'],
+    ['/en', '/en/restaurants', '/en/suppliers', '/en/cases', '/en/about', '/en/contact', '/en/news', '/en/qa', '/en/legal'],
   );
 });
 
 test('pathToRoute and pageToPath round-trip every page in every language', () => {
-  const pages = ['home', 'restaurants', 'suppliers', 'cases', 'about', 'contact', 'news', 'qa'];
+  const pages = ['home', 'restaurants', 'suppliers', 'cases', 'about', 'contact', 'news', 'qa', 'legal'];
   for (const lang of ['zh', 'en']) {
     for (const page of pages) {
       const path = pageToPath(page, lang);
@@ -200,6 +200,20 @@ test('pathToRoute and pageToPath round-trip every page in every language', () =>
   assert.equal(pageToPath('article', 'en', undefined), '/en/news');
   // 多一層路徑不可以被當成文章
   assert.equal(pathToRoute('/news/a/b').page, 'home');
+
+  // 條款頁的 slug 往返:/legal/terms 與 /en/legal/terms 是同一份文件
+  for (const lang of ['zh', 'en']) {
+    for (const slug of ['terms', 'privacy']) {
+      const path = pageToPath('legal', lang, slug);
+      assert.deepEqual(pathToRoute(path), { page: 'legal', lang, slug }, `${lang} legal ${slug} -> ${path}`);
+    }
+  }
+  // 沒有 slug 的 /legal 是文件索引,不是 home(這一點跟文章頁刻意不同)
+  assert.equal(pageToPath('legal', 'zh', null), '/legal');
+  assert.equal(pageToPath('legal', 'en', undefined), '/en/legal');
+  assert.equal(pathToRoute('/legal').page, 'legal');
+  assert.equal(pathToRoute('/legal').slug, null);
+  assert.equal(pathToRoute('/legal/a/b').page, 'home');
 });
 
 
@@ -585,7 +599,9 @@ test('public route controls use anchors and navigation exposes accessibility hoo
   assert.match(source, /window\.IfmRouting\.pageToPath\(target, targetLang \|\| lang\)/);
   // 語言切換是真的 <a href>,右鍵複製連結、新分頁開啟、爬蟲都正常
   assert.match(source, /<a href="\{\{ langHref \}\}"[^>]*onClick="\{\{ switchLang \}\}"/);
-  assert.match(source, /langHref: href\(page, otherLang\)/);
+  // 🔴 語言切換的 href 必須帶 slug,否則 /legal/terms 與 /news/<slug> 上右鍵開新分頁
+  // 會掉到 /en/legal、/en/news 這種列表頁(onClick 走 setLang 是對的,所以點起來正常)
+  assert.match(source, /langHref: href2\(page, this\.state\.slug, otherLang\)/);
   assert.match(source, /aria-current="\{\{\s*ariaCurrentHome\s*\}\}"/);
   assert.match(source, /document\.createElement\('button'\)/);
   assert.match(source, /btn\.type = 'button'/);
@@ -605,16 +621,19 @@ test('public route controls use anchors and navigation exposes accessibility hoo
 
 test('Vercel rewrites each public route to index without catching API paths', () => {
   const config = JSON.parse(fs.readFileSync(path.join(projectRoot, 'vercel.json'), 'utf8'));
-  // 中文 6 條 + 文章參數路由 + /qa + /en + 英文 6 條 + 英文文章參數路由 + /en/qa = 17。
+  // 中文 6 條 + 文章參數路由 + /qa + /legal 兩條 + /en
+  //   + 英文 6 條 + 英文文章參數路由 + /en/qa + /en/legal 兩條 = 21。
   // 中文首頁 / 就是 index 本身,不需要 rewrite。
   const expectedSources = [
     '/restaurants', '/suppliers', '/cases', '/about', '/contact', '/news',
     '/news/:slug',
     '/qa',
+    '/legal', '/legal/:slug',
     '/en',
     '/en/restaurants', '/en/suppliers', '/en/cases', '/en/about', '/en/contact', '/en/news',
     '/en/news/:slug',
     '/en/qa',
+    '/en/legal', '/en/legal/:slug',
   ];
   assert.deepEqual(config.rewrites.map(({ source }) => source), expectedSources);
 
@@ -623,15 +642,18 @@ test('Vercel rewrites each public route to index without catching API paths', ()
   for (const url of shareable) {
     assert.ok(url === '/' || expectedSources.includes(url), `missing rewrite for ${url}`);
   }
-  // 文章網址要被參數路由接到(這是 18 篇文章唯一的進入點,漏了整批 404)
+  // 文章與法律文件的網址要被參數路由接到
+  // (文章是 18 篇唯一的進入點,法律文件是頁尾兩條連結的目的地 —— 漏了就整批 404)
+  const matchesParamRoute = (url) => expectedSources.find((src) => {
+    if (!src.includes(':')) return false;
+    const a = src.split('/'); const b = url.split('/');
+    return a.length === b.length && a.every((seg, i) => seg.startsWith(':') || seg === b[i]);
+  });
   for (const lang of ['zh', 'en']) {
-    const url = pageToPath('article', lang, 'some-slug');
-    const pattern = expectedSources.find((src) => {
-      if (!src.includes(':')) return false;
-      const a = src.split('/'); const b = url.split('/');
-      return a.length === b.length && a.every((seg, i) => seg.startsWith(':') || seg === b[i]);
-    });
-    assert.ok(pattern, `missing rewrite for ${url}`);
+    for (const [page, slug] of [['article', 'some-slug'], ['legal', 'terms'], ['legal', 'privacy']]) {
+      const url = pageToPath(page, lang, slug);
+      assert.ok(matchesParamRoute(url), `missing rewrite for ${url}`);
+    }
   }
 
   // destination 要是 '/',不能是 '/index.html':cleanUrls 會把 index.html 改成 index 提供,

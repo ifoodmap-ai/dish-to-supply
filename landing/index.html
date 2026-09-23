@@ -10,6 +10,7 @@
 <link rel="alternate" hreflang="x-default" href="https://ifoodmap-landing.vercel.app/">
 <script src="/i18n.js"></script>
 <script src="/news.js"></script>
+<script src="/legal.js"></script>
 <script>window.IFM_PRODUCT_BASE_URL = 'https://dish-to-supply.vercel.app';</script>
 <!-- Supabase 連線常數。anon key 是公開金鑰(RLS 才是防線),寫死沒問題,但只能有一份 ——
      AI 助手與異業合作表單都要用,以前它包在 widget 的 IIFE 裡,外面拿不到。 -->
@@ -348,6 +349,81 @@
   .ifm-article__links li::before { display:none; }
   .ifm-article__links a { color:#0B6B40; word-break:break-word; }
 
+  /* ---- 法律文件 /legal/:slug。
+         刻意不共用 .ifm-article__body:文章的 ul 是 list-style:none 加圓點,
+         法律文件要的是「看得見的條號」,而且條號必須是原文那組(見下面 ol 那條註解)。 */
+  .ifm-legal { max-width:820px; }
+  .ifm-legal__title { font-size:38px; line-height:1.3; color:#0E1A14; margin:10px 0 12px; }
+  .ifm-legal__meta { font-size:14px; color:#5b6b62; margin:0 0 22px; }
+  .ifm-legal__lede { font-size:17px; line-height:1.8; color:#4B5A52; margin:0 0 30px; }
+
+  /* 頂部文件切換列 */
+  .ifm-legal__docnav { display:flex; flex-wrap:wrap; gap:8px; margin-bottom:26px; }
+  .ifm-legal__docnav-item {
+    display:inline-flex; align-items:center; min-height:44px; padding:0 16px;
+    border:1px solid #E6EAE7; border-radius:999px; background:#fff;
+    font-size:14.5px; font-weight:700; color:#4B5A52; text-decoration:none;
+  }
+  .ifm-legal__docnav-item[data-active="true"] { background:#0B6B40; border-color:#0B6B40; color:#fff; }
+
+  /* 效力聲明 */
+  .ifm-legal__prevail {
+    display:grid; gap:6px; margin:0 0 30px; padding:16px 18px;
+    border:1px solid #D9E7DF; border-left:4px solid #0B6B40; border-radius:12px;
+    background:#F7FBF8; font-size:15px; line-height:1.75; color:#2C3A32;
+  }
+  .ifm-legal__prevail-label {
+    font-size:12px; font-weight:700; letter-spacing:.08em; color:#0B6B40; text-transform:uppercase;
+  }
+
+  /* 目錄 */
+  .ifm-legal__toc {
+    margin:0 0 34px; padding:18px 20px;
+    border:1px solid #E6EAE7; border-radius:16px; background:#FBFDFC;
+  }
+  .ifm-legal__toc-title {
+    font-size:13px; font-weight:700; letter-spacing:.06em; color:#0B6B40; margin-bottom:10px;
+  }
+  .ifm-legal__toc ul {
+    margin:0; padding:0; list-style:none;
+    display:grid; grid-template-columns:repeat(auto-fit,minmax(215px,1fr)); gap:2px;
+  }
+  .ifm-legal__toc a {
+    display:block; padding:11px 8px; min-height:44px; box-sizing:border-box;
+    font-size:15px; line-height:1.5; color:#2C3A32; text-decoration:none; border-radius:8px;
+  }
+  .ifm-legal__toc a:hover { background:#EDF6F0; color:#0B6B40; }
+
+  /* 正文:手機也要 >=16px / 行高 >=1.7 */
+  .ifm-legal__body { font-size:17px; line-height:1.95; color:#2C3A32; }
+  .ifm-legal__body h2 {
+    font-size:22px; line-height:1.5; color:#0E1A14; margin:40px 0 14px;
+    scroll-margin-top:96px;   /* 從目錄跳過去時標題不會被固定頁首蓋住 */
+  }
+  .ifm-legal__body h3 { font-size:18px; line-height:1.55; color:#0E1A14; margin:26px 0 10px; }
+  .ifm-legal__body p { margin:0 0 18px; }
+  /* 條號留在文字裡(第九條會引用「第十八條」,自動編號一旦跟原文對不上就是改了法律文件),
+     所以這裡關掉自動編號,只留懸掛縮排。語意上仍然是 <ol>,螢幕報讀器照樣報「清單,共 N 項」。 */
+  .ifm-legal__body ol, .ifm-legal__body ul {
+    margin:0 0 20px; padding:0; list-style:none; display:grid; gap:14px;
+  }
+  .ifm-legal__body ol > li, .ifm-legal__body ul > li { padding-left:2px; }
+
+  /* 底部其他文件 */
+  .ifm-legal__more { margin-top:52px; padding-top:30px; border-top:1px solid #E6EAE7; }
+  .ifm-legal__more-title {
+    font-size:13px; font-weight:700; letter-spacing:.06em; color:#0B6B40; margin-bottom:14px;
+  }
+  .ifm-legal__more-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(250px,1fr)); gap:14px; }
+  .ifm-legal__more-card {
+    display:grid; gap:6px; padding:18px 20px; min-height:44px;
+    border:1px solid #E6EAE7; border-radius:16px; background:#fff; text-decoration:none;
+  }
+  .ifm-legal__more-card:hover { border-color:#0B6B40; background:#F7FBF8; }
+  .ifm-legal__more-card-title { font-size:16.5px; font-weight:700; color:#0E1A14; }
+  .ifm-legal__more-card-sub { font-size:14px; line-height:1.7; color:#4B5A52; }
+  .ifm-legal__more-card-cta { font-size:14px; font-weight:700; color:#0B6B40; }
+
   /* ---- 常見問題:原生 <details>/<summary> 手風琴。
          不寫 JS —— 鍵盤(Enter/Space)、螢幕閱讀器的展開狀態、Ctrl+F 搜尋頁內文字全部天生就有。 */
   .ifm-qa { max-width:860px; }
@@ -423,6 +499,22 @@
     .ifm-news-hero__art { max-width:320px; justify-self:start; }
     .ifm-article__body { font-size:16px; line-height:1.9; }
     .ifm-article__body h2 { font-size:20px; margin:30px 0 12px; }
+    .ifm-legal__title { font-size:28px; }
+    .ifm-legal__body { font-size:16px; line-height:1.9; }
+    .ifm-legal__body h2 { font-size:19px; margin:32px 0 12px; }
+    .ifm-legal__body h3 { font-size:17px; }
+    .ifm-legal__toc ul { grid-template-columns:1fr; }
+    /* 手機上 main 裡的每一段字都要 >= 16px(站上其他頁的作法一樣,見 .ifm-qa__q / .ifm-qa__a)。
+       桌機維持原本的 12–15px 層級,只有窄螢幕拉大 —— 這是一份要在手機上讀完的法律文件。 */
+    .ifm-legal__meta { font-size:16px; }
+    .ifm-legal__docnav-item { font-size:16px; }
+    .ifm-legal__prevail { font-size:16px; }
+    .ifm-legal__prevail-label { font-size:16px; letter-spacing:.04em; }
+    .ifm-legal__toc-title { font-size:16px; }
+    .ifm-legal__toc a { font-size:16px; }
+    .ifm-legal__more-title { font-size:16px; }
+    .ifm-legal__more-card-sub { font-size:16px; }
+    .ifm-legal__more-card-cta { font-size:16px; }
     .ifm-qa-title { font-size:32px !important; }
     .ifm-qa__q { padding:18px; font-size:16px; }
     .ifm-qa__a { padding:0 18px 20px; font-size:16px; }
@@ -1580,6 +1672,93 @@
   </div>
   </sc-if>
 
+  <!-- ============ PAGE: LEGAL(法律文件 /legal/:slug) ============
+       這一塊是 main 地標裡的最後一個頁面區段(接在 QA 後面) —— 插到 main 外面的話
+       畫面完全正常,但 skip link 與螢幕閱讀器都摸不到這兩頁,tests/content.test.cjs 有擋。
+       (註解裡刻意不寫 main 的收尾標籤字面值:整份 index.html 只准出現一次。)
+       整塊只有一個 H1:標題文字由 renderVals 的 legalH1 決定(文件標題／索引／找不到),
+       三種狀態共用同一個標題,不會出現一頁多個標題。
+       條號保留在文字裡,ol 用 list-style:none 呈現 —— 見 component.md 的 CSS。 -->
+  <sc-if value="{{ isLegal }}">
+  <div data-screen-label="法律文件">
+    <article class="restaurant-wrap ifm-legal" style="padding-top:44px;padding-bottom:88px;">
+
+      <!-- 頂部「其他條款」互連:三種狀態都看得到,等於一個常駐的文件切換列 -->
+      <nav class="ifm-legal__docnav" aria-label="{{ L.legal.docNavLabel }}">
+        <sc-for list="{{ legalDocs }}" as="d" hint-placeholder-count="2">
+          <a class="ifm-legal__docnav-item" href="{{ d.href }}" onClick="{{ d.go }}" aria-current="{{ d.ariaCurrent }}" data-active="{{ d.isActive }}">{{ d.title }}</a>
+        </sc-for>
+      </nav>
+
+      <div class="ifm-eyebrow">{{ L.legal.eyebrow }}</div>
+      <h1 class="ifm-legal__title">{{ legalH1 }}</h1>
+
+      <!-- ---------- 有文件:正文 ---------- -->
+      <sc-if value="{{ hasLegalDoc }}">
+        <p class="ifm-legal__meta">
+          <sc-if value="{{ legalHasUpdated }}"><span>{{ L.legal.updatedLabel }} {{ legalUpdated }}</span></sc-if>
+          <sc-if value="{{ legalNoUpdated }}"><span>{{ L.legal.noUpdatedLabel }}</span></sc-if>
+        </p>
+
+        <!-- 效力聲明:中英兩邊對稱,兩個語系都看得到 -->
+        <aside class="ifm-legal__prevail" role="note">
+          <span class="ifm-legal__prevail-label">{{ L.legal.prevailLabel }}</span>
+          <span class="ifm-legal__prevail-text">{{ L.legal.prevail }}</span>
+        </aside>
+
+        <nav class="ifm-legal__toc" aria-label="{{ L.legal.tocTitle }}">
+          <div class="ifm-legal__toc-title">{{ L.legal.tocTitle }}</div>
+          <ul>
+            <sc-for list="{{ legalToc }}" as="t" hint-placeholder-count="6">
+              <li><a href="{{ t.href }}">{{ t.text }}</a></li>
+            </sc-for>
+          </ul>
+        </nav>
+
+        <div class="ifm-legal__body">
+          <sc-for list="{{ legalBlocks }}" as="b" hint-placeholder-count="8">
+            <div>
+              <sc-if value="{{ b.isH2 }}"><h2 id="{{ b.anchor }}">{{ b.text }}</h2></sc-if>
+              <sc-if value="{{ b.isH3 }}"><h3>{{ b.text }}</h3></sc-if>
+              <sc-if value="{{ b.isP }}"><p>{{ b.text }}</p></sc-if>
+              <sc-if value="{{ b.isOl }}">
+                <ol>
+                  <sc-for list="{{ b.items }}" as="it" hint-placeholder-count="3"><li>{{ it }}</li></sc-for>
+                </ol>
+              </sc-if>
+              <sc-if value="{{ b.isUl }}">
+                <ul>
+                  <sc-for list="{{ b.items }}" as="it" hint-placeholder-count="3"><li>{{ it }}</li></sc-for>
+                </ul>
+              </sc-if>
+            </div>
+          </sc-for>
+        </div>
+      </sc-if>
+
+      <!-- ---------- 沒有文件:索引 or 找不到。兩種都列出所有文件 ---------- -->
+      <sc-if value="{{ legalEmpty }}">
+        <p class="ifm-legal__lede">{{ legalEmptyBody }}</p>
+      </sc-if>
+
+      <!-- 底部「其他條款」:有文件時列其他份,沒文件時列全部 -->
+      <nav class="ifm-legal__more" aria-label="{{ L.legal.otherDocsTitle }}">
+        <div class="ifm-legal__more-title">{{ L.legal.otherDocsTitle }}</div>
+        <div class="ifm-legal__more-grid">
+          <sc-for list="{{ legalOthers }}" as="d" hint-placeholder-count="2">
+            <a class="ifm-legal__more-card" href="{{ d.href }}" onClick="{{ d.go }}">
+              <span class="ifm-legal__more-card-title">{{ d.title }}</span>
+              <span class="ifm-legal__more-card-sub">{{ d.summary }}</span>
+              <span class="ifm-legal__more-card-cta">{{ L.legal.readDoc }}</span>
+            </a>
+          </sc-for>
+        </div>
+      </nav>
+
+    </article>
+  </div>
+  </sc-if>
+
   </main>
 
   <!-- ============ FOOTER ============ -->
@@ -1625,8 +1804,8 @@
         <div style="color:#fff;font-family:'Space Grotesk',sans-serif;font-size:11.5px;letter-spacing:.18em;margin-bottom:16px">SUPPORT</div>
         <ul style="display:grid;gap:11px;padding:0;margin:0;list-style:none">
             <li><a href="{{ hrefQa }}" onClick="{{ goQa }}" style="color:#9FB0A6;font-size:13.5px;text-decoration:none;font-weight:300;cursor:pointer" style-hover="color:#fff">{{ L.footer.supportFaq }}</a></li>
-            <li><a href="{{ hrefAbout }}" onClick="{{ goAbout }}" style="color:#9FB0A6;font-size:13.5px;text-decoration:none;font-weight:300;cursor:pointer" style-hover="color:#fff">{{ L.footer.supportTerms }}</a></li>
-            <li><a href="{{ hrefAbout }}" onClick="{{ goAbout }}" style="color:#9FB0A6;font-size:13.5px;text-decoration:none;font-weight:300;cursor:pointer" style-hover="color:#fff">{{ L.footer.supportPrivacy }}</a></li>
+            <li><a href="{{ hrefLegalTerms }}" onClick="{{ goLegalTerms }}" style="color:#9FB0A6;font-size:13.5px;text-decoration:none;font-weight:300;cursor:pointer" style-hover="color:#fff">{{ L.footer.supportTerms }}</a></li>
+            <li><a href="{{ hrefLegalPrivacy }}" onClick="{{ goLegalPrivacy }}" style="color:#9FB0A6;font-size:13.5px;text-decoration:none;font-weight:300;cursor:pointer" style-hover="color:#fff">{{ L.footer.supportPrivacy }}</a></li>
         </ul>
       </div>
     </div>
@@ -1919,6 +2098,15 @@ class Component extends DCLogic {
         page = { title: `${found.title} - ${siteName}`, description: found.excerpt || page.description };
       }
     }
+    // 條款頁同理:每一份文件有自己的 title,否則兩份文件會共用同一個分頁標題。
+    // 沒有 slug(裸 /legal)或查不到時,就留在 pages.legal 這個索引用的 meta。
+    if (this.state.page === 'legal' && this.state.slug) {
+      const doc = window.IfmLegal ? window.IfmLegal.bySlug(this.state.slug, this.state.lang) : null;
+      if (doc) {
+        const siteName = meta.siteName || 'iFoodmap';
+        page = { title: `${doc.title} - ${siteName}`, description: doc.summary || page.description };
+      }
+    }
     if (page.title) document.title = page.title;
     const set = (selector, value) => {
       if (!value) return;
@@ -2193,8 +2381,22 @@ class Component extends DCLogic {
       hasLink: !!item.linkHref,
     }));
 
+    const legalApi = typeof window !== 'undefined' ? window.IfmLegal : null;
+    // 法律文件。slug 來自網址(/legal/:slug);沒有 slug 就是文件索引,查不到就是「找不到」。
+    const legalDoc = page === 'legal' && legalApi && this.state.slug
+      ? legalApi.bySlug(this.state.slug, lang) : null;
+    const legalList = page === 'legal' && legalApi ? legalApi.all(lang) : [];
+    // 條號要能被交叉引用(第九條提到「第十八條」),所以錨點用序號而不是標題文字 ——
+    // 標題含中文與全形冒號,做成 id 會很難看也不好複製。
+    const legalAnchor = (i) => 'legal-s' + i;
+
     const href = (target, targetLang) =>
       (window.IfmRouting ? window.IfmRouting.pageToPath(target, targetLang || lang) : '/');
+    // 參數路由用的 href(文章/條款)。內部連結的 href 一定要帶語系前綴:
+    // href 是右鍵開新分頁、cmd+click 與爬蟲實際會走的路徑,寫死 /legal/terms 會把英文使用者帶回中文站。
+    // 第三個參數是給語言切換用的(換語系、留在同一份文件)。
+    const href2 = (target, slug, targetLang) =>
+      (window.IfmRouting ? window.IfmRouting.pageToPath(target, targetLang || lang, slug) : '/');
     const anchorHref = (id) => href('home') + '#' + id;
 
     const phrases = list('rotating');
@@ -2233,6 +2435,48 @@ class Component extends DCLogic {
       qaItems,
       qaCount: qaItems.length,
       hrefNewsList: href('news'),
+
+      /* ---- 法律文件 /legal/:slug ---- */
+      isLegal: page === 'legal',
+      hasLegalDoc: page === 'legal' && !!legalDoc,
+      // 裸 /legal(索引)與查不到的 slug(找不到)共用同一塊 markup,只有標題與說明不同
+      legalEmpty: page === 'legal' && !legalDoc,
+      legalH1: legalDoc ? legalDoc.title
+        : (this.state.slug ? L.legal.notFoundTitle : L.legal.indexTitle),
+      legalEmptyBody: this.state.slug ? L.legal.notFoundBody : L.legal.indexBody,
+      legalUpdated: legalDoc && legalDoc.updated,
+      legalHasUpdated: !!(legalDoc && legalDoc.updated),
+      legalNoUpdated: !!(legalDoc && !legalDoc.updated),
+      // 模板只有 sc-if 沒有 switch,所以型別在這裡先攤成布林旗標(跟文章那段同一個作法)
+      legalBlocks: (legalDoc ? legalDoc.blocks : []).map((b, i) => ({
+        ...b,
+        anchor: legalAnchor(i),
+        isH2: b.type === 'h2',
+        isH3: b.type === 'h3',
+        isP: b.type === 'p',
+        isOl: b.type === 'ol',
+        isUl: b.type === 'ul',
+      })),
+      legalToc: (legalDoc ? legalDoc.blocks : [])
+        .map((b, i) => ({ type: b.type, text: b.text, href: '#' + legalAnchor(i) }))
+        .filter((t) => t.type === 'h2'),
+      // 頂部常駐的文件切換列(三種狀態都看得到)
+      legalDocs: legalList.map((d) => ({
+        ...d,
+        href: href2('legal', d.slug),
+        go: this.go('legal', d.slug),
+        isActive: legalDoc && d.slug === legalDoc.slug ? 'true' : 'false',
+        ariaCurrent: legalDoc && d.slug === legalDoc.slug ? 'page' : null,
+      })),
+      // 底部卡片:在某一份文件裡就列「其他份」,在索引／找不到就列全部
+      legalOthers: legalList
+        .filter((d) => !legalDoc || d.slug !== legalDoc.slug)
+        .map((d) => ({ ...d, href: href2('legal', d.slug), go: this.go('legal', d.slug) })),
+      // 頁尾 SUPPORT 區那兩條(以前兩條都綁 hrefAbout,點下去會到關於我們)
+      hrefLegalTerms: href2('legal', 'terms'),
+      goLegalTerms: this.go('legal', 'terms'),
+      hrefLegalPrivacy: href2('legal', 'privacy'),
+      goLegalPrivacy: this.go('legal', 'privacy'),
       goHome: g('home'),
       goRestaurants: g('restaurants'),
       goSuppliers: g('suppliers'),
@@ -2279,7 +2523,10 @@ class Component extends DCLogic {
       hrefHow: anchorHref('how-it-works'),
       hrefNews: anchorHref('news'),
       hrefQa: href('qa'),
-      langHref: href(page, otherLang),
+      // 🔴 slug 一定要帶上。switchLang 的 onClick 走 routing.setLang() 本來就有帶 slug,
+      // 但 href 沒帶的話,在 /legal/terms 或 /news/<slug> 上右鍵開新分頁、cmd+click 與爬蟲
+      // 會被丟到 /en/legal、/en/news 這種列表頁 —— 畫面上點起來正常,所以很難發現。
+      langHref: href2(page, this.state.slug, otherLang),
       langLabel: otherLang === 'en' ? (L.meta && L.meta.langSwitchToEn) : (L.meta && L.meta.langSwitchToZh),
       langAria: L.meta && L.meta.langSwitchLabel,
       langTag: otherLang === 'en' ? 'en' : 'zh-Hant',

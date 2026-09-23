@@ -560,6 +560,10 @@
             "title": "最新消息｜餐飲採購與食安的第一手整理 - iFoodmap 食材地圖",
             "description": "從食材採購、產銷履歷到市場趨勢，整理餐飲與團膳業者實際會用到的資訊。"
           },
+          "legal": {
+            "title": "法律文件｜使用條款與隱私權政策 - iFoodmap 食材地圖",
+            "description": "iFoodmap 食材地圖的使用條款與隱私權政策。條款內容自舊站原文搬遷，中文版為準。"
+          },
           "qa": {
             "title": "常見問題｜加入、審核與收費怎麼運作 - iFoodmap 食材地圖",
             "description": "供應商加入食材地圖的流程、平台審核與收費方案，最常被問到的問題都整理在這裡。找不到答案可以直接問 AI 採購助手。"
@@ -578,6 +582,21 @@
         "notFoundTitle": "找不到這篇文章",
         "notFoundBody": "這個網址可能已經變更或被移除。你可以回到最新消息列表看看其他內容。",
         "coverAlt": "文章封面"
+      },
+      "legal": {
+        "eyebrow": "法律文件",
+        "updatedLabel": "最後更新",
+        "noUpdatedLabel": "舊站未標示版本日期",
+        "prevail": "本網站之英文版本僅為便利讀者所提供之翻譯。如中英文版本有任何歧異或疑義，概以中文版本為準。",
+        "prevailLabel": "版本效力",
+        "tocTitle": "本頁內容",
+        "docNavLabel": "法律文件",
+        "otherDocsTitle": "其他條款",
+        "indexTitle": "法律文件",
+        "indexBody": "以下是 iFoodmap 食材地圖目前適用的條款與政策。",
+        "notFoundTitle": "找不到這份文件",
+        "notFoundBody": "這個網址可能已經變更或被移除。以下是目前可以閱讀的法律文件。",
+        "readDoc": "閱讀全文 →"
       },
       "qa": {
         "heroEyebrow": "常見問題",
@@ -1179,6 +1198,10 @@
             "title": "News | Sourcing and Food Safety, Sorted Out - iFoodmap",
             "description": "From ingredient procurement and traceability to market trends — what restaurants and catering operations actually need to know."
           },
+          "legal": {
+            "title": "Legal | Terms of Use and Privacy Policy - iFoodmap",
+            "description": "iFoodmap's Terms of Use and Privacy Policy. These documents are translations of the Chinese originals; the Chinese version prevails."
+          },
           "qa": {
             "title": "FAQ | How joining, review and pricing work - iFoodmap",
             "description": "How suppliers join iFoodmap, how the review works and what the paid plans cover — the questions we are asked most. Can't find your answer? Ask our AI sourcing assistant."
@@ -1197,6 +1220,21 @@
         "notFoundTitle": "We couldn't find that article",
         "notFoundBody": "This link may have changed or been removed. Head back to the news list to see what else is there.",
         "coverAlt": "Article cover"
+      },
+      "legal": {
+        "eyebrow": "Legal",
+        "updatedLabel": "Last updated",
+        "noUpdatedLabel": "No version date was stated on the previous site",
+        "prevail": "This English version is a translation provided for convenience only. In the event of any discrepancy or ambiguity between the English and Chinese versions, the Chinese version shall prevail.",
+        "prevailLabel": "Governing version",
+        "tocTitle": "On this page",
+        "docNavLabel": "Legal documents",
+        "otherDocsTitle": "Other documents",
+        "indexTitle": "Legal documents",
+        "indexBody": "These are the terms and policies that currently apply to iFoodmap.",
+        "notFoundTitle": "We couldn't find that document",
+        "notFoundBody": "This link may have changed or been removed. Here are the legal documents currently available.",
+        "readDoc": "Read in full →"
       },
       "qa": {
         "heroEyebrow": "FAQ",

@@ -35,6 +35,14 @@
       "destination": "/"
     },
     {
+      "source": "/legal",
+      "destination": "/"
+    },
+    {
+      "source": "/legal/:slug",
+      "destination": "/"
+    },
+    {
       "source": "/en",
       "destination": "/"
     },
@@ -68,6 +76,14 @@
     },
     {
       "source": "/en/qa",
+      "destination": "/"
+    },
+    {
+      "source": "/en/legal",
+      "destination": "/"
+    },
+    {
+      "source": "/en/legal/:slug",
       "destination": "/"
     }
   ],

@@ -38,7 +38,11 @@ const articleStart = source.indexOf('<!-- ============ PAGE: ARTICLE');
 const news = source.slice(newsStart, articleStart);
 const qaStart = source.indexOf('<!-- ============ PAGE: QA');
 const article = source.slice(articleStart, qaStart);
-const qa = source.slice(qaStart, source.indexOf('<!-- ============ FOOTER ============ -->'));
+// QA 後面現在還有 LEGAL 區段,切片要止於 LEGAL 而不是 FOOTER,
+// 否則 qa 會把法律文件頁整個吃進來(H1 就從 1 個變成 2 個)。
+const legalStart = source.indexOf('<!-- ============ PAGE: LEGAL');
+const qa = source.slice(qaStart, legalStart);
+const legal = source.slice(legalStart, source.indexOf('<!-- ============ FOOTER ============ -->'));
 const footerStart = source.indexOf('<!-- ============ FOOTER ============ -->');
 const footerEnd = source.indexOf('</footer>', footerStart) + '</footer>'.length;
 const footer = source.slice(footerStart, footerEnd);
@@ -1088,13 +1092,110 @@ test('every news image referenced by the data module exists on disk', () => {
   assert.deepEqual(missing, [], `資料指到不存在的圖片:${missing.join(', ')}`);
 });
 
+test('legal page renders one document at a time and never falls into a dead end', () => {
+  // 三種狀態共用一個 H1(文件標題 / 索引 / 找不到),所以不會出現一頁多個 H1
+  assert.equal((legal.match(/<h1\b/g) || []).length, 1, '法律文件頁只能有一個 H1');
+  assert.match(legal, /value="\{\{ isLegal \}\}"/);
+  for (const flag of ['hasLegalDoc', 'legalEmpty']) {
+    assert.match(legal, new RegExp(`value="\\{\\{ ${flag} \\}\\}"`), `缺少 ${flag} 分支`);
+  }
+  // 模板只有 sc-if 沒有 switch,所以每個 block 型別各有一個布林旗標
+  for (const flag of ['b.isH2', 'b.isH3', 'b.isP', 'b.isOl', 'b.isUl']) {
+    assert.match(legal, new RegExp(`value="\\{\\{ ${flag.replace('.', '\\.')} \\}\\}"`), `缺少 ${flag} 分支`);
+  }
+  // ol / ul 內層還要再跑一層迴圈
+  assert.match(legal, /<sc-for list="\{\{ b\.items \}\}" as="it"/);
+  // 目錄的錨點:h2 上的 id 與目錄項的 href 必須是同一組(序號),點了才會跳
+  assert.match(legal, /<h2 id="\{\{ b\.anchor \}\}">/);
+  assert.match(legal, /<sc-for list="\{\{ legalToc \}\}" as="t"/);
+  assert.match(component, /const legalAnchor = \(i\) => 'legal-s' \+ i;/);
+  assert.match(component, /href: '#' \+ legalAnchor\(i\)/);
+  assert.match(component, /anchor: legalAnchor\(i\)/);
+  // 錨點跳過去時標題不可以被固定頁首蓋住
+  assert.match(source, /\.ifm-legal__body h2 \{[^}]*scroll-margin-top:\s*96px/s);
+
+  // 三種狀態都要有出路:頂部切換列常駐,底部再列一次其他文件
+  assert.match(legal, /<sc-for list="\{\{ legalDocs \}\}" as="d"/);
+  assert.match(legal, /<sc-for list="\{\{ legalOthers \}\}" as="d"/);
+  // 效力聲明(英文版是譯本,以中文版為準)中英都要看得到
+  const { dict } = require('../i18n.js');
+  assert.ok(legal.includes(dict('zh').legal.prevail), '缺少中文版效力聲明');
+  assert.ok(dict('en').legal.prevail.includes('Chinese version shall prevail'));
+
+  // 🔴 條號留在原文裡(第九條會引用第十八條),ol 一旦跑出瀏覽器的自動編號就等於改了條號
+  const legalCss = source.slice(source.indexOf('.ifm-legal__body ol'), source.indexOf('/* 底部其他文件 */'));
+  assert.match(legalCss, /list-style:none/, '法律文件的 ol 必須關掉自動編號');
+  // 而且不可以共用文章頁的 body 樣式(那邊的 ul 是圓點,不是條號)
+  assert.doesNotMatch(legal, /ifm-article__body/);
+  assert.match(source, /\.ifm-article__body ul li::before/, '文章頁的圓點樣式不該被動到');
+});
+
+test('legal data module is well formed and shared between languages by slug', () => {
+  const legalApi = require('../legal.js');
+  assert.equal(legalApi.count, 2, '目前應該是使用條款 + 隱私權政策兩份');
+  const zh = legalApi.all('zh');
+  const en = legalApi.all('en');
+  const slugs = zh.map((d) => d.slug);
+  assert.deepEqual(slugs, ['terms', 'privacy']);
+  // 兩個語系共用同一個 slug,/legal/x 與 /en/legal/x 才會是同一份,hreflang 才指得對
+  assert.deepEqual(en.map((d) => d.slug), slugs);
+
+  const CJK_RE = /[一-鿿]/;
+  for (let i = 0; i < zh.length; i++) {
+    const z = zh[i];
+    const e = en[i];
+    assert.ok(z.title && z.summary && e.title && e.summary, `${z.slug} 少了標題或摘要`);
+    assert.doesNotMatch(e.title, CJK_RE, `${z.slug} 英文標題還是中文`);
+    // 中英 block 一一對應 —— 對不上就代表譯本漏了或多了一段
+    assert.equal(z.blocks.length, e.blocks.length, `${z.slug} 中英段落數不一致`);
+    assert.deepEqual(e.blocks.map((b) => b.type), z.blocks.map((b) => b.type), `${z.slug} 中英段落型別不一致`);
+    for (let j = 0; j < z.blocks.length; j++) {
+      const zb = z.blocks[j];
+      const eb = e.blocks[j];
+      assert.ok(['h2', 'h3', 'p', 'ol', 'ul'].includes(zb.type), `未知的 block 型別:${zb.type}`);
+      if (zb.type === 'ol' || zb.type === 'ul') {
+        assert.equal(zb.items.length, eb.items.length, `${z.slug} block#${j} 條列項數不一致`);
+      }
+      const enText = (eb.text || '') + (eb.items || []).join('');
+      assert.doesNotMatch(enText, CJK_RE, `${z.slug} block#${j} 英文版殘留中文`);
+    }
+  }
+
+  // 條號留在文字裡:第九條的定義段會引用「第十八條」,自動編號對不上就等於改了法律文件
+  const terms = legalApi.bySlug('terms', 'zh');
+  assert.ok(terms.blocks.some((b) => b.type === 'h2' && b.text.includes('第九條')), '使用條款少了第九條');
+  assert.ok(terms.blocks.some((b) => b.type === 'h2' && b.text.includes('第十八條')), '使用條款少了第十八條');
+  assert.ok(
+    terms.blocks.some((b) => (b.items || []).some((it) => it.includes('第十八條'))),
+    '定義段落應該要交叉引用第十八條 —— 條號被改過的話這條會紅',
+  );
+
+  assert.equal(legalApi.bySlug('definitely-not-a-real-slug', 'zh'), null);
+  assert.ok(legalApi.bySlug('privacy', 'en'));
+});
+
+test('the footer terms and privacy links finally point at the legal pages', () => {
+  // 🔴 href 與 onClick 都要改。只改 onClick 的話,右鍵開新分頁與爬蟲仍然會跑到關於我們
+  for (const [binding, go] of [['hrefLegalTerms', 'goLegalTerms'], ['hrefLegalPrivacy', 'goLegalPrivacy']]) {
+    assert.match(footer, new RegExp(`<a href="\\{\\{ ${binding} \\}\\}" onClick="\\{\\{ ${go} \\}\\}"`));
+  }
+  // 兩條都帶語系前綴(href2 走 pageToPath,英文頁上才不會連回中文站)
+  assert.match(component, /hrefLegalTerms: href2\('legal', 'terms'\),/);
+  assert.match(component, /hrefLegalPrivacy: href2\('legal', 'privacy'\),/);
+  assert.match(component, /const href2 = \(target, slug, targetLang\) =>/);
+  assert.match(component, /window\.IfmRouting\.pageToPath\(target, targetLang \|\| lang, slug\)/);
+  // SUPPORT 區只剩常見問題還指向別的頁面,使用條款/隱私權不可以再綁 hrefAbout
+  const support = footer.slice(footer.indexOf('>SUPPORT<'));
+  assert.doesNotMatch(support, /hrefAbout/, '頁尾的條款連結還綁在關於我們');
+});
+
 test('every page section lives inside the main landmark', () => {
   // 我自己踩過:新聞頁的 markup 被插在 </main> 後面,結果跳過導覽的 skip link
   // 與螢幕閱讀器的 main 地標都摸不到那兩頁,但畫面看起來完全正常。
   const mainOpen = source.indexOf('<main id="main-content"');
   const mainClose = source.indexOf('</main>');
   assert.ok(mainOpen !== -1 && mainClose > mainOpen, '找不到 main');
-  for (const marker of ['HOME', 'RESTAURANTS', 'SUPPLIERS', 'CASES', 'ABOUT', 'CONTACT', 'NEWS', 'ARTICLE', 'QA']) {
+  for (const marker of ['HOME', 'RESTAURANTS', 'SUPPLIERS', 'CASES', 'ABOUT', 'CONTACT', 'NEWS', 'ARTICLE', 'QA', 'LEGAL']) {
     const at = source.indexOf(`<!-- ============ PAGE: ${marker}`);
     assert.ok(at !== -1, `找不到 ${marker} 區段`);
     assert.ok(at > mainOpen && at < mainClose, `${marker} 區段跑到 <main> 外面了`);

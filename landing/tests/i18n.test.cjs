@@ -153,7 +153,7 @@ test('English SEO metadata is translated for every page, not just the markup', (
   // 全靠 syncSeo() 換。字典裡沒有英文版的話,英文頁的分頁標題會一路是中文。
   const en = dict('en').meta;
   assert.ok(en && en.pages, 'en dict must carry meta.pages');
-  for (const page of ['home', 'restaurants', 'suppliers', 'cases', 'about', 'contact', 'news', 'qa']) {
+  for (const page of ['home', 'restaurants', 'suppliers', 'cases', 'about', 'contact', 'news', 'qa', 'legal']) {
     assert.ok(en.pages[page], `missing en meta for ${page}`);
     assert.doesNotMatch(en.pages[page].title, CJK, `${page} title still Chinese`);
     assert.doesNotMatch(en.pages[page].description, CJK, `${page} description still Chinese`);
@@ -244,7 +244,7 @@ test('detect() survives a localStorage that throws (private browsing)', () => {
 test('assets and support.js are root-absolute so /en/ pages load the same files', () => {
   // 相對路徑在 /en/suppliers 之下 base 會變成 /en/,./support.js 會去要 /en/support.js
   // 然後 404 —— 整個框架不載入、頁面全白。2026-09-22 線上實際踩過。
-  for (const script of ['i18n.js', 'routing.js', 'support.js']) {
+  for (const script of ['i18n.js', 'routing.js', 'news.js', 'legal.js', 'support.js']) {
     assert.match(rawSource, new RegExp(`<script src="/${script.replace('.', '\\.')}"></script>`));
   }
   // ./x、../x、裸檔名 x.js 一律不行
@@ -273,7 +273,9 @@ test('internal links are language-aware bindings, never hard-coded paths', () =>
       // 跟 hrefXxx 一樣是綁定,不是寫死的路徑。
       // q.linkHref 是常見問題答案裡的外連(值來自字典,是完整的 https:// 網址);
       // 它會落進這條檢查只是因為 markup 上寫的是綁定而不是字面網址,不是寫死的內部路徑。
-      /^\{\{ (href[A-Za-z]*|langHref|loginUrl|restaurantRegistrationUrl|supplierApplicationUrl|a\.href|lk\.href|q\.linkHref) \}\}$/,
+      // d.href 是法律文件在 sc-for 裡逐份算出來的網址(pageToPath 產的,已帶語系前綴);
+      // t.href 是同一頁目錄的 #錨點,不跨頁也不跨語系。
+      /^\{\{ (href[A-Za-z]*|langHref|loginUrl|restaurantRegistrationUrl|supplierApplicationUrl|a\.href|lk\.href|q\.linkHref|d\.href|t\.href) \}\}$/,
       `internal link must be a binding, got ${href}`,
     );
   }
