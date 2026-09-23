@@ -163,9 +163,7 @@
     border-bottom:1px solid #e1e9e3;
   }
   .restaurant-capability--reverse .restaurant-copy { order:2; }
-  .restaurant-capability--reverse .restaurant-product-mock { order:1; }
-  .restaurant-copy,
-  .restaurant-product-mock { min-width:0; }
+  .restaurant-copy { min-width:0; }
   .restaurant-detail-list { margin:24px 0 0; padding:0; list-style:none; display:grid; gap:12px; }
   .restaurant-detail-list li { display:flex; gap:12px; align-items:flex-start; color:#34473b; line-height:1.65; }
   .restaurant-detail-list li::before {
@@ -182,39 +180,7 @@
     font-size:12px;
     font-weight:900;
   }
-  .restaurant-product-mock {
-    overflow:hidden;
-    border:1px solid #d7e3da;
-    border-radius:22px;
-    background:#fff;
-    box-shadow:0 22px 58px rgba(15,43,26,.11);
-  }
-  .restaurant-mock-bar {
-    display:flex;
-    align-items:center;
-    justify-content:space-between;
-    gap:16px;
-    padding:13px 18px;
-    border-bottom:1px solid #e5ece6;
-    background:#f7faf7;
-    color:#5b6b62;
-    font-size:13px;
-    font-weight:600;
-  }
-  .restaurant-mock-body { padding:20px; min-width:0; }
-  .restaurant-mock-scroll { max-width:100%; overflow-x:auto; overscroll-behavior-inline:contain; }
-  .restaurant-mock-scroll:focus-visible {
-    outline:3px solid #166534;
-    outline-offset:3px;
-    border-radius:8px;
-  }
-  .restaurant-mock-table { width:100%; min-width:470px; border-collapse:collapse; }
-  .restaurant-mock-table th,
-  .restaurant-mock-table td { padding:11px 12px; border-bottom:1px solid #e5ece6; text-align:left; font-size:13px; white-space:nowrap; }
-  .restaurant-mock-table th { color:#5b6b62; font-weight:600; }
-  .restaurant-mock-table td { color:#17261c; }
   .restaurant-case-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:24px; }
-  .restaurant-kpis { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:12px; }
   .supplier-wrap { max-width:1240px; margin:0 auto; padding-left:40px; padding-right:40px; }
   .supplier-hero-grid { display:grid; grid-template-columns:minmax(0,1.02fr) minmax(420px,.98fr); gap:54px; align-items:center; }
   .supplier-pain-grid { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:18px; }
@@ -240,9 +206,7 @@
     border-bottom:1px solid #e1e9e3;
   }
   .supplier-capability--reverse .supplier-copy { order:2; }
-  .supplier-capability--reverse .supplier-product-mock { order:1; }
-  .supplier-copy,
-  .supplier-product-mock { min-width:0; }
+  .supplier-copy { min-width:0; }
   .supplier-detail-list { margin:24px 0 0; padding:0; list-style:none; display:grid; gap:12px; }
   .supplier-detail-list li { display:flex; gap:12px; align-items:flex-start; color:#34473b; line-height:1.65; }
   .supplier-detail-list li::before {
@@ -259,39 +223,7 @@
     font-size:12px;
     font-weight:900;
   }
-  .supplier-product-mock {
-    overflow:hidden;
-    border:1px solid #d7e3da;
-    border-radius:22px;
-    background:#fff;
-    box-shadow:0 22px 58px rgba(15,43,26,.11);
-  }
-  .supplier-mock-bar {
-    display:flex;
-    align-items:center;
-    justify-content:space-between;
-    gap:16px;
-    padding:13px 18px;
-    border-bottom:1px solid #e5ece6;
-    background:#f7faf7;
-    color:#5b6b62;
-    font-size:13px;
-    font-weight:600;
-  }
-  .supplier-mock-body { padding:20px; min-width:0; }
-  .supplier-mock-scroll { max-width:100%; overflow-x:auto; overscroll-behavior-inline:contain; }
-  .supplier-mock-scroll:focus-visible {
-    outline:3px solid #166534;
-    outline-offset:3px;
-    border-radius:8px;
-  }
-  .supplier-mock-table { width:100%; min-width:500px; border-collapse:collapse; }
-  .supplier-mock-table th,
-  .supplier-mock-table td { padding:11px 12px; border-bottom:1px solid #e5ece6; text-align:left; font-size:13px; white-space:nowrap; }
-  .supplier-mock-table th { color:#5b6b62; font-weight:600; }
-  .supplier-mock-table td { color:#17261c; }
   .supplier-case-grid { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:18px; }
-  .supplier-kpis { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:12px; }
   .support-wrap { max-width:1240px; margin:0 auto; padding-left:40px; padding-right:40px; }
   .cases-grid { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:24px; }
   .case-card { min-width:0; overflow:hidden; border:1px solid #dfe8e1; border-radius:24px; background:#fff; box-shadow:0 18px 48px rgba(15,43,26,.08); }
@@ -387,6 +319,10 @@
   /* ===== 最新消息 / 文章頁 ===== */
   .ifm-news-hero { display:grid; grid-template-columns:minmax(0,1.1fr) minmax(0,.9fr); gap:40px; align-items:center; }
   .ifm-news-hero__art { display:block; width:100%; height:auto; max-width:460px; justify-self:end; }
+  /* /restaurants 與 /suppliers hero 右側的手繪插圖。560x350 的 viewBox,
+     寬度吃滿欄位(桌機 542px、手機扣掉 wrap padding 後 350px),height:auto 維持比例;
+     img 上的 width/height 屬性負責在圖檔載入前先佔好位,不會有 CLS。 */
+  .platform-hero-art { display:block; width:100%; height:auto; max-width:560px; }
 
   /* 內文排版:長文的可讀性靠三件事 —— 行寬、行高、段距。
      行寬壓在 68ch 左右,超過的話眼睛回行會找不到下一行的開頭。 */
@@ -505,13 +441,10 @@
     .restaurant-hero-grid,
     .restaurant-capability { gap:32px; }
     .restaurant-capability { padding:56px 0; }
-    .restaurant-capability--reverse .restaurant-copy,
-    .restaurant-capability--reverse .restaurant-product-mock { order:initial; }
+    .restaurant-capability--reverse .restaurant-copy { order:initial; }
     .restaurant-hero-title { font-size:38px !important; }
     .restaurant-pain-grid,
     .restaurant-flow { gap:12px; }
-    .restaurant-product-mock { max-width:100%; }
-    .restaurant-mock-table { min-width:430px; }
     .restaurant-mobile-copy { font-size:16px !important; }
     .supplier-wrap { padding-left:20px; padding-right:20px; }
     .supplier-hero-grid,
@@ -522,13 +455,10 @@
     .supplier-hero-grid,
     .supplier-capability { gap:32px; }
     .supplier-capability { padding:56px 0; }
-    .supplier-capability--reverse .supplier-copy,
-    .supplier-capability--reverse .supplier-product-mock { order:initial; }
+    .supplier-capability--reverse .supplier-copy { order:initial; }
     .supplier-hero-title { font-size:38px !important; }
     .supplier-pain-grid,
     .supplier-flow { gap:12px; }
-    .supplier-product-mock { max-width:100%; }
-    .supplier-mock-table { min-width:450px; }
     .supplier-mobile-copy { font-size:16px !important; }
     .support-wrap { padding-left:20px; padding-right:20px; }
     .cases-grid,
@@ -544,11 +474,7 @@
   @media (max-width:400px) {
     body { font-size:16px; }
     .restaurant-hero-title { font-size:34px !important; }
-    .restaurant-kpis { grid-template-columns:1fr; }
-    .restaurant-mock-body { padding:15px; }
     .supplier-hero-title { font-size:34px !important; }
-    .supplier-kpis { grid-template-columns:1fr; }
-    .supplier-mock-body { padding:15px; }
     .support-title { font-size:34px !important; }
     .contact-fields-two { grid-template-columns:1fr; }
     .case-stats { grid-template-columns:1fr; }
@@ -838,37 +764,19 @@
   <!-- ============ PAGE: RESTAURANTS ============ -->
   <sc-if value="{{ isRestaurants }}">
   <div data-screen-label="餐廳方案">
-    <section style="position:relative;overflow:hidden;background:radial-gradient(760px 460px at 88% 5%,rgba(74,209,90,.25),transparent 62%),radial-gradient(620px 400px at 2% 100%,rgba(31,158,78,.16),transparent 64%),#0a1510;">
-      <div style="position:absolute;inset:0;background-image:linear-gradient(rgba(255,255,255,.04) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.04) 1px,transparent 1px);background-size:54px 54px;"></div>
+    <section style="position:relative;overflow:hidden;border-bottom:1px solid #E6EAE7;background:linear-gradient(180deg,#F6FBF7 0%,#fff 100%);">
       <div class="restaurant-wrap restaurant-hero-grid" style="position:relative;padding-top:84px;padding-bottom:88px;">
         <div data-reveal>
-          <div style="font-family:'Space Grotesk','Noto Sans TC',sans-serif;font-size:13px;font-weight:700;color:#8fe681;letter-spacing:.13em;text-transform:uppercase;margin-bottom:18px;">iFoodmap for Restaurants</div>
-          <h1 class="restaurant-hero-title" style="font-family:'Space Grotesk','Noto Sans TC',sans-serif;font-size:52px;font-weight:900;color:#fff;margin:0 0 22px;line-height:1.18;letter-spacing:-.02em;">{{ L.rest.hero.title }}</h1>
-          <p class="restaurant-mobile-copy" style="font-size:18px;line-height:1.75;color:#b4c6b8;margin:0 0 30px;max-width:650px;">{{ L.rest.hero.sub }}</p>
+          <div style="font-family:'Space Grotesk','Noto Sans TC',sans-serif;font-size:13px;font-weight:700;color:#166534;letter-spacing:.13em;text-transform:uppercase;margin-bottom:18px;">iFoodmap for Restaurants</div>
+          <h1 class="restaurant-hero-title" style="font-family:'Space Grotesk','Noto Sans TC',sans-serif;font-size:52px;font-weight:900;color:#0e1a12;margin:0 0 22px;line-height:1.18;letter-spacing:-.02em;">{{ L.rest.hero.title }}</h1>
+          <p class="restaurant-mobile-copy" style="font-size:18px;line-height:1.75;color:#5b6b62;margin:0 0 30px;max-width:650px;">{{ L.rest.hero.sub }}</p>
           <div style="display:flex;flex-wrap:wrap;gap:14px;">
-            <a class="platform-action" href="{{ restaurantRegistrationUrl }}" style="background:#54ce50;color:#07130a;box-shadow:0 12px 30px rgba(74,209,90,.24);">{{ L.rest.ctaCreateAccount }}</a>
-            <a class="platform-action" href="#restaurant-capabilities" style="border:1px solid rgba(255,255,255,.34);color:#fff;background:rgba(255,255,255,.06);">{{ L.rest.hero.ctaSecondary }}</a>
+            <a class="platform-action" href="{{ restaurantRegistrationUrl }}" style="background:#166534;color:#fff;">{{ L.rest.ctaCreateAccount }}</a>
+            <a class="platform-action" href="#restaurant-capabilities" style="border:1px solid #166534;color:#166534;background:#fff;">{{ L.rest.hero.ctaSecondary }}</a>
           </div>
         </div>
 
-        <div class="restaurant-product-mock" data-reveal aria-label="{{ L.rest.hero.mockAria }}">
-          <div class="restaurant-mock-bar"><span>{{ L.rest.hero.mockTitle }}</span><span>{{ L.rest.hero.mockTag }}</span></div>
-          <div class="restaurant-mock-body">
-            <div class="restaurant-kpis">
-              <div style="padding:16px;border-radius:14px;background:#f1f8f1;"><span style="display:block;color:#5b6b62;font-size:13px;">{{ L.rest.hero.kpiSpendLabel }}</span><strong style="display:block;margin-top:6px;font-size:22px;color:#17261c;">$128,640</strong></div>
-              <div style="padding:16px;border-radius:14px;background:#f1f8f1;"><span style="display:block;color:#5b6b62;font-size:13px;">{{ L.rest.hero.kpiPendingLabel }}</span><strong style="display:block;margin-top:6px;font-size:22px;color:#17261c;">{{ L.rest.hero.kpiPendingValue }}</strong></div>
-              <div style="padding:16px;border-radius:14px;background:#f1f8f1;"><span style="display:block;color:#5b6b62;font-size:13px;">{{ L.rest.hero.kpiSuppliersLabel }}</span><strong style="display:block;margin-top:6px;font-size:22px;color:#17261c;">{{ L.rest.hero.kpiSuppliersValue }}</strong></div>
-            </div>
-            <div style="margin-top:18px;padding:18px;border:1px solid #e1e9e3;border-radius:15px;">
-              <div style="display:flex;justify-content:space-between;gap:12px;margin-bottom:14px;"><strong style="font-size:15px;">{{ L.rest.hero.progressTitle }}</strong><span style="font-size:13px;color:#166534;font-weight:700;">{{ L.rest.hero.progressCount }}</span></div>
-              <div style="height:9px;border-radius:99px;background:#e5ece6;overflow:hidden;"><div style="width:67%;height:100%;border-radius:99px;background:#1f9e4e;"></div></div>
-              <ul style="list-style:none;padding:0;margin:16px 0 0;display:grid;gap:10px;color:#34473b;font-size:14px;">
-                <li style="display:flex;justify-content:space-between;gap:12px;"><span>{{ L.rest.hero.task1 }}</span><strong style="color:#166534;">{{ L.rest.hero.task1Status }}</strong></li>
-                <li style="display:flex;justify-content:space-between;gap:12px;"><span>{{ L.rest.hero.task2 }}</span><strong style="color:#7c4a03;">{{ L.rest.hero.task2Status }}</strong></li>
-              </ul>
-            </div>
-          </div>
-        </div>
+        <img class="platform-hero-art" data-reveal src="/assets/rest-hero-panel.svg" alt="" width="560" height="350" loading="lazy">
       </div>
     </section>
 
@@ -1037,36 +945,19 @@
   <!-- ============ PAGE: SUPPLIERS ============ -->
   <sc-if value="{{ isSuppliers }}">
   <div data-screen-label="供應商方案">
-    <section style="position:relative;overflow:hidden;background:radial-gradient(720px 430px at 88% 8%,rgba(84,206,80,.22),transparent 65%),#0a1510;color:#fff;">
+    <section style="position:relative;overflow:hidden;border-bottom:1px solid #E6EAE7;background:linear-gradient(180deg,#F6FBF7 0%,#fff 100%);color:#0e1a12;">
       <div class="supplier-wrap supplier-hero-grid" style="position:relative;padding-top:84px;padding-bottom:88px;">
         <div data-reveal>
-          <div style="font-family:'Space Grotesk','Noto Sans TC',sans-serif;font-size:13px;font-weight:700;color:#8fe681;letter-spacing:.14em;text-transform:uppercase;margin-bottom:16px;">iFoodmap for Suppliers</div>
+          <div style="font-family:'Space Grotesk','Noto Sans TC',sans-serif;font-size:13px;font-weight:700;color:#166534;letter-spacing:.14em;text-transform:uppercase;margin-bottom:16px;">iFoodmap for Suppliers</div>
           <h1 class="supplier-hero-title" style="font-family:'Space Grotesk','Noto Sans TC',sans-serif;font-size:52px;line-height:1.18;letter-spacing:-.02em;margin:0 0 22px;">{{ L.sup.heroTitle }}</h1>
-          <p class="supplier-mobile-copy" style="max-width:650px;font-size:18px;line-height:1.8;color:#b4c6b8;margin:0 0 30px;">{{ L.sup.heroSub }}</p>
+          <p class="supplier-mobile-copy" style="max-width:650px;font-size:18px;line-height:1.8;color:#5b6b62;margin:0 0 30px;">{{ L.sup.heroSub }}</p>
           <div style="display:flex;flex-wrap:wrap;gap:12px;">
-            <a class="platform-action" href="{{ supplierApplicationUrl }}" style="background:#54ce50;color:#07130a;box-shadow:0 12px 30px rgba(74,209,90,.24);">{{ L.sup.applyCta }}</a>
-            <a class="platform-action" href="#supplier-capabilities" style="border:1px solid #6e8976;color:#fff;background:transparent;">{{ L.sup.heroCtaSecondary }}</a>
+            <a class="platform-action" href="{{ supplierApplicationUrl }}" style="background:#166534;color:#fff;">{{ L.sup.applyCta }}</a>
+            <a class="platform-action" href="#supplier-capabilities" style="border:1px solid #166534;color:#166534;background:#fff;">{{ L.sup.heroCtaSecondary }}</a>
           </div>
         </div>
 
-        <article data-reveal aria-labelledby="supplier-hero-demo-title" style="min-width:0;border:1px solid rgba(255,255,255,.14);border-radius:24px;background:#fff;color:#17261c;overflow:hidden;box-shadow:0 24px 70px rgba(0,0,0,.28);">
-          <div style="display:flex;align-items:center;justify-content:space-between;gap:14px;padding:16px 18px;background:#f7faf7;border-bottom:1px solid #e5ece6;">
-            <div><h2 id="supplier-hero-demo-title" style="font-size:16px;margin:0;">{{ L.sup.demoTitle }}</h2><div style="font-size:12px;color:#5b6b62;margin-top:3px;">{{ L.sup.demoSample }}</div></div>
-            <span style="font-size:12px;font-weight:700;color:#166534;padding:6px 9px;border-radius:999px;background:#e8f6e7;">{{ L.sup.demoBadge }}</span>
-          </div>
-          <div class="supplier-mock-body">
-            <div class="supplier-kpis">
-              <div style="padding:15px;border-radius:14px;background:#f1f8f1;"><span style="display:block;color:#5b6b62;font-size:13px;">{{ L.sup.demoKpiLeadsLabel }}</span><strong style="display:block;margin-top:6px;font-size:23px;">{{ L.sup.demoKpiLeadsValue }}</strong></div>
-              <div style="padding:15px;border-radius:14px;background:#fff7e6;"><span style="display:block;color:#675a3d;font-size:13px;">{{ L.sup.demoKpiQuotesLabel }}</span><strong style="display:block;margin-top:6px;font-size:23px;">{{ L.sup.demoKpiQuotesValue }}</strong></div>
-              <div style="padding:15px;border-radius:14px;background:#eef5ff;"><span style="display:block;color:#495d72;font-size:13px;">{{ L.sup.demoKpiOrdersLabel }}</span><strong style="display:block;margin-top:6px;font-size:23px;">{{ L.sup.demoKpiOrdersValue }}</strong></div>
-            </div>
-            <div style="margin-top:16px;padding:16px;border:1px solid #e2eae4;border-radius:14px;">
-              <div style="display:flex;justify-content:space-between;gap:12px;align-items:center;"><strong style="font-size:14px;">{{ L.sup.demoMatchTitle }}</strong><span style="font-size:12px;color:#166534;">{{ L.sup.demoMatchBadge }}</span></div>
-              <p style="font-size:14px;color:#34473b;margin:10px 0 4px;">{{ L.sup.demoMatchItem }}</p>
-              <p style="font-size:13px;color:#5b6b62;margin:0;">{{ L.sup.demoMatchDetail }}</p>
-            </div>
-          </div>
-        </article>
+        <img class="platform-hero-art" data-reveal src="/assets/sup-hero-panel.svg" alt="" width="560" height="350" loading="lazy">
       </div>
     </section>
 
@@ -2598,8 +2489,6 @@ class Component extends DCLogic {
   .ifm-article__links       { font-size: 16px !important; }
   .ifm-article__links-title { font-size: 16px !important; }
   .case-visual-row          { font-size: 16px !important; }
-  .restaurant-mock-bar,
-  .supplier-mock-bar        { font-size: 16px !important; }
   .restaurant-detail-list li,
   .supplier-detail-list li  { font-size: 16px !important; }
   /* 圓圈裡的序號是裝飾性數字（"1"~"4"），跟著放大會撐破圓圈 */
