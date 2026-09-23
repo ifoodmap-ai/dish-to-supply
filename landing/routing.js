@@ -16,8 +16,12 @@
   var DEFAULT_LANG = 'zh';
   var PREFIXED_LANGS = { en: '/en' };
 
+  // 文章頁是動態路由 /news/<slug>,不在這張靜態表裡,由 pathToRoute 另外處理。
+  var ARTICLE_RE = /^\/news\/([^/]+)$/;
+
   var pageByPath = {
     '/': 'home',
+    '/news': 'news',
     '/restaurants': 'restaurants',
     '/suppliers': 'suppliers',
     '/cases': 'cases',
@@ -27,6 +31,7 @@
 
   var pathByPage = {
     home: '/',
+    news: '/news',
     restaurants: '/restaurants',
     suppliers: '/suppliers',
     cases: '/cases',
@@ -55,7 +60,7 @@
   }
 
   function pathToPage(pathname) {
-    return pageByPath[splitLang(pathname).path] || 'home';
+    return pathToRoute(pathname).page;
   }
 
   function pathToLang(pathname) {
@@ -64,11 +69,24 @@
 
   function pathToRoute(pathname) {
     var split = splitLang(pathname);
-    return { page: pageByPath[split.path] || 'home', lang: split.lang };
+    var article = ARTICLE_RE.exec(split.path);
+    if (article) {
+      // slug 可能被編碼過(雖然我們只產 a-z0-9- 的 slug,但使用者可能手打或貼到編碼過的網址)
+      var slug;
+      try { slug = decodeURIComponent(article[1]); } catch (e) { slug = article[1]; }
+      return { page: 'article', lang: split.lang, slug: slug };
+    }
+    return { page: pageByPath[split.path] || 'home', lang: split.lang, slug: null };
   }
 
-  function pageToPath(page, lang) {
-    var path = pathByPage[page] || '/';
+  function pageToPath(page, lang, slug) {
+    var path;
+    if (page === 'article') {
+      // 沒有 slug 的文章頁沒有意義,退回列表頁 —— 免得產出 /news/undefined 這種連結
+      path = slug ? '/news/' + encodeURIComponent(slug) : pathByPage.news;
+    } else {
+      path = pathByPage[page] || '/';
+    }
     var prefix = PREFIXED_LANGS[lang];
     if (!prefix) return path;
     return path === '/' ? prefix : prefix + path;
@@ -76,16 +94,16 @@
 
   function canonicalUrlForPath(pathname) {
     var route = pathToRoute(pathname);
-    return publicBaseUrl + pageToPath(route.page, route.lang);
+    return publicBaseUrl + pageToPath(route.page, route.lang, route.slug);
   }
 
   // hreflang:同一頁的各語系版本。x-default 指中文版(預設語系)。
   function alternateUrlsForPath(pathname) {
-    var page = pathToRoute(pathname).page;
+    var route = pathToRoute(pathname);
     return {
-      zh: publicBaseUrl + pageToPath(page, 'zh'),
-      en: publicBaseUrl + pageToPath(page, 'en'),
-      xDefault: publicBaseUrl + pageToPath(page, DEFAULT_LANG),
+      zh: publicBaseUrl + pageToPath(route.page, 'zh', route.slug),
+      en: publicBaseUrl + pageToPath(route.page, 'en', route.slug),
+      xDefault: publicBaseUrl + pageToPath(route.page, DEFAULT_LANG, route.slug),
     };
   }
 
@@ -147,25 +165,25 @@
       route: function () {
         return pathToRoute(win.location.pathname);
       },
-      navigate: function (page, event, lang) {
+      navigate: function (page, event, lang, slug) {
         if (!shouldHandleClick(event)) return false;
         if (event && typeof event.preventDefault === 'function') event.preventDefault();
 
         var nextLang = lang || pathToLang(win.location.pathname);
-        var path = pageToPath(page, nextLang);
+        var path = pageToPath(page, nextLang, slug);
         if (normalizePath(win.location.pathname) === path) return false;
         win.history.pushState({}, '', path);
         syncMetadata(win);
-        renderRoute({ page: page, lang: nextLang }, true);
+        renderRoute({ page: page, lang: nextLang, slug: slug || null }, true);
         return true;
       },
       // 切語系:同一頁換到另一個語系的網址。用 pushState 讓「上一頁」能切回來。
       setLang: function (lang) {
         var current = pathToRoute(win.location.pathname);
         if (current.lang === lang) return false;
-        win.history.pushState({}, '', pageToPath(current.page, lang));
+        win.history.pushState({}, '', pageToPath(current.page, lang, current.slug));
         syncMetadata(win);
-        renderRoute({ page: current.page, lang: lang }, false);
+        renderRoute({ page: current.page, lang: lang, slug: current.slug }, false);
         return true;
       },
       // 只在「裸網址 /」時依瀏覽器語系自動落地,而且不留歷史紀錄(replaceState)。
@@ -177,7 +195,7 @@
         if (normalizePath(win.location.pathname) !== pageToPath('home', DEFAULT_LANG)) return false;
         win.history.replaceState({}, '', pageToPath('home', lang));
         syncMetadata(win);
-        renderRoute({ page: 'home', lang: lang }, false);
+        renderRoute({ page: 'home', lang: lang, slug: null }, false);
         return true;
       },
       stop: function () {

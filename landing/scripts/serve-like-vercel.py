@@ -13,6 +13,17 @@ class H(http.server.SimpleHTTPRequestHandler):
         clean = path.split('?', 1)[0].split('#', 1)[0].rstrip('/') or '/'
         if clean in REWRITES or clean == '/':
             return os.path.join(ROOT, 'index.html')
+        # vercel.json 的 :slug 參數路由(例如 /news/:slug)在本機也要比對得到,
+        # 否則文章頁在本機一律 404,跟正式站行為不一致
+        for source in REWRITES:
+            if ':' not in source:
+                continue
+            src_parts = source.strip('/').split('/')
+            req_parts = clean.strip('/').split('/')
+            if len(src_parts) != len(req_parts):
+                continue
+            if all(sp.startswith(':') or sp == rp for sp, rp in zip(src_parts, req_parts)):
+                return os.path.join(ROOT, 'index.html')
         return super().translate_path(path)
 
     def __init__(self, *a, **kw):

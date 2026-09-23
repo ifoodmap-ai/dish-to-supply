@@ -32,7 +32,9 @@ ifoodmap_deploy/
 ├─ supabase_schema.sql ← 之後接資料庫用的建表 SQL
 ├─ README.md           ← 本檔
 ├─ DEPLOY.md           ← 逐步部署（GitHub→Vercel→Supabase→Railway）
-└─ docs/I18N.md        ← 中英雙語怎麼運作（含三個踩過的坑）
+├─ news.js             ← 文章資料（由 scripts/build-news.mjs 產生）
+├─ docs/I18N.md        ← 中英雙語怎麼運作（含三個踩過的坑）
+└─ docs/NEWS.md        ← 最新消息／文章區怎麼運作
 ```
 
 ---

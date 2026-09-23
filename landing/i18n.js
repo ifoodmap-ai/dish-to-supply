@@ -185,20 +185,6 @@
               "desc": "新供應商、食材優惠與媒合結果，第一時間通知你。"
             }
           ],
-          "articlesTop": [
-            {
-              "tag": "採購",
-              "title": "如何做好餐飲食材採購：從規格書到驗收"
-            },
-            {
-              "tag": "食安",
-              "title": "了解產銷履歷，加入溯源餐廳的行列"
-            },
-            {
-              "tag": "趨勢",
-              "title": "使用在地食材，邁向從產地到餐桌"
-            }
-          ],
           "askPrefix": "我想找食材："
         }
       },
@@ -535,8 +521,29 @@
           "contact": {
             "title": "聯絡我們｜跟 AI 採購助手說需求，或申請供應商上架 - iFoodmap 食材地圖",
             "description": "餐廳可以直接建立帳號、供應商可以申請上架。食材需求交給 AI 採購助手問清楚，平台再送給合適的供應商，需求方完全免費。"
+          },
+          "news": {
+            "title": "最新消息｜餐飲採購與食安的第一手整理 - iFoodmap 食材地圖",
+            "description": "從食材採購、產銷履歷到市場趨勢，整理餐飲與團膳業者實際會用到的資訊。"
+          },
+          "article": {
+            "title": "最新消息｜餐飲採購與食安的第一手整理 - iFoodmap 食材地圖",
+            "description": "從食材採購、產銷履歷到市場趨勢，整理餐飲與團膳業者實際會用到的資訊。"
           }
         }
+      },
+      "news": {
+        "heroEyebrow": "最新消息",
+        "heroTitle": "餐飲採購與食安的第一手整理",
+        "heroSub": "從食材採購、產銷履歷到市場趨勢，整理餐飲與團膳業者實際會用到的資訊。",
+        "countLabel": "篇文章",
+        "readMore": "閱讀全文 →",
+        "backToList": "← 回到最新消息",
+        "publishedOn": "發佈於",
+        "sourceLinks": "文中參考連結",
+        "notFoundTitle": "找不到這篇文章",
+        "notFoundBody": "這個網址可能已經變更或被移除。你可以回到最新消息列表看看其他內容。",
+        "coverAlt": "文章封面"
       },
       "ai": {
         "fabLabel": "開啟 AI 採購助手",
@@ -732,20 +739,6 @@
             {
               "title": "LINE instant alerts",
               "desc": "Be the first to know about new suppliers, ingredient deals, and match results."
-            }
-          ],
-          "articlesTop": [
-            {
-              "tag": "Procurement",
-              "title": "Better Food Procurement: From Spec Sheet to Acceptance"
-            },
-            {
-              "tag": "Food Safety",
-              "title": "Traceability Certification (TAP) and Becoming a Traceable Restaurant"
-            },
-            {
-              "tag": "Trends",
-              "title": "Local Sourcing: Moving Toward Farm to Table"
             }
           ],
           "askPrefix": "I'm looking for: "
@@ -1084,8 +1077,29 @@
           "contact": {
             "title": "Contact | Tell our AI assistant what you need - iFoodmap",
             "description": "Restaurants can create an account and suppliers can apply to list. Tell our AI assistant what ingredients you need and we will send your request to suppliers that fit, at no cost to buyers."
+          },
+          "news": {
+            "title": "News | Sourcing and Food Safety, Sorted Out - iFoodmap",
+            "description": "From ingredient procurement and traceability to market trends — what restaurants and catering operations actually need to know."
+          },
+          "article": {
+            "title": "News | Sourcing and Food Safety, Sorted Out - iFoodmap",
+            "description": "From ingredient procurement and traceability to market trends — what restaurants and catering operations actually need to know."
           }
         }
+      },
+      "news": {
+        "heroEyebrow": "News",
+        "heroTitle": "Sourcing and food safety, sorted out",
+        "heroSub": "From ingredient procurement and traceability to market trends — the things restaurants and catering operations actually need to know.",
+        "countLabel": "articles",
+        "readMore": "Read more →",
+        "backToList": "← Back to all news",
+        "publishedOn": "Published",
+        "sourceLinks": "Links referenced in this article",
+        "notFoundTitle": "We couldn't find that article",
+        "notFoundBody": "This link may have changed or been removed. Head back to the news list to see what else is there.",
+        "coverAlt": "Article cover"
       },
       "ai": {
         "fabLabel": "Open the AI sourcing assistant",

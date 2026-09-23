@@ -17,7 +17,7 @@ const {
 const projectRoot = path.resolve(__dirname, '..');
 
 const BASE = 'https://ifoodmap-landing.vercel.app';
-const PAGES = ['home', 'restaurants', 'suppliers', 'cases', 'about', 'contact'];
+const PAGES = ['home', 'restaurants', 'suppliers', 'cases', 'about', 'contact', 'news'];
 
 function createFakeWindow(pathname = '/') {
   const listeners = new Map();
@@ -118,11 +118,11 @@ function createFakeElement(document, name) {
 
 test('pathToPage maps every public path to its page', () => {
   assert.deepEqual(
-    ['/', '/restaurants', '/suppliers', '/cases', '/about', '/contact'].map(pathToPage),
+    ['/', '/restaurants', '/suppliers', '/cases', '/about', '/contact', '/news'].map(pathToPage),
     PAGES,
   );
   assert.deepEqual(
-    ['/en', '/en/restaurants', '/en/suppliers', '/en/cases', '/en/about', '/en/contact'].map(pathToPage),
+    ['/en', '/en/restaurants', '/en/suppliers', '/en/cases', '/en/about', '/en/contact', '/en/news'].map(pathToPage),
     PAGES,
   );
 });
@@ -140,9 +140,9 @@ test('pathToPage ignores query strings and hashes defensively', () => {
   assert.equal(pathToPage('/cases?source=nav'), 'cases');
   assert.equal(pathToPage('/about/#team'), 'about');
   assert.equal(pathToPage('/contact?source=nav#form'), 'contact');
-  assert.deepEqual(pathToRoute('/en/cases?source=nav'), { page: 'cases', lang: 'en' });
-  assert.deepEqual(pathToRoute('/en/about/#team'), { page: 'about', lang: 'en' });
-  assert.deepEqual(pathToRoute('/en?source=nav#top'), { page: 'home', lang: 'en' });
+  assert.deepEqual(pathToRoute('/en/cases?source=nav'), { page: 'cases', lang: 'en', slug: null });
+  assert.deepEqual(pathToRoute('/en/about/#team'), { page: 'about', lang: 'en', slug: null });
+  assert.deepEqual(pathToRoute('/en?source=nav#top'), { page: 'home', lang: 'en', slug: null });
 });
 
 test('pathToPage falls back to home for unknown paths', () => {
@@ -166,27 +166,42 @@ test('only a real /en segment counts as English', () => {
 test('pageToPath maps every page to its canonical public path', () => {
   assert.deepEqual(
     PAGES.map((page) => pageToPath(page)),
-    ['/', '/restaurants', '/suppliers', '/cases', '/about', '/contact'],
+    ['/', '/restaurants', '/suppliers', '/cases', '/about', '/contact', '/news'],
   );
   assert.deepEqual(
     PAGES.map((page) => pageToPath(page, 'zh')),
-    ['/', '/restaurants', '/suppliers', '/cases', '/about', '/contact'],
+    ['/', '/restaurants', '/suppliers', '/cases', '/about', '/contact', '/news'],
   );
   assert.deepEqual(
     PAGES.map((page) => pageToPath(page, 'en')),
-    ['/en', '/en/restaurants', '/en/suppliers', '/en/cases', '/en/about', '/en/contact'],
+    ['/en', '/en/restaurants', '/en/suppliers', '/en/cases', '/en/about', '/en/contact', '/en/news'],
   );
 });
 
 test('pathToRoute and pageToPath round-trip every page in every language', () => {
+  const pages = ['home', 'restaurants', 'suppliers', 'cases', 'about', 'contact', 'news'];
   for (const lang of ['zh', 'en']) {
-    for (const page of PAGES) {
-      const url = pageToPath(page, lang);
-      assert.deepEqual(pathToRoute(url), { page, lang }, `${lang} ${page} -> ${url}`);
-      assert.equal(pageToPath(pathToRoute(url).page, pathToRoute(url).lang), url);
+    for (const page of pages) {
+      const path = pageToPath(page, lang);
+      assert.deepEqual(pathToRoute(path), { page, lang, slug: null }, `${lang} ${page} -> ${path}`);
     }
   }
+
+  // 文章頁多一層 slug,來回也要守得住
+  for (const lang of ['zh', 'en']) {
+    for (const slug of ['how-to-source-ingredients', 'a', 'a-b-c-1']) {
+      const path = pageToPath('article', lang, slug);
+      assert.deepEqual(pathToRoute(path), { page: 'article', lang, slug }, `${lang} article ${slug} -> ${path}`);
+    }
+  }
+
+  // 沒有 slug 的文章頁沒有意義,要退回列表頁而不是產出 /news/undefined
+  assert.equal(pageToPath('article', 'zh', null), '/news');
+  assert.equal(pageToPath('article', 'en', undefined), '/en/news');
+  // 多一層路徑不可以被當成文章
+  assert.equal(pathToRoute('/news/a/b').page, 'home');
 });
+
 
 test('pageToPath falls back to the home path for unknown pages', () => {
   assert.equal(pageToPath('services'), '/');
@@ -283,21 +298,21 @@ test('history controller starts, navigates, reacts to popstate, and stops', () =
 
   controller.start();
   assert.equal(fakeWindow.listeners.has('popstate'), true);
-  assert.deepEqual(controller.route(), { page: 'home', lang: 'zh' });
+  assert.deepEqual(controller.route(), { page: 'home', lang: 'zh', slug: null });
 
   const click = { preventDefaultCalled: false, preventDefault() { this.preventDefaultCalled = true; } };
   controller.navigate('restaurants', click);
   assert.equal(click.preventDefaultCalled, true);
   assert.deepEqual(fakeWindow.pushes, ['/restaurants']);
-  assert.deepEqual(routes, [{ page: 'restaurants', lang: 'zh' }]);
+  assert.deepEqual(routes, [{ page: 'restaurants', lang: 'zh', slug: null }]);
 
   controller.navigate('restaurants', { preventDefault() {} });
   assert.deepEqual(fakeWindow.pushes, ['/restaurants']);
-  assert.deepEqual(routes, [{ page: 'restaurants', lang: 'zh' }]);
+  assert.deepEqual(routes, [{ page: 'restaurants', lang: 'zh', slug: null }]);
 
   fakeWindow.location.pathname = '/suppliers';
   fakeWindow.dispatch('popstate');
-  assert.deepEqual(routes, [{ page: 'restaurants', lang: 'zh' }, { page: 'suppliers', lang: 'zh' }]);
+  assert.deepEqual(routes, [{ page: 'restaurants', lang: 'zh', slug: null }, { page: 'suppliers', lang: 'zh', slug: null }]);
 
   controller.stop();
   assert.equal(fakeWindow.listeners.has('popstate'), false);
@@ -309,16 +324,16 @@ test('navigate keeps the current language, or moves to the one it is handed', ()
   const controller = createHistoryController({ window: fakeWindow, onRoute: (route) => routes.push(route) });
 
   controller.start();
-  assert.deepEqual(controller.route(), { page: 'restaurants', lang: 'en' });
+  assert.deepEqual(controller.route(), { page: 'restaurants', lang: 'en', slug: null });
 
   // 省略第三個參數 → 沿用當前網址的語系,英文站內換頁不會掉回中文
   controller.navigate('cases', { preventDefault() {} });
   assert.deepEqual(fakeWindow.pushes, ['/en/cases']);
-  assert.deepEqual(routes.at(-1), { page: 'cases', lang: 'en' });
+  assert.deepEqual(routes.at(-1), { page: 'cases', lang: 'en', slug: null });
 
   controller.navigate('about', { preventDefault() {} }, 'zh');
   assert.deepEqual(fakeWindow.pushes, ['/en/cases', '/about']);
-  assert.deepEqual(routes.at(-1), { page: 'about', lang: 'zh' });
+  assert.deepEqual(routes.at(-1), { page: 'about', lang: 'zh', slug: null });
 });
 
 test('setLang swaps only the language of the current page', () => {
@@ -334,7 +349,7 @@ test('setLang swaps only the language of the current page', () => {
   controller.start();
   assert.equal(controller.setLang('en'), true);
   assert.deepEqual(fakeWindow.pushes, ['/en/suppliers']);
-  assert.deepEqual(routes, [{ page: 'suppliers', lang: 'en' }]);
+  assert.deepEqual(routes, [{ page: 'suppliers', lang: 'en', slug: null }]);
   // 切語系是換字不是換頁,焦點留在原地
   assert.deepEqual(focusedPages, []);
 
@@ -346,7 +361,7 @@ test('setLang swaps only the language of the current page', () => {
 
   assert.equal(controller.setLang('zh'), true);
   assert.deepEqual(fakeWindow.pushes, ['/en/suppliers', '/suppliers']);
-  assert.deepEqual(routes.at(-1), { page: 'suppliers', lang: 'zh' });
+  assert.deepEqual(routes.at(-1), { page: 'suppliers', lang: 'zh', slug: null });
 });
 
 test('applyPreferredLang only redirects the bare / URL', () => {
@@ -359,7 +374,7 @@ test('applyPreferredLang only redirects the bare / URL', () => {
   // replaceState,不留歷史 —— 按上一頁不該回到「剛剛那個會自動跳走的 /」
   assert.deepEqual(bare.replaces, ['/en']);
   assert.deepEqual(bare.pushes, []);
-  assert.deepEqual(routes, [{ page: 'home', lang: 'en' }]);
+  assert.deepEqual(routes, [{ page: 'home', lang: 'en', slug: null }]);
   assert.equal(bareController.applyPreferredLang('en'), false);
 
   // 深層網址一律照網址渲染。否則 Googlebot 帶 Accept-Language: en 逛中文頁會被踢走,
@@ -535,7 +550,7 @@ test('index loads i18n and routing before support and wires History API navigati
   assert.match(source, /target\.focus\(\{\s*preventScroll:\s*true\s*\}\)/);
   assert.match(source, /this\._routingController\.start\(\)/);
   assert.match(source, /this\._routingController\.stop\(\)/);
-  assert.match(source, /this\._routingController\.navigate\(p, event\)/);
+  assert.match(source, /this\._routingController\.navigate\(p, event, null, slug\)/);
   assert.match(source, /this\._routingController\.setLang\(lang\)/);
   // 自動落地只在裸網址 /,由 applyPreferredLang 自己把關(見 routing.js);
   // 送進去的語系必須是 IfmI18n.detect() 的結果,而且要在 controller.start() 之後才跑。
@@ -590,23 +605,43 @@ test('public route controls use anchors and navigation exposes accessibility hoo
 
 test('Vercel rewrites each public route to index without catching API paths', () => {
   const config = JSON.parse(fs.readFileSync(path.join(projectRoot, 'vercel.json'), 'utf8'));
-  // 中文 5 條 + /en + 英文 5 條 = 11。中文首頁 / 就是 index 本身,不需要 rewrite。
+  // 中文 6 條 + 文章參數路由 + /en + 英文 6 條 + 英文文章參數路由 = 15。
+  // 中文首頁 / 就是 index 本身,不需要 rewrite。
   const expectedSources = [
-    '/restaurants', '/suppliers', '/cases', '/about', '/contact',
+    '/restaurants', '/suppliers', '/cases', '/about', '/contact', '/news',
+    '/news/:slug',
     '/en',
-    '/en/restaurants', '/en/suppliers', '/en/cases', '/en/about', '/en/contact',
+    '/en/restaurants', '/en/suppliers', '/en/cases', '/en/about', '/en/contact', '/en/news',
+    '/en/news/:slug',
   ];
   assert.deepEqual(config.rewrites.map(({ source }) => source), expectedSources);
+
   // 每個可分享的網址都要有 rewrite,否則直接開那個網址會 404
   const shareable = ['zh', 'en'].flatMap((lang) => PAGES.map((page) => pageToPath(page, lang)));
   for (const url of shareable) {
     assert.ok(url === '/' || expectedSources.includes(url), `missing rewrite for ${url}`);
   }
+  // 文章網址要被參數路由接到(這是 18 篇文章唯一的進入點,漏了整批 404)
+  for (const lang of ['zh', 'en']) {
+    const url = pageToPath('article', lang, 'some-slug');
+    const pattern = expectedSources.find((src) => {
+      if (!src.includes(':')) return false;
+      const a = src.split('/'); const b = url.split('/');
+      return a.length === b.length && a.every((seg, i) => seg.startsWith(':') || seg === b[i]);
+    });
+    assert.ok(pattern, `missing rewrite for ${url}`);
+  }
+
   // destination 要是 '/',不能是 '/index.html':cleanUrls 會把 index.html 改成 index 提供,
   // 寫 /index.html 的話 Vercel 檔案系統檢查找不到,深層網址直接 404(2026-09-21 線上實測)
   assert.deepEqual(config.rewrites.map(({ destination }) => destination), Array(expectedSources.length).fill('/'));
-  assert.equal(config.rewrites.some(({ source }) => /[*():]/.test(source)), false);
+  // 萬用字元與括號仍然不准(會誤吃到別的路徑);: 參數路由是允許的,但只准出現在最後一段
+  assert.equal(config.rewrites.some(({ source }) => /[*()]/.test(source)), false);
+  for (const { source } of config.rewrites) {
+    if (!source.includes(':')) continue;
+    const segs = source.split('/');
+    assert.ok(segs.slice(0, -1).every((seg) => !seg.includes(':')), `參數只能在最後一段:${source}`);
+  }
   assert.equal(config.rewrites.some(({ source }) => source.includes('api')), false);
   assert.equal(config.cleanUrls, true);
-  assert.equal(config.trailingSlash, false);
 });

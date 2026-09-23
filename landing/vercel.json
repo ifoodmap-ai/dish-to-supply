@@ -23,6 +23,14 @@
       "destination": "/"
     },
     {
+      "source": "/news",
+      "destination": "/"
+    },
+    {
+      "source": "/news/:slug",
+      "destination": "/"
+    },
+    {
       "source": "/en",
       "destination": "/"
     },
@@ -44,6 +52,14 @@
     },
     {
       "source": "/en/contact",
+      "destination": "/"
+    },
+    {
+      "source": "/en/news",
+      "destination": "/"
+    },
+    {
+      "source": "/en/news/:slug",
       "destination": "/"
     }
   ],

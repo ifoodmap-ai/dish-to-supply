@@ -175,7 +175,7 @@ test('home data arrays match the counts the component renders', () => {
     pains: 4,
     testimonials: 3,
     trust: 3,
-    articlesTop: 3,
+    // articlesTop 已經移除 —— 首頁文章區改吃 news.js 的真實文章
   };
   for (const lang of LANGS) {
     const data = dict(lang).home.data;
@@ -189,8 +189,6 @@ test('home data arrays match the counts the component renders', () => {
   const data = dict('zh').home.data;
   assert.equal(constArray('FLOW_IMGS').length, data.flow.length);
   assert.equal(constArray('CATEGORY_IMGS').length, data.categories.length);
-  assert.equal(constArray('ARTICLE_DATES').length, data.articlesTop.length);
-  assert.equal(constArray('ARTICLE_IMGS').length, data.articlesTop.length);
   // NO_LABELS 是編號 01–04,audiences 與 trust 共用(trust 只取前三個)
   assert.equal(constArray('NO_LABELS').length, data.audiences.length);
   assert.ok(constArray('NO_LABELS').length >= data.trust.length);
@@ -258,7 +256,9 @@ test('internal links are language-aware bindings, never hard-coded paths', () =>
   for (const href of internal) {
     assert.match(
       href,
-      /^\{\{ (href[A-Za-z]*|langHref|loginUrl|restaurantRegistrationUrl|supplierApplicationUrl) \}\}$/,
+      // a.href 是文章列表在 sc-for 裡逐篇算出來的網址(已經帶語系前綴),
+      // 跟 hrefXxx 一樣是綁定,不是寫死的路徑
+      /^\{\{ (href[A-Za-z]*|langHref|loginUrl|restaurantRegistrationUrl|supplierApplicationUrl|a\.href|lk\.href) \}\}$/,
       `internal link must be a binding, got ${href}`,
     );
   }

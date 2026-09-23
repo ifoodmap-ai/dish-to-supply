@@ -29,8 +29,14 @@ const aboutStart = source.indexOf('<!-- ============ PAGE: ABOUT ============ --
 const aboutEnd = source.indexOf('<!-- ============ PAGE: CONTACT ============ -->');
 const about = source.slice(aboutStart, aboutEnd);
 const contactStart = source.indexOf('<!-- ============ PAGE: CONTACT ============ -->');
-const contactEnd = source.indexOf('<!-- ============ FOOTER ============ -->');
+// CONTACT 後面現在還有 NEWS 與 ARTICLE 兩個區段,切片要止於 NEWS 而不是 FOOTER,
+// 否則 contact 這一段會把新聞頁整個吃進來(H1 就從 1 個變成 4 個)。
+const contactEnd = source.indexOf('<!-- ============ PAGE: NEWS');
 const contact = source.slice(contactStart, contactEnd);
+const newsStart = source.indexOf('<!-- ============ PAGE: NEWS');
+const articleStart = source.indexOf('<!-- ============ PAGE: ARTICLE');
+const news = source.slice(newsStart, articleStart);
+const article = source.slice(articleStart, source.indexOf('<!-- ============ FOOTER ============ -->'));
 const footerStart = source.indexOf('<!-- ============ FOOTER ============ -->');
 const footerEnd = source.indexOf('</footer>', footerStart) + '</footer>'.length;
 const footer = source.slice(footerStart, footerEnd);
@@ -333,12 +339,12 @@ test('homepage names four audiences, twelve categories and three trust features 
 });
 
 test('homepage illustrations are real files and no design placeholder text leaks through', () => {
+  // 文章區的圖改吃真的文章封面了(news.js),不再是寫死的 ARTICLE_IMGS
   const referenced = new Set([
     ...constArray('FLOW_IMGS'),
     ...constArray('CATEGORY_IMGS'),
-    ...constArray('ARTICLE_IMGS'),
   ]);
-  assert.ok(referenced.size >= 21, `expected 21 illustrations, found ${referenced.size}`);
+  assert.ok(referenced.size >= 18, `expected 18 illustrations, found ${referenced.size}`);
   for (const absolute of referenced) {
     // root-absolute 才行:/en/xxx 底下 base 會變成 /en/,相對路徑會 404
     assert.match(absolute, /^\/assets\//, `illustration must be root-absolute: ${absolute}`);
@@ -354,10 +360,14 @@ test('homepage illustrations are real files and no design placeholder text leaks
 
 test('homepage shows three testimonials and three articles, then the closing CTA', () => {
   assert.deepEqual(homeData.testimonials.map((t) => t.who), ['林老闆', '陳主任', '王小姐']);
-  assert.deepEqual(
-    homeData.articlesTop.map((a) => a.title),
-    ['如何做好餐飲食材採購：從規格書到驗收', '了解產銷履歷，加入溯源餐廳的行列', '使用在地食材，邁向從產地到餐桌'],
-  );
+  // 首頁文章區改吃 news.js 的最新三篇,不再是字典裡三筆寫死的假文章
+  const newsModule = require('../news.js');
+  const latest = newsModule.latest('zh', 3);
+  assert.equal(latest.length, 3, '首頁要顯示三篇文章');
+  assert.deepEqual(latest.map((a) => a.title), newsModule.all('zh').slice(0, 3).map((a) => a.title));
+  assert.match(home, /<sc-for list="\{\{ articlesTop \}\}" as="a"/);
+  // 卡片整張可點進文章頁
+  assert.match(home, /href="\{\{ a\.href \}\}"[^>]*onClick="\{\{ a\.go \}\}"/);
   const news = home.indexOf('id="news"');
   const closing = home.indexOf('免費找到所有食材，<br>從填一張需求單開始');
   assert.ok(news >= 0 && closing > news);
@@ -833,6 +843,90 @@ test('every bento span class used in markup has a matching CSS rule', () => {
       assert.match(source, new RegExp(`\\.${shift}\\s*\\{`), `${shift} 沒有 CSS 規則`);
     }
   }
+});
+
+test('news list renders every article as an irregular card with a language-aware link', () => {
+  assert.match(news, /<sc-for list="\{\{ articles \}\}" as="a"/);
+  // 卡片寬度是從資料算出來的(a.span),不是寫死 —— 長列表才維持得住不規則節奏
+  assert.match(news, /class="ifm-card \{\{ a\.span \}\}"/);
+  assert.match(news, /href="\{\{ a\.href \}\}"/);
+  assert.match(news, /onClick="\{\{ a\.go \}\}"/);
+  // 每張卡要有封面、分類、日期、標題、摘要
+  for (const field of ['a.cover', 'a.category', 'a.date', 'a.title', 'a.excerpt']) {
+    assert.match(news, new RegExp(field.replace('.', '\\.')), `新聞卡缺少 ${field}`);
+  }
+});
+
+test('article page renders every block type and degrades gracefully on a bad slug', () => {
+  // 模板只有 sc-if 沒有 switch,所以每個 block 型別各有一個布林旗標
+  for (const flag of ['b.isH2', 'b.isP', 'b.isUl', 'b.isImg', 'b.hasLinks']) {
+    assert.match(article, new RegExp(`value="\\{\\{ ${flag.replace('.', '\\.')} \\}\\}"`), `缺少 ${flag} 分支`);
+  }
+  // ul 內層還要再跑一層迴圈
+  assert.match(article, /<sc-for list="\{\{ b\.items \}\}" as="it"/);
+  assert.match(article, /<sc-for list="\{\{ b\.links \}\}" as="lk"/);
+  // 外部參考連結一定要帶 rel=noopener(target=_blank 沒有它會把 opener 交出去)
+  assert.match(article, /target="_blank" rel="noopener noreferrer"/);
+
+  // slug 查不到時要顯示「找不到」而不是整頁空白
+  // 注意:article 是 renderMarkup('zh') 的結果,L.* 已經被代成中文了
+  const { dict } = require('../i18n.js');
+  assert.match(article, /value="\{\{ articleMissing \}\}"/);
+  assert.ok(article.includes(dict('zh').news.notFoundTitle), '找不到文章時沒有標題');
+  assert.ok(article.includes(dict('zh').news.backToList), '找不到文章時沒有回列表的連結');
+});
+
+test('news data module is well formed and shared between languages by slug', () => {
+  const news = require('../news.js');
+  assert.ok(news.count > 0, '沒有任何文章');
+  const zh = news.all('zh');
+  const en = news.all('en');
+  assert.equal(zh.length, en.length);
+
+  const slugs = zh.map((a) => a.slug);
+  assert.equal(new Set(slugs).size, slugs.length, `slug 有重複:${slugs.join(', ')}`);
+  for (const slug of slugs) {
+    assert.match(slug, /^[a-z0-9][a-z0-9-]*$/, `slug 只能是小寫英數與連字號:${slug}`);
+  }
+  // 兩個語系共用同一個 slug,/news/x 與 /en/news/x 才會是同一篇,hreflang 才指得對
+  assert.deepEqual(en.map((a) => a.slug), slugs);
+
+  // 日期新到舊
+  const dates = zh.map((a) => a.date);
+  assert.deepEqual([...dates].sort().reverse(), dates, '文章沒有依日期新到舊排序');
+
+  for (const a of zh) {
+    assert.match(a.date, /^\d{4}-\d{2}-\d{2}$/, `日期格式不對:${a.date}`);
+    assert.ok(a.title, `id=${a.id} 沒有標題`);
+    if (a.cover) assert.match(a.cover, /^\/assets\/news\/[\w-]+\.jpg$/, `封面路徑不對:${a.cover}`);
+    for (const b of a.blocks) {
+      assert.ok(['p', 'h2', 'ul', 'img', 'quote'].includes(b.type), `未知的 block 型別:${b.type}`);
+      if (b.type === 'ul') assert.ok(Array.isArray(b.items));
+      if (b.type === 'img') assert.match(b.src, /^\/assets\/news\//);
+    }
+  }
+  // 沒有內文的文章不該出現在列表 —— 點進去只有標題,對讀者沒有價值
+  for (const a of zh) {
+    assert.ok(a.blocks.length > 0, `文章 ${a.slug} 沒有內文,不該出現在列表`);
+  }
+  assert.equal(news.bySlug('definitely-not-a-real-slug', 'zh'), null);
+  assert.ok(news.bySlug(slugs[0], 'en'));
+});
+
+test('every news image referenced by the data module exists on disk', () => {
+  const fsMod = require('node:fs');
+  const pathMod = require('node:path');
+  const news = require('../news.js');
+  const root = pathMod.resolve(__dirname, '..');
+  const missing = [];
+  for (const a of news.all('zh')) {
+    const refs = [a.cover, ...a.blocks.filter((b) => b.type === 'img').map((b) => b.src)].filter(Boolean);
+    for (const ref of refs) {
+      if (ref.endsWith('.svg')) continue; // 備用封面是插圖,另外檢查
+      if (!fsMod.existsSync(pathMod.join(root, ref.replace(/^\//, '')))) missing.push(`${a.slug} → ${ref}`);
+    }
+  }
+  assert.deepEqual(missing, [], `資料指到不存在的圖片:${missing.join(', ')}`);
 });
 
 test('metadata consistently describes the approved two-sided platform', () => {

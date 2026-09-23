@@ -5,6 +5,7 @@ const BASE = process.argv[2];
 const ROUTES = [
   ['/', 'zh'], ['/restaurants', 'zh'], ['/suppliers', 'zh'], ['/cases', 'zh'], ['/about', 'zh'], ['/contact', 'zh'],
   ['/en', 'en'], ['/en/restaurants', 'en'], ['/en/suppliers', 'en'], ['/en/cases', 'en'], ['/en/about', 'en'], ['/en/contact', 'en'],
+  ['/news', 'zh'], ['/en/news', 'en'],
 ];
 const port = 9700 + Math.floor(Math.random() * 200);
 const chrome = spawn('/Applications/Google Chrome.app/Contents/MacOS/Google Chrome', [
@@ -61,6 +62,6 @@ for (const [path, wantLang] of ROUTES) {
     String(v.wrongPrefix).padEnd(9),
     v.title.slice(0, 44));
 }
-console.log(fails ? `\n❌ ${fails}/${ROUTES.length} 條不合格` : `\n✅ 12/12 全過`);
+console.log(fails ? `\n❌ ${fails}/${ROUTES.length} 條不合格` : `\n✅ ${ROUTES.length}/${ROUTES.length} 全過`);
 ws.close(); chrome.kill();
 process.exit(fails ? 1 : 0);
