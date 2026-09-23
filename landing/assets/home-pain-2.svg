@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120">
+
+<rect x="62" y="12" width="44" height="6" rx="3" fill="#7ECBA5"/>
+<rect x="62" y="58" width="44" height="6" rx="3" fill="#7ECBA5"/>
+<path d="M66 18 h36 l-18 20 l18 20 h-36 l18 -20 z" fill="#FFFFFF" stroke="#128A54" stroke-width="3" stroke-linejoin="round"/>
+<path d="M70 23 h28 l-14 13 z" fill="#E9A83A"/>
+<path d="M72 56 h24 l-12 -8 z" fill="#E9A83A"/>
+<circle cx="84" cy="43" r="2" fill="#E9A83A"/>
+
+<rect x="6" y="66" width="48" height="34" rx="7" fill="#FFFFFF" stroke="#128A54" stroke-width="3"/>
+<circle cx="20" cy="78" r="5.5" fill="#7ECBA5"/>
+<path d="M12 92 a8 8 0 0 1 16 0 z" fill="#7ECBA5"/>
+<rect x="33" y="74" width="15" height="5" rx="2.5" fill="#CFE6DA"/>
+<rect x="33" y="84" width="11" height="5" rx="2.5" fill="#CFE6DA"/>
+
+<path d="M44 62 q10 -10 22 -12" fill="none" stroke="#CFE6DA" stroke-width="3" stroke-linecap="round" stroke-dasharray="4 6"/>
+
+<path d="M70 70 H104 a8 8 0 0 1 8 8 V92 a8 8 0 0 1 -8 8 H88 l-10 10 v-10 H70 a8 8 0 0 1 -8 -8 V78 a8 8 0 0 1 8 -8 Z" fill="none" stroke="#CFE6DA" stroke-width="3" stroke-dasharray="5 5" stroke-linejoin="round"/>
+
+</svg>

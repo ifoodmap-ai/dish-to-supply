@@ -617,10 +617,15 @@
           <h2 style="margin-top:16px;font-size:clamp(26px,3.4vw,38px);line-height:1.4">{{ L.home.audienceTitleA }}<br>{{ L.home.audienceTitleB }}</h2>
           <p style="margin-top:16px;font-size:16px;line-height:1.9;color:#4B5A52;font-weight:300">{{ L.home.audienceSub }}</p>
         </div>
-        <div style="margin-top:44px;display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:0;border-top:1px solid #E1E7E3;border-left:1px solid #E1E7E3">
+        <!-- 原本是四等分的硬邊框格線(每格等寬等高),改成 bento:寬窄交錯 + 上下位移。
+             span 由 renderVals 算出來掛在 a.span,不寫死在模板裡。 -->
+        <div class="ifm-bento" style="margin-top:44px">
           <sc-for list="{{ audiences }}" as="a" hint-placeholder-count="4">
-            <div style="background:#fff;padding:30px 26px;border-right:1px solid #E1E7E3;border-bottom:1px solid #E1E7E3" style-hover="background:#FCFDFC">
-              <div style="font-family:'Space Grotesk',sans-serif;font-size:11.5px;letter-spacing:.16em;color:#0B6B40">{{ a.no }}</div>
+            <div class="ifm-card {{ a.span }}" data-reveal>
+              <div style="display:flex;align-items:center;justify-content:space-between;gap:12px">
+                <div style="font-family:'Space Grotesk',sans-serif;font-size:11.5px;letter-spacing:.16em;color:#0B6B40">{{ a.no }}</div>
+                <img src="{{ a.icon }}" alt="" width="160" height="160" loading="lazy" style="width:60px;height:60px;display:block">
+              </div>
               <h3 style="margin-top:14px;font-size:19px">{{ a.title }}</h3>
               <p style="margin-top:10px;font-size:14.5px;line-height:1.9;color:#4B5A52;font-weight:300;text-wrap:pretty">{{ a.desc }}</p>
             </div>
@@ -704,9 +709,9 @@
         </div>
         <div>
           <sc-for list="{{ pains }}" as="p" hint-placeholder-count="4">
-            <div style="display:flex;gap:14px;align-items:flex-start;padding:20px 0;border-top:1px solid rgba(255,255,255,.14)">
-              <span aria-hidden="true" style="color:#4BC98A;font-family:'Space Grotesk',sans-serif;font-size:13px">✕</span>
-              <span style="font-size:15px;line-height:1.85;color:#CFDAD3;font-weight:300">{{ p }}</span>
+            <div style="display:flex;gap:16px;align-items:center;padding:18px 0;border-top:1px solid rgba(255,255,255,.14)">
+              <img src="{{ p.icon }}" alt="" width="120" height="120" loading="lazy" style="width:44px;height:44px;flex:0 0 44px;display:block">
+              <span style="font-size:15px;line-height:1.85;color:#CFDAD3;font-weight:300">{{ p.text }}</span>
             </div>
           </sc-for>
         </div>
@@ -731,6 +736,7 @@
       <div style="max-width:1240px;margin:0 auto;padding:clamp(48px,7vw,78px) 20px;display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:40px">
         <sc-for list="{{ trust }}" as="t" hint-placeholder-count="3">
           <div>
+            <img src="{{ t.icon }}" alt="" width="160" height="160" loading="lazy" style="width:64px;height:64px;display:block;margin-bottom:16px">
             <div style="font-family:'Space Grotesk',sans-serif;font-size:11.5px;letter-spacing:.16em;color:#0B6B40">{{ t.no }}</div>
             <h3 style="margin-top:14px;font-size:19px">{{ t.title }}</h3>
             <p style="margin-top:10px;font-size:14.5px;line-height:1.9;color:#4B5A52;font-weight:300">{{ t.desc }}</p>
@@ -1504,6 +1510,8 @@
 /* 首頁資料陣列裡「不是文字」的部分。文案在 i18n.js 的字典,兩邊靠陣列順序對齊 ——
    改順序要兩邊一起改(tests/content.test.cjs 會擋住長度對不上的情況)。 */
 const NO_LABELS = ['01', '02', '03', '04'];
+// 首頁「適用對象」四格的 bento 節奏:寬窄交錯,第二與第三格再各自上下推開
+const AUDIENCE_SPANS = ['bt-7', 'bt-5 bt-drop', 'bt-5 bt-rise', 'bt-7'];
 const FLOW_IMGS = [
   '/assets/flow-form.svg', '/assets/flow-match.svg', '/assets/flow-quote.svg',
   '/assets/flow-compare.svg', '/assets/flow-ship.svg', '/assets/flow-review.svg',
@@ -2011,13 +2019,18 @@ class Component extends DCLogic {
         label: list('stats')[i] || '',
         num: s.text ? s.text : Math.round(s.target * p).toLocaleString('en-US') + s.suffix,
       })),
-      audiences: list('audiences').map((a, i) => ({ no: NO_LABELS[i], title: a.title, desc: a.desc })),
+      audiences: list('audiences').map((a, i) => ({
+        no: NO_LABELS[i], title: a.title, desc: a.desc,
+        icon: `/assets/home-aud-${i + 1}.svg`,
+        span: AUDIENCE_SPANS[i % AUDIENCE_SPANS.length],
+      })),
       flowA: list('flow').slice(0, 3).map((s, i) => ({ n: String(i + 1), title: s.title, desc: s.desc, img: FLOW_IMGS[i] })),
       flowB: list('flow').slice(3, 6).map((s, i) => ({ n: String(i + 4), title: s.title, desc: s.desc, img: FLOW_IMGS[i + 3] })),
       categories: list('categories').map((name, i) => ({ name, img: CATEGORY_IMGS[i] })),
-      pains: list('pains'),
+      // pains 原本是純字串陣列,配圖之後要變成物件(模板改用 p.text)
+      pains: list('pains').map((text, i) => ({ text, icon: `/assets/home-pain-${i + 1}.svg` })),
       testimonials: list('testimonials'),
-      trust: list('trust').map((t, i) => ({ no: NO_LABELS[i], title: t.title, desc: t.desc })),
+      trust: list('trust').map((t, i) => ({ no: NO_LABELS[i], title: t.title, desc: t.desc, icon: `/assets/home-trust-${i + 1}.svg` })),
       // 首頁的文章區以前是三筆寫死的假文章。現在 /news 有真的 18 篇了,直接取最新三篇,
       // 標題、日期、封面、連結全部跟著文章資料走,不用兩邊各維護一份。
       articlesTop: (newsApi ? newsApi.latest(lang, 3) : []).map((a, i) => ({
