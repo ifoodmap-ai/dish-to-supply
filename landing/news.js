@@ -46,7 +46,9 @@
           {
             "type": "img",
             "src": "/assets/news/news-20-1.jpg",
-            "alt": ""
+            "alt": "",
+            "w": 1200,
+            "h": 800
           },
           {
             "type": "h2",
@@ -103,7 +105,9 @@
           {
             "type": "img",
             "src": "/assets/news/news-20-2.jpg",
-            "alt": ""
+            "alt": "",
+            "w": 1400,
+            "h": 787
           },
           {
             "type": "p",
@@ -177,7 +181,9 @@
           {
             "type": "img",
             "src": "/assets/news/news-20-1.jpg",
-            "alt": ""
+            "alt": "",
+            "w": 1200,
+            "h": 800
           },
           {
             "type": "h2",
@@ -234,7 +240,9 @@
           {
             "type": "img",
             "src": "/assets/news/news-20-2.jpg",
-            "alt": ""
+            "alt": "",
+            "w": 1400,
+            "h": 787
           },
           {
             "type": "p",
@@ -274,7 +282,9 @@
           }
         ]
       },
-      "editorialNote": "Editorial note: this is sponsored content for Dsorder, a third-party POS vendor. The referral code map2025 and the offer of one extra month of contract time come from the vendor, have not been independently verified, and may have expired; confirm with the vendor before publishing. 編按：本篇為第三方 POS 廠商「點溡」的業配內容，文末推薦碼 map2025 與「加贈一個月合約使用時長」的優惠由廠商提供、未經查核，且可能已失效，刊出前請先向廠商確認。"
+      "editorialNote": "Editorial note: this is sponsored content for Dsorder, a third-party POS vendor. The referral code map2025 and the offer of one extra month of contract time come from the vendor, have not been independently verified, and may have expired; confirm with the vendor before publishing. 編按：本篇為第三方 POS 廠商「點溡」的業配內容，文末推薦碼 map2025 與「加贈一個月合約使用時長」的優惠由廠商提供、未經查核，且可能已失效，刊出前請先向廠商確認。",
+      "coverW": 1344,
+      "coverH": 681
     },
     {
       "id": 19,
@@ -297,7 +307,9 @@
           {
             "type": "img",
             "src": "/assets/news/news-19-1.jpg",
-            "alt": ""
+            "alt": "",
+            "w": 1400,
+            "h": 933
           },
           {
             "type": "p",
@@ -314,7 +326,9 @@
           {
             "type": "img",
             "src": "/assets/news/news-19-2.jpg",
-            "alt": ""
+            "alt": "",
+            "w": 1400,
+            "h": 933
           },
           {
             "type": "p",
@@ -327,7 +341,9 @@
           {
             "type": "img",
             "src": "/assets/news/news-19-3.jpg",
-            "alt": ""
+            "alt": "",
+            "w": 1400,
+            "h": 933
           },
           {
             "type": "p",
@@ -336,7 +352,9 @@
           {
             "type": "img",
             "src": "/assets/news/news-19-4.jpg",
-            "alt": ""
+            "alt": "",
+            "w": 1400,
+            "h": 933
           },
           {
             "type": "p",
@@ -349,7 +367,9 @@
           {
             "type": "img",
             "src": "/assets/news/news-19-5.jpg",
-            "alt": ""
+            "alt": "",
+            "w": 1400,
+            "h": 933
           },
           {
             "type": "p",
@@ -475,7 +495,9 @@
           {
             "type": "img",
             "src": "/assets/news/news-19-1.jpg",
-            "alt": ""
+            "alt": "",
+            "w": 1400,
+            "h": 933
           },
           {
             "type": "p",
@@ -492,7 +514,9 @@
           {
             "type": "img",
             "src": "/assets/news/news-19-2.jpg",
-            "alt": ""
+            "alt": "",
+            "w": 1400,
+            "h": 933
           },
           {
             "type": "p",
@@ -505,7 +529,9 @@
           {
             "type": "img",
             "src": "/assets/news/news-19-3.jpg",
-            "alt": ""
+            "alt": "",
+            "w": 1400,
+            "h": 933
           },
           {
             "type": "p",
@@ -514,7 +540,9 @@
           {
             "type": "img",
             "src": "/assets/news/news-19-4.jpg",
-            "alt": ""
+            "alt": "",
+            "w": 1400,
+            "h": 933
           },
           {
             "type": "p",
@@ -527,7 +555,9 @@
           {
             "type": "img",
             "src": "/assets/news/news-19-5.jpg",
-            "alt": ""
+            "alt": "",
+            "w": 1400,
+            "h": 933
           },
           {
             "type": "p",
@@ -637,7 +667,9 @@
           }
         ]
       },
-      "editorialNote": null
+      "editorialNote": null,
+      "coverW": 1024,
+      "coverH": 1024
     },
     {
       "id": 17,
@@ -740,7 +772,9 @@
           }
         ]
       },
-      "editorialNote": null
+      "editorialNote": null,
+      "coverW": 1024,
+      "coverH": 683
     },
     {
       "id": 16,
@@ -839,7 +873,9 @@
           }
         ]
       },
-      "editorialNote": null
+      "editorialNote": null,
+      "coverW": 1279,
+      "coverH": 719
     },
     {
       "id": 15,
@@ -964,7 +1000,9 @@
           }
         ]
       },
-      "editorialNote": null
+      "editorialNote": null,
+      "coverW": 1200,
+      "coverH": 800
     },
     {
       "id": 14,
@@ -1141,7 +1179,9 @@
           }
         ]
       },
-      "editorialNote": null
+      "editorialNote": null,
+      "coverW": 1400,
+      "coverH": 700
     },
     {
       "id": 13,
@@ -1298,7 +1338,9 @@
           }
         ]
       },
-      "editorialNote": null
+      "editorialNote": null,
+      "coverW": 512,
+      "coverH": 342
     },
     {
       "id": 12,
@@ -1421,7 +1463,9 @@
           }
         ]
       },
-      "editorialNote": null
+      "editorialNote": null,
+      "coverW": 960,
+      "coverH": 720
     },
     {
       "id": 11,
@@ -1486,7 +1530,9 @@
           }
         ]
       },
-      "editorialNote": null
+      "editorialNote": null,
+      "coverW": 542,
+      "coverH": 361
     },
     {
       "id": 10,
@@ -1555,7 +1601,9 @@
           }
         ]
       },
-      "editorialNote": "Editorial note: this article was published in April 2023 and states that discharge of treated water from Fukushima Daiichi began that month. The first actual discharge took place on 24 August 2023, so both the timeline and the article's framing of the discharge as a prospective event are now out of date; import controls and testing arrangements have also changed since publication. 編按：本文發表於 2023 年 4 月，文中稱福島核處理水自 2023 年 4 月開始排放，但實際首次排放為 2023 年 8 月 24 日，時序與「排放尚未真正展開」的語境均已過時，文中所述進口管制與檢驗措施亦已變動。"
+      "editorialNote": "Editorial note: this article was published in April 2023 and states that discharge of treated water from Fukushima Daiichi began that month. The first actual discharge took place on 24 August 2023, so both the timeline and the article's framing of the discharge as a prospective event are now out of date; import controls and testing arrangements have also changed since publication. 編按：本文發表於 2023 年 4 月，文中稱福島核處理水自 2023 年 4 月開始排放，但實際首次排放為 2023 年 8 月 24 日，時序與「排放尚未真正展開」的語境均已過時，文中所述進口管制與檢驗措施亦已變動。",
+      "coverW": 799,
+      "coverH": 532
     },
     {
       "id": 9,
@@ -1660,7 +1708,9 @@
           }
         ]
       },
-      "editorialNote": null
+      "editorialNote": null,
+      "coverW": 1275,
+      "coverH": 816
     },
     {
       "id": 8,
@@ -1815,7 +1865,9 @@
           }
         ]
       },
-      "editorialNote": null
+      "editorialNote": null,
+      "coverW": 578,
+      "coverH": 420
     },
     {
       "id": 7,
@@ -1876,7 +1928,9 @@
           }
         ]
       },
-      "editorialNote": null
+      "editorialNote": null,
+      "coverW": 1200,
+      "coverH": 628
     },
     {
       "id": 6,
@@ -1987,7 +2041,9 @@
           }
         ]
       },
-      "editorialNote": null
+      "editorialNote": null,
+      "coverW": 600,
+      "coverH": 476
     },
     {
       "id": 5,
@@ -2088,7 +2144,9 @@
           }
         ]
       },
-      "editorialNote": null
+      "editorialNote": null,
+      "coverW": 710,
+      "coverH": 522
     },
     {
       "id": 4,
@@ -2195,7 +2253,9 @@
           }
         ]
       },
-      "editorialNote": null
+      "editorialNote": null,
+      "coverW": 512,
+      "coverH": 512
     },
     {
       "id": 3,
@@ -2278,14 +2338,17 @@
           }
         ]
       },
-      "editorialNote": null
+      "editorialNote": null,
+      "coverW": 1024,
+      "coverH": 1024
     }
   ];
 
   function pick(article, lang) {
     var body = article[lang === 'en' ? 'en' : 'zh'];
     return {
-      id: article.id, slug: article.slug, date: article.date, cover: article.cover,
+      id: article.id, slug: article.slug, date: article.date,
+      cover: article.cover, coverW: article.coverW, coverH: article.coverH,
       title: body.title, excerpt: body.excerpt, category: body.category, blocks: body.blocks,
     };
   }

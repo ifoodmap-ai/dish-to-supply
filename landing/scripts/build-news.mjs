@@ -2,8 +2,31 @@
 // 用法:node scripts/build-news.mjs <articles.json> <articles.en.json> [out=news.js]
 import fs from 'node:fs';
 import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 
 const [zhPath, enPath, outPath = 'news.js'] = process.argv.slice(2);
+
+// 站台根目錄(scripts/ 的上一層),用來從 /assets/news/*.jpg 讀圖片實際尺寸
+const SITE_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
+
+// 讀 JPEG 的 SOF 標記拿長寬。0xC4(DHT)/0xC8(JPG)/0xCC(DAC) 長得像 SOF 但不是,要跳過。
+function jpegSize(file) {
+  const buf = fs.readFileSync(file);
+  if (buf[0] !== 0xff || buf[1] !== 0xd8) throw new Error(`不是 JPEG:${file}`);
+  let i = 2;
+  while (i < buf.length) {
+    if (buf[i] !== 0xff) { i++; continue; }
+    const m = buf[i + 1];
+    if (m === 0xd8 || m === 0x01 || (m >= 0xd0 && m <= 0xd7)) { i += 2; continue; }
+    const len = buf.readUInt16BE(i + 2);
+    if (m >= 0xc0 && m <= 0xcf && m !== 0xc4 && m !== 0xc8 && m !== 0xcc) {
+      return { h: buf.readUInt16BE(i + 5), w: buf.readUInt16BE(i + 7) };
+    }
+    i += 2 + len;
+  }
+  throw new Error(`找不到 SOF:${file}`);
+}
+
 const zh = JSON.parse(fs.readFileSync(zhPath, 'utf8'));
 const en = JSON.parse(fs.readFileSync(enPath, 'utf8'));
 const enById = new Map(en.map((a) => [a.id, a]));
@@ -36,16 +59,28 @@ const articles = zh.filter((a) => (a.blocks || []).length).map((a) => {
   if (seen.has(slug)) { const n = seen.get(slug) + 1; seen.set(slug, n); slug = `${slug}-${n}`; }
   else seen.set(slug, 1);
   const cover = a.coverImage ? `/assets/news/${a.coverImage.replace(/\.[^.]+$/, '')}.jpg` : null;
+  // 封面原本在樣板裡寫死 width=960 height=540,但 17 篇裡有 16 篇不是 16:9(最極端 1024×1024),
+  // 宣告錯的長寬比會在圖載入的瞬間把整篇往下推 —— 等於 width/height 反過來製造 CLS。
+  const coverSize = cover ? jpegSize(path.join(SITE_ROOT, cover)) : null;
   const body = (blocks) => blocks.map((b) => {
     const out = { type: b.type };
     if (b.type === 'ul') out.items = b.items || [];
-    else if (b.type === 'img') { out.src = `/assets/news/${String(b.src).replace(/\.[^.]+$/, '')}.jpg`; out.alt = b.alt || ''; }
+    else if (b.type === 'img') {
+      out.src = `/assets/news/${String(b.src).replace(/\.[^.]+$/, '')}.jpg`;
+      out.alt = b.alt || '';
+      // 內文圖的長寬要寫進資料,樣板才綁得到 width/height。沒有的話瀏覽器在圖載入前
+      // 不知道要留多少位置,文章讀到一半會被推下去(CLS)。七張圖的比例還不一樣,
+      // 所以不能用一個寫死的 aspect-ratio 蓋過去 —— 只能逐張讀實際像素。
+      const d = jpegSize(path.join(SITE_ROOT, out.src));
+      out.w = d.w; out.h = d.h;
+    }
     else out.text = b.text || '';
     if (b.links && b.links.length) out.links = b.links.map((l) => ({ text: l.text, href: l.href }));
     return out;
   });
   return {
     id: a.id, slug, date: a.date, cover,
+    coverW: coverSize && coverSize.w, coverH: coverSize && coverSize.h,
     zh: { title: a.title, excerpt: a.excerpt || '', category: a.category, blocks: body(a.blocks || []) },
     en: { title: e.title, excerpt: e.excerpt || '', category: e.category, blocks: body(e.blocks || []) },
     editorialNote: e.editorialNote || a.editorialNote || null,
@@ -65,7 +100,8 @@ const module_ = `(function (root, factory) {
   function pick(article, lang) {
     var body = article[lang === 'en' ? 'en' : 'zh'];
     return {
-      id: article.id, slug: article.slug, date: article.date, cover: article.cover,
+      id: article.id, slug: article.slug, date: article.date,
+      cover: article.cover, coverW: article.coverW, coverH: article.coverH,
       title: body.title, excerpt: body.excerpt, category: body.category, blocks: body.blocks,
     };
   }

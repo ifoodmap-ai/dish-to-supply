@@ -252,6 +252,101 @@
   a.contact-line { text-decoration:none; color:inherit; transition:background .16s ease; }
   a.contact-line:hover { background:#F3FAF6; }
   a.contact-line:focus-visible { outline:3px solid #166534; outline-offset:2px; background:#F3FAF6; }
+
+  /* 這一區原本寫在各元素的 inline style 裡。inline 的優先權壓過 stylesheet,
+     只要留在 inline,下面的 :hover / :focus-visible 就永遠換不動這幾個屬性
+     ——「hover 有 match 但畫面沒反應」就是這樣來的。所以只把 hover 會改到的
+     宣告搬上來,其餘版面用的 inline 宣告原封不動,渲染結果不變。 */
+  .mc-navlink     { color:#4B5A52; }
+  .mc-langpill    { border:1px solid #DCE3DE; color:#4B5A52; }
+  .mc-navcta      { background:#0E1A14; }
+  .mc-searchbtn   { background:#0B6B40; }
+  .mc-hottag      { color:#5E6E65; border:1px solid #E6EAE7; }
+  .mc-flowcta     { background:#0B6B40; }
+  .mc-catcell     { background:#fff; }
+  .mc-problemcta  { background:transparent; color:#fff; }
+  .mc-newscard    { border:1px solid #E1E7E3; }
+  .mc-ctaprimary  { background:#0B6B40; }
+  .mc-ctasecondary{ background:transparent; color:#0E1A14; }
+  .mc-footlink    { color:#9FB0A6; }
+
+  /* ── 互動狀態:hover 與鍵盤焦點 ────────────────────────────────────────
+     這些元素原本掛的是設計稿留下來的 style-hover 自訂屬性,support.js 沒有實作它,
+     也就是導覽列、頁尾、首頁 CTA 的 hover 從上線到現在一次都沒生效過。改成真 CSS。
+     順手把 :focus-visible 一起補上 —— 滑鼠點不顯示、鍵盤 Tab 才顯示,這個分辨只有
+     瀏覽器原生的 :focus-visible 做得對,用 JS 模擬一定會錯。
+     焦點框:淺底用 #0B6B40(對白底 6.58:1),深底用 #C3D543(對 #0E1A14 是 11:1)。 */
+  .mc-navlink:hover,
+  .mc-navlink:focus-visible { color:#0E1A14; }
+
+  .mc-langpill:hover,
+  .mc-langpill:focus-visible { border-color:#0B6B40; color:#0B6B40; }
+
+  .mc-navcta:hover,
+  .mc-navcta:focus-visible { background:#0B6B40; transform:translateY(-1px); }
+
+  .mc-drawerlink:hover,
+  .mc-drawerlink:focus-visible { background:#F3FAF6; }
+
+  .mc-searchbtn:hover,
+  .mc-searchbtn:focus-visible { background:#074E2E; }
+
+  .mc-hottag:hover,
+  .mc-hottag:focus-visible { border-color:#0B6B40; color:#0B6B40; }
+
+  .mc-flowcta:hover,
+  .mc-flowcta:focus-visible { background:#074E2E; transform:translateY(-2px); }
+
+  .mc-catcell:hover,
+  .mc-catcell:focus-visible { background:#F7F9F8; }
+
+  .mc-problemcta:hover,
+  .mc-problemcta:focus-visible { background:#fff; color:#0E1A14; }
+
+  .mc-newscard:hover,
+  .mc-newscard:focus-within { border-color:#0B6B40; }
+
+  .mc-ctaprimary:hover,
+  .mc-ctaprimary:focus-visible { background:#074E2E; }
+
+  .mc-ctasecondary:hover,
+  .mc-ctasecondary:focus-visible { background:#0E1A14; color:#fff; }
+
+  .mc-footlink:hover,
+  .mc-footlink:focus-visible { color:#fff; }
+
+  /* hover 只換色;鍵盤焦點還要看得到「框」,否則換個底色鍵盤使用者不一定注意得到 */
+  .mc-logo:focus-visible,
+  .mc-navlink:focus-visible,
+  .mc-langpill:focus-visible,
+  .mc-navcta:focus-visible,
+  .mc-drawerlink:focus-visible,
+  .mc-searchbtn:focus-visible,
+  .mc-hottag:focus-visible,
+  .mc-flowcta:focus-visible,
+  .mc-catcell:focus-visible,
+  .mc-alllink:focus-visible,
+  .mc-ctaprimary:focus-visible,
+  .mc-ctasecondary:focus-visible { outline:3px solid #0B6B40; outline-offset:3px; }
+
+  /* 深色底(問題卡、頁尾)上綠框看不見,換成亮黃綠 */
+  .mc-problemcta:focus-visible { outline:3px solid #C3D543; outline-offset:3px; }
+
+  /* 新聞卡的可聚焦元素是裡面那條 <a>,框往內縮才不會跑到圓角卡片外面 */
+  .mc-newscard a:focus-visible { outline:3px solid #0B6B40; outline-offset:-3px; border-radius:20px; }
+
+  /* 搜尋輸入框包在白色藥丸裡,框往內縮 */
+  .mc-searchinput:focus-visible { outline:3px solid #0B6B40; outline-offset:-2px; border-radius:999px; }
+
+  /* 聯絡頁快捷籤:外觀由外層 <li> 提供,<button> 用 all:unset 讓開 ——
+     連瀏覽器原生的焦點框都被 unset 掉了,所以在後面補回來(同特異度、後寫的贏)。 */
+  .ifm-chip-btn { all:unset; cursor:pointer; }
+  .ifm-chip-btn:focus-visible { outline:3px solid #0B6B40; outline-offset:3px; border-radius:999px; }
+
+  @media (prefers-reduced-motion: reduce) {
+    .mc-navcta:hover, .mc-navcta:focus-visible,
+    .mc-flowcta:hover, .mc-flowcta:focus-visible { transform:none; }
+  }
   .contact-submit { border:0; min-height:52px; }
   .footer-grid { display:grid; grid-template-columns:minmax(250px,1.5fr) repeat(4,minmax(120px,1fr)); gap:32px; }
   .footer-group-title { font-size:14px; font-weight:700; color:#fff; margin-bottom:16px; }
@@ -335,7 +430,7 @@
   .ifm-article__body ul li { position:relative; padding-left:24px; }
   .ifm-article__body ul li::before {
     content:""; position:absolute; left:4px; top:.72em;
-    width:7px; height:7px; border-radius:50%; background:#128A54;
+    width:7px; height:7px; border-radius:50%; background:#0B6B40;
   }
   .ifm-article__body img { display:block; width:100%; height:auto; border-radius:18px; margin:8px 0 26px; }
   .ifm-article__links {
@@ -439,11 +534,11 @@
   }
   .ifm-qa__q::-webkit-details-marker { display:none; }
   .ifm-qa__q:hover { background:#F7FBF8; }
-  .ifm-qa__q:focus-visible { outline:3px solid #128A54; outline-offset:-3px; }
+  .ifm-qa__q:focus-visible { outline:3px solid #0B6B40; outline-offset:-3px; }
   .ifm-qa__q::after {
     content:''; flex:none; margin-left:auto; margin-top:5px;
     width:10px; height:10px;
-    border-right:2px solid #128A54; border-bottom:2px solid #128A54;
+    border-right:2px solid #0B6B40; border-bottom:2px solid #0B6B40;
     transform:rotate(45deg); transition:transform .18s ease;
   }
   .ifm-qa__item[open] .ifm-qa__q::after { transform:rotate(-135deg); margin-top:9px; }
@@ -467,7 +562,7 @@
   .ifm-eyebrow__no {
     display:grid; place-items:center;
     width:26px; height:26px; border-radius:50%;
-    background:#128A54; color:#fff; font-size:12px; letter-spacing:0;
+    background:#0B6B40; color:#fff; font-size:12px; letter-spacing:0;
   }
   .ifm-card--dark .ifm-eyebrow { color:#C3D543; }
 
@@ -595,17 +690,17 @@
       </a>
       <sc-if value="{{ isDesktop }}" hint-placeholder-val="{{ true }}">
         <nav aria-label="{{ L.nav.mainNavLabel }}" style="display:flex;gap:22px;flex-wrap:wrap;align-items:center">
-          <a href="{{ hrefRestaurants }}" onClick="{{ goRestaurants }}" aria-current="{{ ariaCurrentRestaurants }}" style="padding:6px 0;font-size:14.5px;color:#4B5A52;text-decoration:none;cursor:pointer" style-hover="color:#0E1A14">{{ L.nav.findIngredients }}</a>
-          <a href="{{ hrefSuppliers }}" onClick="{{ goSuppliers }}" aria-current="{{ ariaCurrentSuppliers }}" style="padding:6px 0;font-size:14.5px;color:#4B5A52;text-decoration:none;cursor:pointer" style-hover="color:#0E1A14">{{ L.nav.becomeSupplier }}</a>
-          <a href="{{ hrefQa }}" onClick="{{ goQa }}" aria-current="{{ ariaCurrentQa }}" style="padding:6px 0;font-size:14.5px;color:#4B5A52;text-decoration:none;cursor:pointer" style-hover="color:#0E1A14">{{ L.nav.faq }}</a>
-          <a href="{{ hrefAbout }}" onClick="{{ goAbout }}" aria-current="{{ ariaCurrentAbout }}" style="padding:6px 0;font-size:14.5px;color:#4B5A52;text-decoration:none;cursor:pointer" style-hover="color:#0E1A14">{{ L.nav.about }}</a>
-          <a href="{{ hrefNews }}" onClick="{{ goNews }}" style="padding:6px 0;font-size:14.5px;color:#4B5A52;text-decoration:none;cursor:pointer" style-hover="color:#0E1A14">{{ L.nav.news }}</a>
-          <a href="{{ hrefContact }}" onClick="{{ goContact }}" aria-current="{{ ariaCurrentContact }}" style="padding:6px 0;font-size:14.5px;color:#4B5A52;text-decoration:none;cursor:pointer" style-hover="color:#0E1A14">{{ L.nav.contact }}</a>
+          <a href="{{ hrefRestaurants }}" onClick="{{ goRestaurants }}" aria-current="{{ ariaCurrentRestaurants }}" class="mc-navlink" style="padding:6px 0;font-size:14.5px;text-decoration:none;cursor:pointer">{{ L.nav.findIngredients }}</a>
+          <a href="{{ hrefSuppliers }}" onClick="{{ goSuppliers }}" aria-current="{{ ariaCurrentSuppliers }}" class="mc-navlink" style="padding:6px 0;font-size:14.5px;text-decoration:none;cursor:pointer">{{ L.nav.becomeSupplier }}</a>
+          <a href="{{ hrefQa }}" onClick="{{ goQa }}" aria-current="{{ ariaCurrentQa }}" class="mc-navlink" style="padding:6px 0;font-size:14.5px;text-decoration:none;cursor:pointer">{{ L.nav.faq }}</a>
+          <a href="{{ hrefAbout }}" onClick="{{ goAbout }}" aria-current="{{ ariaCurrentAbout }}" class="mc-navlink" style="padding:6px 0;font-size:14.5px;text-decoration:none;cursor:pointer">{{ L.nav.about }}</a>
+          <a href="{{ hrefNews }}" onClick="{{ goNews }}" class="mc-navlink" style="padding:6px 0;font-size:14.5px;text-decoration:none;cursor:pointer">{{ L.nav.news }}</a>
+          <a href="{{ hrefContact }}" onClick="{{ goContact }}" aria-current="{{ ariaCurrentContact }}" class="mc-navlink" style="padding:6px 0;font-size:14.5px;text-decoration:none;cursor:pointer">{{ L.nav.contact }}</a>
         </nav>
         <!-- 語言切換:指向同一頁的另一個語系網址(中文 /xxx、英文 /en/xxx),
              用真的 <a href> 而不是 button —— 右鍵複製連結、新分頁開啟、爬蟲都正常。 -->
-        <a href="{{ langHref }}" onClick="{{ switchLang }}" lang="{{ langTag }}" aria-label="{{ langAria }}" style="display:inline-flex;align-items:center;gap:7px;padding:7px 14px;border:1px solid #DCE3DE;border-radius:999px;font-size:13px;font-weight:600;color:#4B5A52;text-decoration:none;cursor:pointer;white-space:nowrap" style-hover="border-color:#128A54;color:#0B6B40"><img src="{{ langFlag }}" alt="" width="20" height="14" loading="lazy" decoding="async" style="display:block;width:20px;height:14px;border-radius:2px;flex:0 0 auto">{{ langLabel }}</a>
-        <a href="{{ hrefContact }}" onClick="{{ openAI }}" style="background:#0E1A14;color:#fff;padding:11px 20px;border-radius:999px;font-size:14px;font-weight:700;text-decoration:none;cursor:pointer;box-shadow:0 6px 14px rgba(14,26,20,.18)" style-hover="background:#128A54;transform:translateY(-1px)">{{ L.nav.cta }}</a>
+        <a href="{{ langHref }}" onClick="{{ switchLang }}" lang="{{ langTag }}" aria-label="{{ langAria }}" class="mc-langpill" style="display:inline-flex;align-items:center;gap:7px;padding:7px 14px;border-radius:999px;font-size:13px;font-weight:600;text-decoration:none;cursor:pointer;white-space:nowrap"><img src="{{ langFlag }}" alt="" width="20" height="14" loading="lazy" decoding="async" style="display:block;width:20px;height:14px;border-radius:2px;flex:0 0 auto">{{ langLabel }}</a>
+        <a href="{{ hrefContact }}" onClick="{{ openAI }}" class="mc-navcta" style="color:#fff;padding:11px 20px;border-radius:999px;font-size:14px;font-weight:700;text-decoration:none;cursor:pointer;box-shadow:0 6px 14px rgba(14,26,20,.18)">{{ L.nav.cta }}</a>
       </sc-if>
       <sc-if value="{{ isMobile }}">
         <button type="button" onClick="{{ toggleMenu }}" aria-label="{{ L.nav.menuLabel }}" aria-controls="ifm-mobile-menu" aria-expanded="{{ menuOpen }}" style="width:46px;height:46px;border:1px solid #DCE3DE;background:#fff;border-radius:14px;cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px">
@@ -617,14 +712,14 @@
     </div>
     <sc-if value="{{ menuOpen }}">
       <div id="ifm-mobile-menu" style="border-top:1px solid #E6EAE7;background:#fff;padding:14px 20px 20px;display:grid;gap:4px">
-        <a href="{{ hrefRestaurants }}" onClick="{{ goRestaurantsMobile }}" aria-current="{{ ariaCurrentRestaurants }}" style="display:block;text-align:left;padding:14px 8px;font-size:16px;color:#0E1A14;text-decoration:none;border-radius:12px;min-height:48px;line-height:20px" style-hover="background:#F3FAF6">{{ L.nav.findIngredients }}</a>
-        <a href="{{ hrefSuppliers }}" onClick="{{ goSuppliersMobile }}" aria-current="{{ ariaCurrentSuppliers }}" style="display:block;text-align:left;padding:14px 8px;font-size:16px;color:#0E1A14;text-decoration:none;border-radius:12px;min-height:48px;line-height:20px" style-hover="background:#F3FAF6">{{ L.nav.becomeSupplier }}</a>
-        <a href="{{ hrefQa }}" onClick="{{ goQaMobile }}" aria-current="{{ ariaCurrentQa }}" style="display:block;text-align:left;padding:14px 8px;font-size:16px;color:#0E1A14;text-decoration:none;border-radius:12px;min-height:48px;line-height:20px" style-hover="background:#F3FAF6">{{ L.nav.faq }}</a>
-        <a href="{{ hrefAbout }}" onClick="{{ goAboutMobile }}" aria-current="{{ ariaCurrentAbout }}" style="display:block;text-align:left;padding:14px 8px;font-size:16px;color:#0E1A14;text-decoration:none;border-radius:12px;min-height:48px;line-height:20px" style-hover="background:#F3FAF6">{{ L.nav.about }}</a>
-        <a href="{{ hrefNews }}" onClick="{{ goNewsMobile }}" style="display:block;text-align:left;padding:14px 8px;font-size:16px;color:#0E1A14;text-decoration:none;border-radius:12px;min-height:48px;line-height:20px" style-hover="background:#F3FAF6">{{ L.nav.news }}</a>
-        <a href="{{ hrefContact }}" onClick="{{ goContactMobile }}" aria-current="{{ ariaCurrentContact }}" style="display:block;text-align:left;padding:14px 8px;font-size:16px;color:#0E1A14;text-decoration:none;border-radius:12px;min-height:48px;line-height:20px" style-hover="background:#F3FAF6">{{ L.nav.contact }}</a>
-        <a href="{{ langHref }}" onClick="{{ switchLangMobile }}" lang="{{ langTag }}" aria-label="{{ langAria }}" style="display:flex;align-items:center;gap:10px;text-align:left;padding:14px 8px;font-size:16px;font-weight:600;color:#0B6B40;text-decoration:none;border-radius:12px;min-height:48px;line-height:20px;border-top:1px solid #E6EAE7;margin-top:6px" style-hover="background:#F3FAF6"><img src="{{ langFlag }}" alt="" width="20" height="14" loading="lazy" decoding="async" style="display:block;width:20px;height:14px;border-radius:2px;flex:0 0 auto">{{ langLabel }}</a>
-        <a href="{{ hrefContact }}" onClick="{{ openAI }}" style="margin-top:8px;display:block;text-align:center;background:#128A54;color:#fff;padding:16px;border-radius:999px;font-size:16px;font-weight:700;text-decoration:none;box-shadow:0 10px 22px rgba(18,138,84,.26)">{{ L.nav.cta }}</a>
+        <a href="{{ hrefRestaurants }}" onClick="{{ goRestaurantsMobile }}" aria-current="{{ ariaCurrentRestaurants }}" class="mc-drawerlink" style="display:block;text-align:left;padding:14px 8px;font-size:16px;color:#0E1A14;text-decoration:none;border-radius:12px;min-height:48px;line-height:20px">{{ L.nav.findIngredients }}</a>
+        <a href="{{ hrefSuppliers }}" onClick="{{ goSuppliersMobile }}" aria-current="{{ ariaCurrentSuppliers }}" class="mc-drawerlink" style="display:block;text-align:left;padding:14px 8px;font-size:16px;color:#0E1A14;text-decoration:none;border-radius:12px;min-height:48px;line-height:20px">{{ L.nav.becomeSupplier }}</a>
+        <a href="{{ hrefQa }}" onClick="{{ goQaMobile }}" aria-current="{{ ariaCurrentQa }}" class="mc-drawerlink" style="display:block;text-align:left;padding:14px 8px;font-size:16px;color:#0E1A14;text-decoration:none;border-radius:12px;min-height:48px;line-height:20px">{{ L.nav.faq }}</a>
+        <a href="{{ hrefAbout }}" onClick="{{ goAboutMobile }}" aria-current="{{ ariaCurrentAbout }}" class="mc-drawerlink" style="display:block;text-align:left;padding:14px 8px;font-size:16px;color:#0E1A14;text-decoration:none;border-radius:12px;min-height:48px;line-height:20px">{{ L.nav.about }}</a>
+        <a href="{{ hrefNews }}" onClick="{{ goNewsMobile }}" class="mc-drawerlink" style="display:block;text-align:left;padding:14px 8px;font-size:16px;color:#0E1A14;text-decoration:none;border-radius:12px;min-height:48px;line-height:20px">{{ L.nav.news }}</a>
+        <a href="{{ hrefContact }}" onClick="{{ goContactMobile }}" aria-current="{{ ariaCurrentContact }}" class="mc-drawerlink" style="display:block;text-align:left;padding:14px 8px;font-size:16px;color:#0E1A14;text-decoration:none;border-radius:12px;min-height:48px;line-height:20px">{{ L.nav.contact }}</a>
+        <a href="{{ langHref }}" onClick="{{ switchLangMobile }}" lang="{{ langTag }}" aria-label="{{ langAria }}" class="mc-drawerlink" style="display:flex;align-items:center;gap:10px;text-align:left;padding:14px 8px;font-size:16px;font-weight:600;color:#0B6B40;text-decoration:none;border-radius:12px;min-height:48px;line-height:20px;border-top:1px solid #E6EAE7;margin-top:6px"><img src="{{ langFlag }}" alt="" width="20" height="14" loading="lazy" decoding="async" style="display:block;width:20px;height:14px;border-radius:2px;flex:0 0 auto">{{ langLabel }}</a>
+        <a href="{{ hrefContact }}" onClick="{{ openAI }}" style="margin-top:8px;display:block;text-align:center;background:#0B6B40;color:#fff;padding:16px;border-radius:999px;font-size:16px;font-weight:700;text-decoration:none;box-shadow:0 10px 22px rgba(18,138,84,.26)">{{ L.nav.cta }}</a>
       </div>
     </sc-if>
   </header>
@@ -641,31 +736,31 @@
       <div style="position:absolute;top:-220px;right:-140px;width:640px;height:640px;background:radial-gradient(circle,rgba(18,138,84,.09),transparent 68%)"></div>
       <div class="mc-heroinner" style="position:relative;max-width:860px;margin:0 auto;padding:clamp(56px,9vw,92px) 20px clamp(52px,8vw,84px);text-align:center;display:flex;flex-direction:column;align-items:center">
         <div class="mc-eyebrow mc-badge" style="display:inline-flex;align-items:center;gap:9px;border:1px solid #DCE3DE;background:#fff;border-radius:999px;padding:7px 16px;font-family:'Space Grotesk',sans-serif;font-size:11.5px;letter-spacing:.18em;color:#5E6E65">
-          <span style="width:6px;height:6px;border-radius:50%;background:#128A54;animation:pulseDot 2s ease-in-out infinite"></span>B2B MATCHING ENGINE
+          <span style="width:6px;height:6px;border-radius:50%;background:#0B6B40;animation:pulseDot 2s ease-in-out infinite"></span>B2B MATCHING ENGINE
         </div>
         <h1 class="mc-h1" style="margin-top:26px;font-size:clamp(34px,5.4vw,58px);line-height:1.22;font-weight:900;letter-spacing:-.02em">
           <!-- 輪播的是「整句」不是「一個詞」—— 三句裡有一句不是「免費找到…」開頭,
                沒辦法共用前綴。每句自己帶 pre / hl(綠字) / post 三段。 -->
-          {{ rotating.pre }}<span style="color:#128A54">{{ rotating.hl }}</span>{{ rotating.post }}
+          {{ rotating.pre }}<span style="color:#0B6B40">{{ rotating.hl }}</span>{{ rotating.post }}
         </h1>
         <p class="mc-lead" style="margin-top:20px;font-size:17px;line-height:1.9;color:#4B5A52;max-width:520px;font-weight:400">{{ L.home.heroSubA }}<br>{{ L.home.heroSubB }}</p>
 
         <!-- 搜尋不是真的搜尋:送出後把關鍵字帶進右下角的 AI 採購助手,由它接著訪談
              (數量、頻率、配送區域…),最後引導留下聯絡方式。見 askAI() 與 window.IfmAI -->
         <form onSubmit="{{ askAI }}" role="search" class="mc-heroform" aria-label="{{ L.home.searchAriaLabel }}" style="margin-top:34px;width:100%;max-width:620px;display:flex;gap:10px;flex-wrap:wrap;background:#fff;border:1px solid #DCE3DE;border-radius:999px;padding:8px 8px 8px 10px;box-shadow:0 14px 34px rgba(14,26,20,.08)">
-          <input name="q" class="mc-searchinput" aria-label="{{ L.home.searchAriaLabel }}" autocomplete="off" placeholder="{{ L.home.searchPlaceholder }}" style="flex:1;min-width:190px;border:none;outline:none;background:transparent;color:#0E1A14;font-size:15.5px;padding:12px 14px">
-          <button type="submit" class="mc-searchbtn" style="border:none;background:#128A54;color:#fff;font-size:15px;font-weight:700;padding:13px 30px;border-radius:999px;cursor:pointer;box-shadow:0 8px 18px rgba(18,138,84,.3)" style-hover="background:#0B6B40">{{ L.home.searchButton }}</button>
+          <input name="q" class="mc-searchinput" aria-label="{{ L.home.searchAriaLabel }}" autocomplete="off" placeholder="{{ L.home.searchPlaceholder }}" style="flex:1;min-width:190px;border:none;background:transparent;color:#0E1A14;font-size:15.5px;padding:12px 14px">
+          <button type="submit" class="mc-searchbtn" style="border:none;color:#fff;font-size:15px;font-weight:700;padding:13px 30px;border-radius:999px;cursor:pointer;box-shadow:0 8px 18px rgba(18,138,84,.3)">{{ L.home.searchButton }}</button>
         </form>
         <div class="mc-hottags" style="margin-top:16px;display:flex;gap:8px;flex-wrap:wrap;justify-content:center">
           <sc-for list="{{ hotTags }}" as="t" hint-placeholder-count="6">
-            <button type="button" onClick="{{ t.ask }}" class="mc-hottag" style="font-size:12.5px;color:#5E6E65;border:1px solid #E6EAE7;background:#fff;border-radius:999px;padding:6px 14px;cursor:pointer" style-hover="border-color:#128A54;color:#0B6B40">{{ t.label }}</button>
+            <button type="button" onClick="{{ t.ask }}" class="mc-hottag" style="font-size:12.5px;background:#fff;border-radius:999px;padding:6px 14px;cursor:pointer">{{ t.label }}</button>
           </sc-for>
         </div>
 
         <div class="mc-promises" style="margin-top:38px;display:flex;gap:10px;flex-wrap:wrap;justify-content:center">
           <sc-for list="{{ heroPromises }}" as="p" hint-placeholder-count="3">
             <span class="mc-promise" style="display:inline-flex;align-items:center;gap:8px;background:#EAF6F0;color:#0B6B40;border-radius:999px;padding:10px 18px;font-size:14px;font-weight:700">
-              <span style="width:18px;height:18px;border-radius:999px;background:#128A54;color:#fff;font-size:11px;display:flex;align-items:center;justify-content:center">✓</span>{{ p }}
+              <span style="width:18px;height:18px;border-radius:999px;background:#0B6B40;color:#fff;font-size:11px;display:flex;align-items:center;justify-content:center">✓</span>{{ p }}
             </span>
           </sc-for>
         </div>
@@ -711,14 +806,14 @@
       <div class="mc-sec" style="max-width:1240px;margin:0 auto;padding:clamp(48px,7vw,80px) 20px">
         <div style="text-align:center">
           <div class="mc-eyebrow" style="font-family:'Space Grotesk',sans-serif;font-size:11.5px;letter-spacing:.2em;color:#5E6E65">HOW IT WORKS</div>
-          <h2 style="margin-top:14px;font-size:clamp(26px,3.4vw,38px)">{{ L.home.flowTitlePre }}<span style="color:#128A54">{{ L.home.flowTitleHighlight }}</span></h2>
+          <h2 style="margin-top:14px;font-size:clamp(26px,3.4vw,38px)">{{ L.home.flowTitlePre }}<span style="color:#0B6B40">{{ L.home.flowTitleHighlight }}</span></h2>
         </div>
         <div class="mc-flowpanel" style="margin-top:44px;background:#F3FAF6;border-radius:32px;padding:clamp(24px,4vw,48px)">
           <div class="mc-flowgrid" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:24px">
             <sc-for list="{{ flowA }}" as="s" hint-placeholder-count="3">
               <div class="mc-flowcard" style="background:#fff;border-radius:24px;padding:22px;box-shadow:0 6px 18px rgba(18,138,84,.08)">
                 <div style="display:flex;align-items:center;gap:10px">
-                  <span class="mc-flownum" style="width:30px;height:30px;border-radius:999px;background:#128A54;color:#fff;font-family:'Space Grotesk',sans-serif;font-size:14px;font-weight:700;display:flex;align-items:center;justify-content:center">{{ s.n }}</span>
+                  <span class="mc-flownum" style="width:30px;height:30px;border-radius:999px;background:#0B6B40;color:#fff;font-family:'Space Grotesk',sans-serif;font-size:14px;font-weight:700;display:flex;align-items:center;justify-content:center">{{ s.n }}</span>
                   <span class="mc-flowtitle" style="font-size:17px;font-weight:700">{{ s.title }}</span>
                 </div>
                 <div class="mc-flowart" style="margin-top:16px;height:130px;border-radius:18px;background:#EFF6F2;display:flex;align-items:center;justify-content:center;overflow:hidden">
@@ -745,7 +840,7 @@
           </div>
         </div>
         <div style="text-align:center">
-          <a href="{{ hrefContact }}" class="mc-flowcta" onClick="{{ openAI }}" style="display:inline-block;margin-top:40px;background:#128A54;color:#fff;font-size:16px;font-weight:700;padding:16px 38px;border-radius:999px;text-decoration:none;cursor:pointer;box-shadow:0 10px 22px rgba(18,138,84,.26)" style-hover="background:#0B6B40;transform:translateY(-2px)">{{ L.home.flowCta }}</a>
+          <a href="{{ hrefContact }}" class="mc-flowcta" onClick="{{ openAI }}" style="display:inline-block;margin-top:40px;color:#fff;font-size:16px;font-weight:700;padding:16px 38px;border-radius:999px;text-decoration:none;cursor:pointer;box-shadow:0 10px 22px rgba(18,138,84,.26)">{{ L.home.flowCta }}</a>
         </div>
       </div>
     </section>
@@ -758,7 +853,7 @@
         </div>
         <div class="mc-catgrid" style="margin-top:34px;display:grid;grid-template-columns:repeat(auto-fill,minmax(168px,1fr));gap:0;border-top:1px solid #E1E7E3;border-left:1px solid #E1E7E3;border-radius:12px;overflow:hidden">
           <sc-for list="{{ categories }}" as="c" hint-placeholder-count="12">
-            <a href="{{ hrefRestaurants }}" class="mc-catcell" onClick="{{ goRestaurants }}" style="display:block;cursor:pointer;background:#fff;border-right:1px solid #E1E7E3;border-bottom:1px solid #E1E7E3;text-align:left;text-decoration:none;color:inherit" style-hover="background:#F7F9F8">
+            <a href="{{ hrefRestaurants }}" class="mc-catcell" onClick="{{ goRestaurants }}" style="display:block;cursor:pointer;border-right:1px solid #E1E7E3;border-bottom:1px solid #E1E7E3;text-align:left;text-decoration:none;color:inherit">
               <div class="mc-catart" style="height:96px;background:#F7F9F8;border-bottom:1px dashed #E1E7E3;display:flex;align-items:center;justify-content:center;overflow:hidden">
                 <img class="mc-catimg" src="{{ c.img }}" alt="" width="96" height="96" loading="lazy" style="height:76px;width:76px;border-radius:14px;display:block">
               </div>
@@ -777,7 +872,7 @@
           <div class="mc-eyebrow" style="font-family:'Space Grotesk',sans-serif;font-size:11.5px;letter-spacing:.2em;color:#7FA490">THE PROBLEM</div>
           <h2 style="margin-top:16px;font-size:clamp(26px,3.4vw,36px);line-height:1.45;color:#fff">{{ L.home.problemTitleA }}<br>{{ L.home.problemTitleB }}</h2>
           <p class="mc-problemp" style="margin-top:20px;font-size:15.5px;line-height:1.95;color:#AFC0B6;font-weight:300;max-width:420px;text-wrap:pretty">{{ L.home.problemBody }}</p>
-          <a href="{{ hrefHow }}" class="mc-problemcta" onClick="{{ goHow }}" style="display:inline-block;margin-top:26px;border:1px solid rgba(255,255,255,.4);background:transparent;color:#fff;padding:14px 30px;border-radius:999px;font-size:14.5px;font-weight:700;text-decoration:none;cursor:pointer" style-hover="background:#fff;color:#0E1A14">{{ L.home.problemCta }}</a>
+          <a href="{{ hrefHow }}" class="mc-problemcta" onClick="{{ goHow }}" style="display:inline-block;margin-top:26px;border:1px solid rgba(255,255,255,.4);padding:14px 30px;border-radius:999px;font-size:14.5px;font-weight:700;text-decoration:none;cursor:pointer">{{ L.home.problemCta }}</a>
         </div>
         <div>
           <sc-for list="{{ pains }}" as="p" hint-placeholder-count="4">
@@ -820,11 +915,11 @@
     <section class="ifm-v2 mc-sec" id="news" style="max-width:1240px;margin:0 auto;padding:clamp(52px,8vw,88px) 20px;scroll-margin-top:80px">
       <div class="mc-newshead" style="display:flex;align-items:baseline;justify-content:space-between;gap:16px;flex-wrap:wrap">
         <h2 style="font-size:clamp(26px,3.4vw,38px)">{{ L.home.newsTitle }}</h2>
-        <a href="{{ hrefNews }}" class="mc-alllink" onClick="{{ goNews }}" style="color:#128A54;font-size:14.5px;text-decoration:none;cursor:pointer">{{ L.home.newsAll }}</a>
+        <a href="{{ hrefNews }}" class="mc-alllink" onClick="{{ goNews }}" style="color:#0B6B40;font-size:14.5px;text-decoration:none;cursor:pointer">{{ L.home.newsAll }}</a>
       </div>
       <div class="mc-newsgrid" style="margin-top:34px;display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:20px">
         <sc-for list="{{ articlesTop }}" as="a" hint-placeholder-count="3">
-          <article style="border:1px solid #E1E7E3;border-radius:20px;overflow:hidden;background:#fff" style-hover="border-color:#128A54">
+          <article class="mc-newscard" style="border-radius:20px;overflow:hidden;background:#fff">
             <a href="{{ a.href }}" onClick="{{ a.go }}" style="display:block;color:inherit;text-decoration:none">
               <div class="mc-newscover" style="height:158px;background:#F7F9F8;border-bottom:1px dashed #E1E7E3;overflow:hidden">
                 <img src="{{ a.img }}" alt="" width="480" height="300" loading="lazy" style="width:100%;height:100%;object-fit:cover;display:block">
@@ -845,8 +940,8 @@
       <div class="mc-sec mc-finalcta" style="max-width:1240px;margin:0 auto;padding:clamp(48px,7vw,78px) 20px;display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:32px;align-items:center">
         <h2 style="font-size:clamp(24px,3vw,34px);line-height:1.45">{{ L.home.ctaTitleA }}<br>{{ L.home.ctaTitleB }}</h2>
         <div style="display:flex;gap:12px;flex-wrap:wrap;justify-self:end">
-          <a href="{{ hrefContact }}" onClick="{{ openAI }}" style="background:#128A54;color:#fff;padding:16px 34px;border-radius:999px;font-size:15.5px;font-weight:700;text-decoration:none;cursor:pointer;box-shadow:0 10px 22px rgba(18,138,84,.26)" style-hover="background:#0B6B40">{{ L.home.ctaPrimary }}</a>
-          <a href="{{ restaurantRegistrationUrl }}" style="border:1px solid #0E1A14;background:transparent;color:#0E1A14;padding:16px 34px;border-radius:999px;font-size:15.5px;font-weight:700;text-decoration:none;cursor:pointer" style-hover="background:#0E1A14;color:#fff">{{ L.home.ctaSecondary }}</a>
+          <a href="{{ hrefContact }}" onClick="{{ openAI }}" class="mc-ctaprimary" style="color:#fff;padding:16px 34px;border-radius:999px;font-size:15.5px;font-weight:700;text-decoration:none;cursor:pointer;box-shadow:0 10px 22px rgba(18,138,84,.26)">{{ L.home.ctaPrimary }}</a>
+          <a href="{{ restaurantRegistrationUrl }}" class="mc-ctasecondary" style="border:1px solid #0E1A14;padding:16px 34px;border-radius:999px;font-size:15.5px;font-weight:700;text-decoration:none;cursor:pointer">{{ L.home.ctaSecondary }}</a>
         </div>
       </div>
     </section>
@@ -1468,7 +1563,7 @@
               <label for="partner-message" style="display:block;font-size:14px;font-weight:600;color:#3c4d42;margin-bottom:8px;">{{ L.contact.labelMessage }} <span aria-hidden="true" style="color:#C0392B;">*</span></label>
               <textarea class="contact-field" id="partner-message" name="message" required="required" rows="5" placeholder="{{ L.contact.placeholderMessage }}" style="width:100%;padding:14px 16px;border:1.5px solid #dde5dc;border-radius:12px;font-size:16px;font-family:inherit;resize:vertical;"></textarea>
             </div>
-            <button class="contact-submit" type="submit" aria-live="polite" style="display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,#46c138,#1f9e4e);color:#fff;font-weight:700;font-size:16px;padding:16px;border-radius:100px;text-align:center;cursor:pointer;box-shadow:0 12px 30px rgba(61,174,43,.24);">{{ L.contact.submit }}</button>
+            <button class="contact-submit" type="submit" aria-live="polite" style="display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,#46c138,#1f9e4e);color:#0E1A14;font-weight:700;font-size:16px;padding:16px;border-radius:100px;text-align:center;cursor:pointer;box-shadow:0 12px 30px rgba(61,174,43,.24);">{{ L.contact.submit }}</button>
           </div>
         </form>
       </div>
@@ -1487,15 +1582,15 @@
       </div>
       <div data-reveal style="display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:22px;">
         <a class="contact-line" href="tel:+886277045539" aria-label="{{ L.contact.phoneAria }}">
-          <span style="width:46px;height:46px;border-radius:13px;background:#eaf7e4;color:#1f9e4e;font-weight:900;display:flex;align-items:center;justify-content:center;flex:0 0 auto;">{{ L.contact.phoneIcon }}</span>
+          <span style="width:46px;height:46px;border-radius:13px;background:#eaf7e4;color:#0B6B40;font-weight:900;display:flex;align-items:center;justify-content:center;flex:0 0 auto;">{{ L.contact.phoneIcon }}</span>
           <div><div style="font-size:13px;color:#5b6b62;">{{ L.contact.phoneLabel }}</div><div style="font-size:17px;font-weight:700;color:#15231b;">02-7704-5539</div></div>
         </a>
         <a class="contact-line" href="mailto:ifoodmaptw@gmail.com" aria-label="{{ L.contact.emailAria }}">
-          <span style="width:46px;height:46px;border-radius:13px;background:#eaf7e4;color:#1f9e4e;font-weight:900;display:flex;align-items:center;justify-content:center;flex:0 0 auto;">@</span>
+          <span style="width:46px;height:46px;border-radius:13px;background:#eaf7e4;color:#0B6B40;font-weight:900;display:flex;align-items:center;justify-content:center;flex:0 0 auto;">@</span>
           <div><div style="font-size:13px;color:#5b6b62;">{{ L.contact.emailLabel }}</div><div style="font-size:17px;font-weight:700;color:#15231b;">ifoodmaptw@gmail.com</div></div>
         </a>
         <div class="contact-line">
-          <span style="width:46px;height:46px;border-radius:13px;background:#eaf7e4;color:#1f9e4e;font-weight:900;display:flex;align-items:center;justify-content:center;flex:0 0 auto;">{{ L.contact.hoursIcon }}</span>
+          <span style="width:46px;height:46px;border-radius:13px;background:#eaf7e4;color:#0B6B40;font-weight:900;display:flex;align-items:center;justify-content:center;flex:0 0 auto;">{{ L.contact.hoursIcon }}</span>
           <div><div style="font-size:13px;color:#5b6b62;">{{ L.contact.hoursLabel }}</div><div style="font-size:17px;font-weight:700;color:#15231b;">{{ L.contact.hoursValue }}</div></div>
         </div>
         <a class="contact-line" href="https://line.me/R/ti/p/@750yvxki?oat_content=url" target="_blank" rel="noopener noreferrer" aria-label="{{ L.contact.lineAria }}">
@@ -1520,10 +1615,10 @@
           <div style="font-size:12.5px;font-weight:700;letter-spacing:.1em;color:#0B6B40;text-transform:uppercase;margin-bottom:10px;">{{ L.contact.aiQuickLabel }}</div>
           <ul class="ifm-chips" style="margin:0 0 26px;">
             <sc-for list="{{ hotTags }}" as="t" hint-placeholder-count="6">
-              <li><button type="button" onClick="{{ t.ask }}" style="all:unset;cursor:pointer;">{{ t.label }}</button></li>
+              <li><button type="button" onClick="{{ t.ask }}" class="ifm-chip-btn">{{ t.label }}</button></li>
             </sc-for>
           </ul>
-          <button class="contact-submit" type="button" onClick="{{ openAI }}" style="width:100%;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,#46c138,#1f9e4e);color:#fff;font-weight:700;font-size:16px;padding:16px;border-radius:100px;text-align:center;cursor:pointer;box-shadow:0 12px 30px rgba(61,174,43,.24);">{{ L.contact.aiCta }}</button>
+          <button class="contact-submit" type="button" onClick="{{ openAI }}" style="width:100%;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,#46c138,#1f9e4e);color:#0E1A14;font-weight:700;font-size:16px;padding:16px;border-radius:100px;text-align:center;cursor:pointer;box-shadow:0 12px 30px rgba(61,174,43,.24);">{{ L.contact.aiCta }}</button>
           <p style="font-size:13px;line-height:1.7;color:#5b6b62;margin:16px 0 0;text-align:center;">{{ L.contact.aiHint }}</p>
         </article>
         <article class="ifm-card bt-5 bt-drop" data-reveal style="padding:38px;">
@@ -1595,7 +1690,7 @@
         </div>
         <h1 style="font-size:38px;line-height:1.3;color:#0E1A14;margin:0 0 28px;">{{ article.title }}</h1>
         <sc-if value="{{ article.cover }}">
-          <img src="{{ article.cover }}" alt="{{ L.news.coverAlt }}" width="960" height="540" style="width:100%;height:auto;border-radius:22px;margin-bottom:34px;display:block;">
+          <img src="{{ article.cover }}" alt="{{ L.news.coverAlt }}" width="{{ article.coverW }}" height="{{ article.coverH }}" loading="lazy" decoding="async" style="width:100%;height:auto;border-radius:22px;margin-bottom:34px;display:block;">
         </sc-if>
         <div class="ifm-article__body">
           <sc-for list="{{ article.blocks }}" as="b" hint-placeholder-count="6">
@@ -1607,7 +1702,7 @@
                   <sc-for list="{{ b.items }}" as="it" hint-placeholder-count="3"><li>{{ it }}</li></sc-for>
                 </ul>
               </sc-if>
-              <sc-if value="{{ b.isImg }}"><img src="{{ b.src }}" alt="{{ b.alt }}" loading="lazy"></sc-if>
+              <sc-if value="{{ b.isImg }}"><img src="{{ b.src }}" alt="{{ b.alt }}" width="{{ b.w }}" height="{{ b.h }}" loading="lazy"></sc-if>
               <sc-if value="{{ b.hasLinks }}">
                 <div class="ifm-article__links">
                   <div class="ifm-article__links-title">{{ L.news.sourceLinks }}</div>
@@ -1625,7 +1720,7 @@
       <section class="restaurant-wrap" style="padding-top:96px;padding-bottom:110px;text-align:center;">
         <h1 style="font-size:32px;line-height:1.35;color:#0E1A14;margin:0 0 14px;">{{ L.news.notFoundTitle }}</h1>
         <p style="font-size:16px;line-height:1.8;color:#4B5A52;margin:0 auto 26px;max-width:520px;">{{ L.news.notFoundBody }}</p>
-        <a class="platform-action" href="{{ hrefNewsList }}" onClick="{{ goNews }}" style="background:#128A54;color:#fff;">{{ L.news.backToList }}</a>
+        <a class="platform-action" href="{{ hrefNewsList }}" onClick="{{ goNews }}" style="background:#0B6B40;color:#fff;">{{ L.news.backToList }}</a>
       </section>
     </sc-if>
   </div>
@@ -1665,7 +1760,7 @@
       <div class="ifm-card ifm-card--tint ifm-qa__cta" data-reveal>
         <h2 style="font-family:'Space Grotesk','Noto Sans TC',sans-serif;font-size:24px;font-weight:800;color:#15231b;margin:0 0 10px;">{{ L.qa.ctaTitle }}</h2>
         <p style="font-size:15px;line-height:1.85;color:#4B5A52;margin:0 auto 22px;max-width:520px;">{{ L.qa.ctaBody }}</p>
-        <a class="platform-action" href="{{ hrefContact }}" onClick="{{ openAI }}" style="background:#128A54;color:#fff;">{{ L.qa.ctaButton }}</a>
+        <a class="platform-action" href="{{ hrefContact }}" onClick="{{ openAI }}" style="background:#0B6B40;color:#fff;">{{ L.qa.ctaButton }}</a>
         <p style="font-size:13px;line-height:1.7;color:#5b6b62;margin:16px 0 0;">{{ L.qa.ctaHint }}</p>
       </div>
     </section>
@@ -1785,27 +1880,27 @@
       <div>
         <div style="color:#fff;font-family:'Space Grotesk',sans-serif;font-size:11.5px;letter-spacing:.18em;margin-bottom:16px">SERVICE</div>
         <ul style="display:grid;gap:11px;padding:0;margin:0;list-style:none">
-            <li><a href="{{ hrefRestaurants }}" onClick="{{ goRestaurants }}" style="color:#9FB0A6;font-size:13.5px;text-decoration:none;font-weight:300;cursor:pointer" style-hover="color:#fff">{{ L.footer.serviceFindIngredients }}</a></li>
-            <li><a href="{{ hrefSuppliers }}" onClick="{{ goSuppliers }}" style="color:#9FB0A6;font-size:13.5px;text-decoration:none;font-weight:300;cursor:pointer" style-hover="color:#fff">{{ L.footer.serviceBecomeSupplier }}</a></li>
-            <li><a href="{{ hrefHow }}" onClick="{{ goHow }}" style="color:#9FB0A6;font-size:13.5px;text-decoration:none;font-weight:300;cursor:pointer" style-hover="color:#fff">{{ L.footer.servicePlatformFeatures }}</a></li>
-            <li><a href="{{ loginUrl }}" style="color:#9FB0A6;font-size:13.5px;text-decoration:none;font-weight:300;cursor:pointer" style-hover="color:#fff">{{ L.footer.serviceLogin }}</a></li>
+            <li><a href="{{ hrefRestaurants }}" onClick="{{ goRestaurants }}" class="mc-footlink" style="font-size:13.5px;text-decoration:none;font-weight:300;cursor:pointer">{{ L.footer.serviceFindIngredients }}</a></li>
+            <li><a href="{{ hrefSuppliers }}" onClick="{{ goSuppliers }}" class="mc-footlink" style="font-size:13.5px;text-decoration:none;font-weight:300;cursor:pointer">{{ L.footer.serviceBecomeSupplier }}</a></li>
+            <li><a href="{{ hrefHow }}" onClick="{{ goHow }}" class="mc-footlink" style="font-size:13.5px;text-decoration:none;font-weight:300;cursor:pointer">{{ L.footer.servicePlatformFeatures }}</a></li>
+            <li><a href="{{ loginUrl }}" class="mc-footlink" style="font-size:13.5px;text-decoration:none;font-weight:300;cursor:pointer">{{ L.footer.serviceLogin }}</a></li>
         </ul>
       </div>
       <div>
         <div style="color:#fff;font-family:'Space Grotesk',sans-serif;font-size:11.5px;letter-spacing:.18em;margin-bottom:16px">COMPANY</div>
         <ul style="display:grid;gap:11px;padding:0;margin:0;list-style:none">
-            <li><a href="{{ hrefAbout }}" onClick="{{ goAbout }}" style="color:#9FB0A6;font-size:13.5px;text-decoration:none;font-weight:300;cursor:pointer" style-hover="color:#fff">{{ L.footer.companyAbout }}</a></li>
-            <li><a href="{{ hrefCases }}" onClick="{{ goCases }}" style="color:#9FB0A6;font-size:13.5px;text-decoration:none;font-weight:300;cursor:pointer" style-hover="color:#fff">{{ L.footer.companyCases }}</a></li>
-            <li><a href="{{ hrefNews }}" onClick="{{ goNews }}" style="color:#9FB0A6;font-size:13.5px;text-decoration:none;font-weight:300;cursor:pointer" style-hover="color:#fff">{{ L.footer.companyNews }}</a></li>
-            <li><a href="{{ hrefContact }}" onClick="{{ goContact }}" style="color:#9FB0A6;font-size:13.5px;text-decoration:none;font-weight:300;cursor:pointer" style-hover="color:#fff">{{ L.footer.companyContact }}</a></li>
+            <li><a href="{{ hrefAbout }}" onClick="{{ goAbout }}" class="mc-footlink" style="font-size:13.5px;text-decoration:none;font-weight:300;cursor:pointer">{{ L.footer.companyAbout }}</a></li>
+            <li><a href="{{ hrefCases }}" onClick="{{ goCases }}" class="mc-footlink" style="font-size:13.5px;text-decoration:none;font-weight:300;cursor:pointer">{{ L.footer.companyCases }}</a></li>
+            <li><a href="{{ hrefNews }}" onClick="{{ goNews }}" class="mc-footlink" style="font-size:13.5px;text-decoration:none;font-weight:300;cursor:pointer">{{ L.footer.companyNews }}</a></li>
+            <li><a href="{{ hrefContact }}" onClick="{{ goContact }}" class="mc-footlink" style="font-size:13.5px;text-decoration:none;font-weight:300;cursor:pointer">{{ L.footer.companyContact }}</a></li>
         </ul>
       </div>
       <div>
         <div style="color:#fff;font-family:'Space Grotesk',sans-serif;font-size:11.5px;letter-spacing:.18em;margin-bottom:16px">SUPPORT</div>
         <ul style="display:grid;gap:11px;padding:0;margin:0;list-style:none">
-            <li><a href="{{ hrefQa }}" onClick="{{ goQa }}" style="color:#9FB0A6;font-size:13.5px;text-decoration:none;font-weight:300;cursor:pointer" style-hover="color:#fff">{{ L.footer.supportFaq }}</a></li>
-            <li><a href="{{ hrefLegalTerms }}" onClick="{{ goLegalTerms }}" style="color:#9FB0A6;font-size:13.5px;text-decoration:none;font-weight:300;cursor:pointer" style-hover="color:#fff">{{ L.footer.supportTerms }}</a></li>
-            <li><a href="{{ hrefLegalPrivacy }}" onClick="{{ goLegalPrivacy }}" style="color:#9FB0A6;font-size:13.5px;text-decoration:none;font-weight:300;cursor:pointer" style-hover="color:#fff">{{ L.footer.supportPrivacy }}</a></li>
+            <li><a href="{{ hrefQa }}" onClick="{{ goQa }}" class="mc-footlink" style="font-size:13.5px;text-decoration:none;font-weight:300;cursor:pointer">{{ L.footer.supportFaq }}</a></li>
+            <li><a href="{{ hrefLegalTerms }}" onClick="{{ goLegalTerms }}" class="mc-footlink" style="font-size:13.5px;text-decoration:none;font-weight:300;cursor:pointer">{{ L.footer.supportTerms }}</a></li>
+            <li><a href="{{ hrefLegalPrivacy }}" onClick="{{ goLegalPrivacy }}" class="mc-footlink" style="font-size:13.5px;text-decoration:none;font-weight:300;cursor:pointer">{{ L.footer.supportPrivacy }}</a></li>
         </ul>
       </div>
     </div>
@@ -2019,7 +2114,7 @@ class Component extends DCLogic {
         .attr('cx', d => (projection(d) || [-99, -99])[0])
         .attr('cy', d => (projection(d) || [-99, -99])[1])
         .attr('r', 2.6)
-        .attr('fill', '#128A54')
+        .attr('fill', '#0B6B40')
         .attr('opacity', .55);
       this._mapW = w; this._mapH = h;
     } catch (e) {
@@ -2755,7 +2850,7 @@ class Component extends DCLogic {
     display: inline-flex !important; align-items: center;
     min-height: 44px !important; min-width: 44px;
   }
-  /* 聯絡頁的快捷籤：<li> 是膠囊外框、<button style="all:unset"> 在裡面。
+  /* 聯絡頁的快捷籤：<li> 是膠囊外框、.ifm-chip-btn 在裡面（外觀全部 unset 讓給 <li>）。
      把 padding 移到 button 上，整顆膠囊才是可點區，而不是外框大、熱區小。 */
   .ifm-chips li:has(> button) { padding: 0 !important; }
   .ifm-chips li > button {
@@ -3263,7 +3358,7 @@ class Component extends DCLogic {
     box-shadow: 0 8px 20px rgba(18,138,84,.18);
     transition: opacity .2s ease, transform .2s ease;
   }
-  .ai-fab-tip:hover { border-color: #128A54; transform: translateY(-1px); }
+  .ai-fab-tip:hover { border-color: #0B6B40; transform: translateY(-1px); }
   .ai-fab-tip::after {
     content: ''; position: absolute; right: 20px; bottom: -5px;
     width: 8px; height: 8px; background: #fff;

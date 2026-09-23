@@ -1293,3 +1293,56 @@ test('reduced-motion mode removes drawer, scrim, hamburger and AI FAB transition
     /@media \(prefers-reduced-motion: reduce\)\s*\{[\s\S]*?\.ai-fab\s*\{[^}]*transition:\s*none\s*!important[^}]*\}[\s\S]*?\.ai-fab:hover,[\s\S]*?\.ai-fab\.ai-open\s*\{[^}]*transform:\s*(?:none|rotate\(45deg\))\s*!important/s,
   );
 });
+
+test('interactive states are real CSS, not the design export\'s dead style-hover attribute', () => {
+  // 設計稿匯出時在 34 個元素上留了 style-hover="…",但 support.js 從來沒有實作這個屬性
+  // —— 導覽列、頁尾、首頁 CTA 的 hover 從上線到現在一次都沒作用過。已全部改成真 CSS。
+  const raw = fs.readFileSync(path.resolve(__dirname, '..', 'index.html'), 'utf8');
+  const leftovers = raw.match(/style-hover="[^"]*"/g) || [];
+  assert.deepEqual(leftovers, [], `style-hover 是沒人實作的死屬性,不可以再出現:${leftovers.join(', ')}`);
+
+  // hover 會改到的宣告必須放在 CSS,不能留在 inline style ——
+  // inline 的優先權壓過 stylesheet,留在 inline 的話 :hover 會「match 到但畫面沒反應」。
+  for (const [cls, decl] of [
+    ['mc-navlink', 'color:#4B5A52'], ['mc-navcta', 'background:#0E1A14'],
+    ['mc-searchbtn', 'background:#0B6B40'], ['mc-ctaprimary', 'background:#0B6B40'],
+    ['mc-footlink', 'color:#9FB0A6'],
+  ]) {
+    assert.match(raw, new RegExp(`\\.${cls}\\s*\\{[^}]*${decl.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}`),
+      `.${cls} 的 ${decl} 應該在 CSS 裡`);
+    const tag = raw.match(new RegExp(`class="${cls}"[^>]*`))[0];
+    assert.doesNotMatch(tag, new RegExp(decl.split(':')[0] + ':'),
+      `.${cls} 的 ${decl.split(':')[0]} 又跑回 inline style 了,hover 會失效`);
+  }
+
+  // 兩個曾經把焦點框清光的地方:搜尋框的 inline outline:none、快捷籤的 all:unset
+  assert.doesNotMatch(raw, /class="mc-searchinput"[^>]*outline:none/);
+  assert.match(raw, /\.mc-searchinput:focus-visible \{[^}]*outline:3px/);
+  assert.match(raw, /\.ifm-chip-btn:focus-visible \{[^}]*outline:3px/);
+  assert.doesNotMatch(raw, /<button[^>]*style="all:unset/);
+});
+
+test('every templated <img> defers to the framework so the preload scanner never fetches "{{ … }}"', () => {
+  // 瀏覽器的 preload scanner 在框架解綁定之前就會照字面去抓 src,
+  // 少一個 loading="lazy" 就是每頁白跑一次 404(/{{ article.cover }})。
+  const raw = fs.readFileSync(path.resolve(__dirname, '..', 'index.html'), 'utf8');
+  const bound = raw.match(/<img[^>]*src="\{\{[^"]*\}\}"[^>]*>/g) || [];
+  assert.ok(bound.length >= 10, `綁定式 <img> 只找到 ${bound.length} 個,這條檢查可能失效了`);
+  for (const tag of bound) {
+    assert.match(tag, /loading="lazy"/, `綁定 src 的 <img> 少了 loading="lazy":${tag.slice(0, 110)}`);
+  }
+
+  // 文章圖的長寬要從資料來(每張圖比例都不一樣,寫死一個值等於自己製造位移)
+  assert.match(raw, /<img src="\{\{ article\.cover \}\}"[^>]*width="\{\{ article\.coverW \}\}" height="\{\{ article\.coverH \}\}"/);
+  assert.match(raw, /<img src="\{\{ b\.src \}\}"[^>]*width="\{\{ b\.w \}\}" height="\{\{ b\.h \}\}"/);
+
+  const news = require('../news.js');
+  for (const a of news._raw) {
+    if (a.cover) assert.ok(a.coverW > 0 && a.coverH > 0, `${a.slug} 的封面沒有尺寸`);
+    for (const lang of ['zh', 'en']) {
+      for (const b of a[lang].blocks) {
+        if (b.type === 'img') assert.ok(b.w > 0 && b.h > 0, `${a.slug}/${lang} 的內文圖 ${b.src} 沒有尺寸`);
+      }
+    }
+  }
+});
