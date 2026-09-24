@@ -4,7 +4,10 @@ const assert = require('node:assert/strict');
 const i18n = require('../i18n.js');
 const { bindingKeys, rawSource, renderMarkup } = require('./helpers/render.cjs');
 
-const { DEFAULT_LANG, LANGS, STORAGE_KEY, detect, dict, storeLang } = i18n;
+const {
+  DEFAULT_LANG, LANGS, STORAGE_KEY, HINT_DISMISSED_KEY,
+  detect, dict, dismissHint, hintDismissed, storeLang, storedLang, suggestLang,
+} = i18n;
 
 const CJK = /[\u4e00-\u9fff]/;
 
@@ -239,6 +242,69 @@ test('detect() survives a localStorage that throws (private browsing)', () => {
   assert.equal(storeLang(writable, 'en'), true);
   assert.equal(writable._store.get(STORAGE_KEY), 'en');
   assert.equal(storeLang(writable, 'ja'), false);
+});
+
+test('suggestLang() nudges only on the two home pages, only people who have not chosen, never toward the page language', () => {
+  const en = { languages: ['en-US', 'en'], language: 'en-US' };
+  const zh = { languages: ['zh-TW', 'zh'], language: 'zh-TW' };
+
+  // 英文瀏覽器開中文首頁 → 建議英文;中文瀏覽器開英文首頁 → 建議中文
+  assert.equal(suggestLang(fakeWindow(en), 'home', 'zh'), 'en');
+  assert.equal(suggestLang(fakeWindow(zh), 'home', 'en'), 'zh');
+  // 瀏覽器語系跟頁面相同 → 什麼都不做
+  assert.equal(suggestLang(fakeWindow(en), 'home', 'en'), null);
+  assert.equal(suggestLang(fakeWindow(zh), 'home', 'zh'), null);
+  // 認不得的瀏覽器語系(只有日文)→ 沒有日文版可以給,不建議
+  assert.equal(suggestLang(fakeWindow({ languages: ['ja'], language: 'ja' }), 'home', 'zh'), null);
+  // 深層頁不出現:那多半是從搜尋結果或分享連結進來的,人已經在看他要的東西
+  for (const page of ['restaurants', 'suppliers', 'cases', 'about', 'contact', 'news', 'article', 'qa', 'legal']) {
+    assert.equal(suggestLang(fakeWindow(en), page, 'zh'), null, page);
+    assert.equal(suggestLang(fakeWindow(zh), page, 'en'), null, page);
+  }
+  // 按過語言鈕(不管選了哪個)→ 他已經知道語言鈕在哪,不再建議
+  assert.equal(suggestLang(fakeWindow({ ...en, stored: 'zh' }), 'home', 'zh'), null);
+  assert.equal(suggestLang(fakeWindow({ ...en, stored: 'en' }), 'home', 'zh'), null);
+  // 關過提示條 → 不再建議
+  const dismissed = fakeWindow(en);
+  dismissed._store.set(HINT_DISMISSED_KEY, '1');
+  assert.equal(suggestLang(dismissed, 'home', 'zh'), null);
+  // localStorage 會 throw(無痕)→ 當作沒存過、沒關過;關閉只能記在記憶體裡(元件的 langHintOff)
+  assert.equal(suggestLang(fakeWindow({ ...en, storageThrows: true }), 'home', 'zh'), 'en');
+  // 頁面語系認不得、沒有 navigator 都不能爆
+  assert.equal(suggestLang(fakeWindow(en), 'home', 'ja'), null);
+  assert.equal(suggestLang({}, 'home', 'zh'), null);
+});
+
+test('dismissing the hint is remembered under its own key and never counts as picking a language', () => {
+  const win = fakeWindow({ languages: ['en-US'], language: 'en-US' });
+  assert.equal(hintDismissed(win), false);
+  assert.equal(dismissHint(win), true);
+  assert.equal(hintDismissed(win), true);
+  // 另開一個 key:關掉提示條 ≠ 選了中文,也 ≠ 選了英文。混用的話,英文訪客按 × 會被記成
+  // 「選了某個語系」,之後裸網址 / 的落地就錯了。
+  assert.notEqual(HINT_DISMISSED_KEY, STORAGE_KEY);
+  assert.equal(win._store.has(STORAGE_KEY), false);
+  assert.equal(storedLang(win), null);
+  assert.equal(detect(win), 'en');
+  // 讀寫失敗(無痕)要回 false,不是丟例外 —— 按 × 的流程不能因此中斷
+  assert.equal(dismissHint(fakeWindow({ storageThrows: true })), false);
+  assert.equal(hintDismissed(fakeWindow({ storageThrows: true })), false);
+});
+
+test('the language hint is written in the language it suggests', () => {
+  // 提示條是給「看不懂這一頁」的人看的:中文頁上的提示條用英文寫、英文頁上的用中文寫。
+  // 元件取的是 dict(建議的語系).langHint,所以 en 字典這組必須是英文、zh 字典這組必須是中文 ——
+  // 放反了,英文訪客會在中文頁上看到一句中文的「要不要切英文?」,等於沒放。
+  const enHint = dict('en').langHint;
+  const zhHint = dict('zh').langHint;
+  const keys = ['regionLabel', 'message', 'switchLabel', 'dismissLabel'];
+  assert.deepEqual(Object.keys(enHint).sort(), [...keys].sort());
+  for (const key of keys) {
+    assert.equal(typeof enHint[key], 'string', `en.langHint.${key}`);
+    assert.ok(enHint[key].trim(), `en.langHint.${key} is empty`);
+    assert.doesNotMatch(enHint[key], CJK, `en.langHint.${key} must be English`);
+    assert.match(zhHint[key], CJK, `zh.langHint.${key} must be Chinese`);
+  }
 });
 
 test('assets and support.js are root-absolute so /en/ pages load the same files', () => {

@@ -378,7 +378,32 @@ test('setLang swaps only the language of the current page', () => {
   assert.deepEqual(routes.at(-1), { page: 'suppliers', lang: 'zh', slug: null });
 });
 
-test('applyPreferredLang only redirects the bare / URL', () => {
+test('applyPreferredLang only redirects the bare / URL, and only for a language the visitor picked', () => {
+  // 送進來的是「按過語言鈕」的紀錄(IfmI18n.storedLang()),沒存過就是 null。
+  // 沒有值(或認不得的值)→ 一律不轉。這條就是 Googlebot(en-US、沒有 localStorage)
+  // 不再被踢去 /en 的保證:它打開 / 看到的必須是中文版,canonical 也必須還是 /。
+  for (const nothing of [null, undefined, '', 'ja', 'en-US']) {
+    const win = createFakeWindow('/');
+    const seen = [];
+    const controller = createHistoryController({ window: win, onRoute: (route) => seen.push(route) });
+    controller.start();
+    assert.equal(controller.applyPreferredLang(nothing), false, String(nothing));
+    assert.deepEqual(win.replaces, [], String(nothing));
+    assert.deepEqual(win.pushes, [], String(nothing));
+    assert.deepEqual(seen, [], String(nothing));
+    assert.equal(win.location.pathname, '/');
+    assert.equal(win.metadata.canonical.getAttribute('href'), `${BASE}/`);
+    assert.equal(win.document.documentElement.getAttribute('lang'), 'zh-Hant');
+  }
+
+  // 存過中文、人就在中文首頁 → 不用動
+  const zhStored = createFakeWindow('/');
+  const zhController = createHistoryController({ window: zhStored, onRoute() {} });
+  zhController.start();
+  assert.equal(zhController.applyPreferredLang('zh'), false);
+  assert.deepEqual(zhStored.replaces, []);
+
+  // 存過英文(按過語言鈕)→ 照他的選擇轉
   const bare = createFakeWindow('/');
   const routes = [];
   const bareController = createHistoryController({ window: bare, onRoute: (route) => routes.push(route) });
@@ -389,10 +414,11 @@ test('applyPreferredLang only redirects the bare / URL', () => {
   assert.deepEqual(bare.replaces, ['/en']);
   assert.deepEqual(bare.pushes, []);
   assert.deepEqual(routes, [{ page: 'home', lang: 'en', slug: null }]);
+  assert.equal(bare.metadata.canonical.getAttribute('href'), `${BASE}/en`);
   assert.equal(bareController.applyPreferredLang('en'), false);
 
-  // 深層網址一律照網址渲染。否則 Googlebot 帶 Accept-Language: en 逛中文頁會被踢走,
-  // 中文版就索引不到了。
+  // 深層網址一律照網址渲染,就算按過語言鈕也一樣 —— 深層網址是從搜尋結果或分享連結進來的,
+  // 網址本身就是「要看哪個語系」的答案。
   for (const deep of ['/restaurants', '/suppliers', '/cases', '/about', '/contact']) {
     const win = createFakeWindow(deep);
     const seen = [];
@@ -413,6 +439,42 @@ test('applyPreferredLang only redirects the bare / URL', () => {
     assert.equal(controller.applyPreferredLang('zh'), false, already);
     assert.equal(win.location.pathname, already);
   }
+});
+
+test('landing on / with an English browser: no redirect unless the visitor stored a choice, only a suggestion', () => {
+  // 用真的 i18n.js 走一遍 componentDidMount 做的兩步:
+  //   applyPreferredLang(storedLang(window)) → 要不要轉
+  //   suggestLang(window, page, lang)        → 要不要出提示條
+  const i18n = require('../i18n.js');
+  const googlebot = createFakeWindow('/');
+  googlebot.navigator = { languages: ['en-US'], language: 'en-US' };
+  const controller = createHistoryController({ window: googlebot, onRoute() {} });
+  controller.start();
+
+  assert.equal(controller.applyPreferredLang(i18n.storedLang(googlebot)), false);
+  assert.equal(googlebot.location.pathname, '/');
+  assert.deepEqual(googlebot.replaces, []);
+  assert.equal(googlebot.metadata.canonical.getAttribute('href'), `${BASE}/`);
+  assert.equal(googlebot.metadata.hreflangZh.getAttribute('href'), `${BASE}/`);
+  assert.equal(googlebot.document.documentElement.getAttribute('lang'), 'zh-Hant');
+  // 瀏覽器語系只拿來「建議」
+  assert.equal(i18n.suggestLang(googlebot, 'home', 'zh'), 'en');
+
+  // 同一個人按過語言鈕(存了 en)之後再來 → 照他的選擇轉,也不再出提示條
+  googlebot.storage.set(i18n.STORAGE_KEY, 'en');
+  assert.equal(controller.applyPreferredLang(i18n.storedLang(googlebot)), true);
+  assert.deepEqual(googlebot.replaces, ['/en']);
+  assert.equal(i18n.suggestLang(googlebot, 'home', 'en'), null);
+
+  // 按 × 關掉提示條 ≠ 選了語系:不轉、也不再建議
+  const dismissed = createFakeWindow('/');
+  dismissed.navigator = { languages: ['en-US'], language: 'en-US' };
+  const dismissedController = createHistoryController({ window: dismissed, onRoute() {} });
+  dismissedController.start();
+  assert.equal(i18n.dismissHint(dismissed), true);
+  assert.equal(dismissedController.applyPreferredLang(i18n.storedLang(dismissed)), false);
+  assert.deepEqual(dismissed.replaces, []);
+  assert.equal(i18n.suggestLang(dismissed, 'home', 'zh'), null);
 });
 
 test('history controller focuses once after real navigation and popstate but not same-route or modified clicks', () => {
@@ -567,14 +629,22 @@ test('index loads i18n and routing before support and wires History API navigati
   assert.match(source, /this\._routingController\.navigate\(p, event, null, slug\)/);
   assert.match(source, /this\._routingController\.setLang\(lang\)/);
   // 自動落地只在裸網址 /,由 applyPreferredLang 自己把關(見 routing.js);
-  // 送進去的語系必須是 IfmI18n.detect() 的結果,而且要在 controller.start() 之後才跑。
+  // 🔴 送進去的必須是「按過語言鈕」的紀錄(IfmI18n.storedLang()),絕不能是瀏覽器語系
+  //    (detect() / fromNavigator() 都會看 navigator.languages)。Googlebot 以 en-US 渲染、
+  //    又沒有 localStorage —— 以前送 detect() 進去,它打開 / 就被 replaceState 到 /en,
+  //    canonical 跟著變 /en,跟 hreflang 互相矛盾(2026-09-24 正式站實測)。
+  //    而且要在 controller.start() 之後才跑。
   const mountStart = source.indexOf('componentDidMount() {');
   const mount = source.slice(mountStart, source.indexOf('\n  }', mountStart));
   assert.ok(mountStart > 0, 'component must define componentDidMount()');
-  assert.match(mount, /window\.IfmI18n\.detect\(window\)/);
-  assert.match(mount, /this\._routingController\.applyPreferredLang\(/);
-  assert.ok(mount.indexOf('this._routingController.start()') < mount.indexOf('window.IfmI18n.detect(window)'));
-  assert.ok(mount.indexOf('window.IfmI18n.detect(window)') < mount.indexOf('applyPreferredLang('));
+  assert.match(mount, /const stored = window\.IfmI18n\.storedLang\(window\);/);
+  assert.match(mount, /this\._routingController\.applyPreferredLang\(stored\)/);
+  assert.doesNotMatch(mount, /\.detect\(|fromNavigator\(|navigator\.language/);
+  assert.ok(mount.indexOf('this._routingController.start()') < mount.indexOf('storedLang(window)'));
+  assert.ok(mount.indexOf('storedLang(window)') < mount.indexOf('applyPreferredLang(stored)'));
+  // 整個 index.html 只有這一個呼叫點 —— 不能在別處(例如 popstate、換頁)又偷偷依瀏覽器語系轉
+  assert.equal((source.match(/applyPreferredLang\(/g) || []).length, 1);
+  assert.doesNotMatch(source, /IfmI18n\.detect\(/);
   assert.match(source, /isRestaurants:\s*page === 'restaurants'/);
   assert.match(source, /isSuppliers:\s*page === 'suppliers'/);
 });

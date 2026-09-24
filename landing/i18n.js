@@ -11,12 +11,18 @@
 })(typeof window !== 'undefined' ? window : null, function () {
   var LANGS = ['zh', 'en'];
   var DEFAULT_LANG = 'zh';
+  // 使用者「按過語言鈕」的紀錄。只有它能讓裸網址 / 自動轉(見 routing.js 的 applyPreferredLang)。
   var STORAGE_KEY = 'ifm.lang';
+  // 使用者按過語系提示條的 ×。刻意跟 STORAGE_KEY 分開 —— 關掉提示條不代表選了哪個語系。
+  var HINT_DISMISSED_KEY = 'ifm.langHintDismissed';
 
   /* ==== DICT:BEGIN ====
      中英文案字典。markup 用 {{ L.xxx.yyy }} 綁定,程式碼用 IfmI18n.dict(lang)。
      zh 與 en 的 key 結構必須完全一致 —— tests/i18n.test.cjs 會擋。
-     改文案就直接改這裡。 */
+     改文案就直接改這裡。
+     ⚠️ langHint 是唯一的例外:它顯示在「另一個語系」的頁面上(中文頁給英文訪客看英文那組、
+        英文頁給中文訪客看中文那組),所以 zh.langHint 是中文、en.langHint 是英文,
+        元件取的是 dict(建議的語系).langHint,不是 L。 */
   var DICT = {
     "zh": {
       "nav": {
@@ -31,6 +37,12 @@
         "contact": "聯絡我們",
         "cta": "填寫食材需求",
         "skipToContent": "跳到主要內容"
+      },
+      "langHint": {
+        "regionLabel": "語言建議",
+        "message": "習慣看中文嗎？",
+        "switchLabel": "切換到中文版",
+        "dismissLabel": "關閉，不再顯示"
       },
       "home": {
         "heroSubA": "餐廳、團膳、學校、團購主都適用。",
@@ -669,6 +681,12 @@
         "contact": "Contact",
         "cta": "Post a Request",
         "skipToContent": "Skip to main content"
+      },
+      "langHint": {
+        "regionLabel": "Language suggestion",
+        "message": "Prefer English?",
+        "switchLabel": "Switch to English",
+        "dismissLabel": "Dismiss, don't show again"
       },
       "home": {
         "heroSubA": "For restaurants, catering operations, schools, and group-buying hosts.",
@@ -1346,8 +1364,44 @@
   }
 
   // 使用者按過語言鈕就聽他的;沒按過才看瀏覽器設定;都沒有就中文。
+  // 🔴 不要拿它的結果去轉址:它會看瀏覽器語系,Googlebot(en-US)會因此被轉走。
+  //    裸網址 / 的自動落地只吃 storedLang(),瀏覽器語系只給 suggestLang() 當「建議」。
   function detect(win) {
     return storedLang(win) || fromNavigator(win) || DEFAULT_LANG;
+  }
+
+  // 按過提示條的 × 沒有。localStorage 會 throw 的瀏覽器(無痕)當作沒按過 ——
+  // 那種瀏覽器只能記在記憶體裡(元件的 langHintOff),重新整理之後會再出現一次,沒辦法。
+  function hintDismissed(win) {
+    try {
+      return win.localStorage.getItem(HINT_DISMISSED_KEY) === '1';
+    } catch (e) {
+      return false;
+    }
+  }
+
+  function dismissHint(win) {
+    try {
+      win.localStorage.setItem(HINT_DISMISSED_KEY, '1');
+      return true;
+    } catch (e) {
+      return false;
+    }
+  }
+
+  // 首頁頂端的語系提示條要建議哪個語系;不該出現就回 null。全部成立才建議:
+  //   1. 在首頁(/ 或 /en)。深層頁多半是從搜尋結果或分享連結進來的,人已經在看他要的東西,
+  //      而且 Googlebot 以 en-US 渲染每一頁 —— 只放首頁,它在中文頁上看到的英文句子就只有這一處。
+  //   2. 沒按過語言鈕(ifm.lang 沒有值)。按過的人在 / 會被自動轉,也知道語言鈕在哪。
+  //   3. 沒按過提示條的 ×(關過就不再煩人家)。
+  //   4. 瀏覽器語系認得出來,而且跟這一頁不同。
+  // 🔴 這裡只「建議」,絕不轉址。為什麼不能依瀏覽器語系轉,見 routing.js 的 applyPreferredLang。
+  function suggestLang(win, page, pageLang) {
+    var current = normalizeLang(pageLang);
+    if (page !== 'home' || !current) return null;
+    if (storedLang(win) || hintDismissed(win)) return null;
+    var browser = fromNavigator(win);
+    return browser && browser !== current ? browser : null;
   }
 
   function dict(lang) {
@@ -1435,11 +1489,14 @@
     DEFAULT_LANG: DEFAULT_LANG,
     LANGS: LANGS,
     STORAGE_KEY: STORAGE_KEY,
+    HINT_DISMISSED_KEY: HINT_DISMISSED_KEY,
     CHANGE_EVENT: CHANGE_EVENT,
     current: current,
     detect: detect,
+    dismissHint: dismissHint,
     emitChange: emitChange,
     format: format,
+    hintDismissed: hintDismissed,
     onChange: onChange,
     dict: dict,
     fromNavigator: fromNavigator,
@@ -1447,6 +1504,7 @@
     other: other,
     storeLang: storeLang,
     storedLang: storedLang,
+    suggestLang: suggestLang,
     translateAll: translateAll,
     _dict: DICT,
   };

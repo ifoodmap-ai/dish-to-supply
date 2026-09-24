@@ -85,14 +85,36 @@
     color:#166534;
     font-weight:800;
     text-decoration:none;
-    box-shadow:0 8px 28px rgba(10,21,16,.24);
     transform:translateY(-160%);
     transition:transform .16s ease;
   }
+  /* 陰影只在真的露出來時才有:藏在畫面外時,28px 的模糊陰影會從上緣滲進視窗約 20px,
+     在頁面最頂端(語系提示條那一列)留下一團灰影。 */
   .skip-link:focus-visible {
     transform:translateY(0);
+    box-shadow:0 8px 28px rgba(10,21,16,.24);
     outline:3px solid #166534;
     outline-offset:3px;
+  }
+  /* ── 語系提示條(只在執行期出現,規則見 i18n.js 的 suggestLang)──────────────────
+     跟著文件流的一條細橫條:不 fixed、不蓋住內容,捲下去就走,sticky header 照常貼頂。
+     配色全部取自站上既有色票:底 #F3FAF6、線 #E6EAE7、字 #0E1A14、連結 #0B6B40(對底 6.2:1)、
+     連結 hover #074E2E、× #4B5A52(6.9:1)。字 16px、兩個點擊區 44px —— 手機也一樣:
+     它在 main 地標外面,m-compact 那套「main 裡 16px 以下一律抬到 16px」管不到它,所以直接寫死。 */
+  /* 焦點框 3px、offset 0,所以上下各留 3px padding:框剛好落在橫條裡,不會被視窗上緣切掉、
+     也不會被下面的 sticky header(z-index 60)蓋住。連結左右 4px padding 用負 margin 抵銷,
+     框不會貼著字,版面位置也不動。 */
+  .ifm-langhint { background:#F3FAF6; border-bottom:1px solid #E6EAE7; color:#0E1A14; }
+  .ifm-langhint__inner { max-width:1240px; margin:0 auto; padding:3px 26px; display:flex; align-items:center; gap:8px; }
+  .ifm-langhint__msg { flex:1 1 auto; min-width:0; margin:0; display:flex; flex-wrap:wrap; align-items:center; column-gap:12px; font-size:16px; line-height:1.4; }
+  .ifm-langhint__switch { display:inline-flex; align-items:center; gap:6px; min-height:44px; padding:0 4px; margin:0 -4px; font-size:16px; font-weight:700; color:#0B6B40; text-decoration:underline; text-underline-offset:3px; border-radius:6px; }
+  .ifm-langhint__switch:hover { color:#074E2E; }
+  .ifm-langhint__close { flex:0 0 44px; width:44px; height:44px; display:inline-flex; align-items:center; justify-content:center; padding:0; border:0; border-radius:12px; background:transparent; color:#4B5A52; font:inherit; font-size:24px; line-height:1; cursor:pointer; }
+  .ifm-langhint__close:hover { background:#E6EAE7; color:#0E1A14; }
+  .ifm-langhint__switch:focus-visible,
+  .ifm-langhint__close:focus-visible { outline:3px solid #0B6B40; outline-offset:0; }
+  @media (max-width:768px) {
+    .ifm-langhint__inner { padding:3px 16px; }
   }
   #main-content { scroll-margin-top:96px; }
   #main-content:focus-visible {
@@ -679,6 +701,24 @@
 <div ref="{{ rootRef }}" style="font-family:'Noto Sans TC',sans-serif; color:#0e1a12; background:#fff;">
 
   <a class="skip-link" href="#main-content">{{ L.nav.skipToContent }}</a>
+
+  <!-- ============ LANGUAGE HINT ============ -->
+  <!-- 語系提示條:瀏覽器語系跟頁面不同、又還沒表態過的訪客,在首頁頂端建議切換(規則在 i18n.js 的
+       suggestLang;以前是直接自動轉址,2026-09-24 改掉,理由見 routing.js 的 applyPreferredLang)。
+       · 字用「建議的那個語系」寫 —— langHint.* 取自 dict(建議語系),不是 L:看不懂這一頁的人才需要它
+       · 不需要時整塊不渲染(不是藏起來);預渲染的語系跟頁面一致,不會出現,prerender.mjs 也會再剝一次
+       · 放在 main 地標外面:它不是頁面內容。skip link 仍是第一個 Tab 停點 -->
+  <sc-if value="{{ showLangHint }}">
+    <div class="ifm-langhint" role="region" aria-label="{{ langHint.regionLabel }}" lang="{{ langHintTag }}" data-nosnippet>
+      <div class="ifm-langhint__inner">
+        <p class="ifm-langhint__msg">
+          <span>{{ langHint.message }}</span>
+          <a href="{{ hrefLangHint }}" onClick="{{ acceptLangHint }}" class="ifm-langhint__switch">{{ langHint.switchLabel }}<span aria-hidden="true">→</span></a>
+        </p>
+        <button type="button" onClick="{{ dismissLangHint }}" aria-label="{{ langHint.dismissLabel }}" class="ifm-langhint__close"><span aria-hidden="true">×</span></button>
+      </div>
+    </div>
+  </sc-if>
 
   <!-- ============ HEADER ============ -->
   <!-- 依 Claude Design「食材地圖官網」設計稿(食材供應商平台設計/食材地圖官網.dc.html)。
@@ -1954,6 +1994,10 @@ class Component extends DCLogic {
     countP: 0,
     cw: typeof window !== 'undefined' ? window.innerWidth : 1200,
     menuOpen: false,
+    // 語系提示條在這一頁被收掉了(按了切換、按了 ×、或按了 header 的語言鈕)。
+    // localStorage 本來就會記,這裡再記一份在記憶體:無痕視窗寫不進 localStorage,
+    // 沒有這個旗標的話按了 × 也收不掉。
+    langHintOff: false,
   };
 
   mapRef = React.createRef();
@@ -2134,14 +2178,18 @@ class Component extends DCLogic {
         focusPage: (page) => this.focusActivePage(page),
       });
       this._routingController.start();
-      // 第一次從裸網址 / 進來時,依「按過的語言 → 瀏覽器語系」自動落到對的版本(replaceState,不留歷史)。
+      // 第一次從裸網址 / 進來時,只有「按過語言鈕」的人(localStorage['ifm.lang'])會被自動轉到
+      // 他選的版本(replaceState,不留歷史)。
+      // 🔴 不可以改回依瀏覽器語系轉:Googlebot 以 en-US 渲染,會看到「/ 的內容是英文、
+      //    canonical 指向 /en」,跟 hreflang 互相矛盾。只是瀏覽器語系不同的人,
+      //    改由首頁頂端的提示條建議(renderVals 的 showLangHint)。
       // 深層網址一律照網址渲染,理由見 routing.js 的 applyPreferredLang。
       if (window.IfmI18n) {
-        const preferred = window.IfmI18n.detect(window);
+        const stored = window.IfmI18n.storedLang(window);
         // 自動落地跟「按語言鈕」一樣要發事件。右下角 AI 助手在 React 外面、開機時就把字寫死了,
         // 少了這個事件,英文訪客從 / 進來會看到英文頁面配一個中文的 AI 助手。
-        if (this._routingController.applyPreferredLang(preferred)) {
-          window.IfmI18n.emitChange(window, preferred);
+        if (this._routingController.applyPreferredLang(stored)) {
+          window.IfmI18n.emitChange(window, stored);
         }
       }
     }
@@ -2227,16 +2275,51 @@ class Component extends DCLogic {
   }
 
   // 切語系 = 換到同一頁的另一個語系網址。順便把選擇記下來,下次從裸網址 / 進來就直接落在這一版。
+  // 選過語系就是表態過了:語系提示條一併收掉(localStorage 寫不進去的無痕視窗也一樣)。
   switchLang(lang) {
     return (event) => {
       if (event && typeof event.preventDefault === 'function') event.preventDefault();
       if (window.IfmI18n) window.IfmI18n.storeLang(window, lang);
       if (this._routingController) this._routingController.setLang(lang);
       else this.setState({ lang: lang });
-      this.setState({ menuOpen: false });
+      this.setState({ menuOpen: false, langHintOff: true });
       // React 外面的東西(右下角 AI 助手、表單狀態訊息)沒有 state 可以重繪,靠這個事件自己換字
       if (window.IfmI18n) window.IfmI18n.emitChange(window, lang);
     };
+  }
+
+  // 語系提示條的「切換」= 跟按 header 的語言鈕完全同一件事(存下偏好、換網址、發事件),
+  // 所以之後再從裸網址 / 進來會自動轉過去。
+  // 它是真的 <a href>:cmd/ctrl/shift 點下去交給瀏覽器開新分頁,這一頁什麼都不動。
+  acceptLangHint(lang) {
+    const switchTo = this.switchLang(lang);
+    return (event) => {
+      if (event && (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey)) return;
+      this.handOffLangHintFocus(event);
+      switchTo(event);
+    };
+  }
+
+  // 語系提示條的 ×:收起來,並記住「關過了」(另一個 key,不是 ifm.lang ——
+  // 關掉提示條不代表選了中文,也不代表選了英文,裸網址 / 的落地不受影響)。
+  dismissLangHint(event) {
+    if (event && typeof event.preventDefault === 'function') event.preventDefault();
+    this.handOffLangHintFocus(event);
+    if (window.IfmI18n && typeof window.IfmI18n.dismissHint === 'function') window.IfmI18n.dismissHint(window);
+    this.setState({ langHintOff: true });
+  }
+
+  // 提示條一收掉,原本在它身上的焦點就掉回 <body> —— 鍵盤與螢幕閱讀器使用者會迷路。
+  // 交給 header 的 logo,也就是原本再按一次 Tab 會到的地方。
+  // 只在焦點原本就在提示條裡時才搬(Safari 用滑鼠點按鈕不會把焦點給按鈕,那時就不要去動它)。
+  handOffLangHintFocus(event) {
+    const el = event && event.currentTarget;
+    const bar = el && typeof el.closest === 'function' ? el.closest('.ifm-langhint') : null;
+    if (!bar || !bar.contains(document.activeElement)) return;
+    requestAnimationFrame(() => {
+      const next = document.querySelector('header .mc-logo') || document.getElementById('main-content');
+      if (next && typeof next.focus === 'function') next.focus({ preventScroll: true });
+    });
   }
 
   go(p, slug) {
@@ -2494,6 +2577,12 @@ class Component extends DCLogic {
       (window.IfmRouting ? window.IfmRouting.pageToPath(target, targetLang || lang, slug) : '/');
     const anchorHref = (id) => href('home') + '#' + id;
 
+    /* 語系提示條:要建議哪個語系(不出現就是 null),規則全在 i18n.js 的 suggestLang ——
+       首頁限定、沒按過語言鈕、沒按過 ×、瀏覽器語系跟頁面不同。
+       字取自「建議的那個語系」的字典,不是 L:看不懂這一頁的人,才是要讀提示條的人。 */
+    const hintLang = !this.state.langHintOff && i18n && typeof i18n.suggestLang === 'function'
+      ? i18n.suggestLang(window, page, lang) : null;
+
     const phrases = list('rotating');
     const rotating = phrases.length ? phrases[tick % phrases.length] : { pre: '', hl: '', post: '' };
 
@@ -2630,6 +2719,14 @@ class Component extends DCLogic {
       langFlag: otherLang === 'en' ? '/assets/flag-gb.svg' : '/assets/flag-tw.svg',
       switchLang: this.switchLang(otherLang),
       switchLangMobile: closeMenuThen(this.switchLang(otherLang)),
+
+      /* 語系提示條(markup 在 header 前面那塊 LANGUAGE HINT) */
+      showLangHint: !!hintLang,
+      langHint: hintLang ? (i18n.dict(hintLang).langHint || {}) : {},
+      langHintTag: hintLang === 'en' ? 'en' : 'zh-Hant',
+      hrefLangHint: hintLang ? href2(page, this.state.slug, hintLang) : href('home'),
+      acceptLangHint: hintLang ? this.acceptLangHint(hintLang) : null,
+      dismissLangHint: (event) => this.dismissLangHint(event),
 
       /* 首頁內容(文案 1:1 取自設計稿,文字已抽進字典) */
       rotating,

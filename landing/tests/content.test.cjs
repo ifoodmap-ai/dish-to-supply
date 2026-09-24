@@ -1346,3 +1346,61 @@ test('every templated <img> defers to the framework so the preload scanner never
     }
   }
 });
+
+test('the language hint is a dismissible region above the header, outside <main>, labelled in the language it suggests', () => {
+  // 用原始碼(綁定沒代換)來驗:提示條的字全部是 {{ langHint.* }},不是 L.*
+  const raw = fs.readFileSync(path.resolve(__dirname, '..', 'index.html'), 'utf8');
+  const hintAt = raw.indexOf('<!-- ============ LANGUAGE HINT ============ -->');
+  const skipAt = raw.indexOf('<a class="skip-link"');
+  const headerAt = raw.indexOf('<!-- ============ HEADER ============ -->');
+  const mainAt = raw.indexOf('<main id="main-content"');
+  assert.ok(hintAt !== -1, '找不到 LANGUAGE HINT 區段');
+  // skip link 仍是第一個 Tab 停點;提示條在頁面最頂端、header 之前,也就在 <main> 外面(它不是頁面內容)
+  assert.ok(skipAt < hintAt && hintAt < headerAt && headerAt < mainAt, '順序必須是 skip link → 提示條 → header → main');
+  const hint = raw.slice(hintAt, headerAt);
+
+  // 不需要時整塊不渲染(連隱藏的節點都沒有),預渲染也就不可能把它烤進靜態檔
+  assert.match(hint, /<sc-if value="\{\{ showLangHint \}\}">/);
+  const region = (hint.match(/<div class="ifm-langhint"[^>]*>/) || [''])[0];
+  assert.match(region, /role="region"/);
+  assert.match(region, /aria-label="\{\{ langHint\.regionLabel \}\}"/);
+  // 內容的語言跟頁面不同:lang 標成建議的那個語系,螢幕閱讀器才會用對的發音
+  assert.match(region, /lang="\{\{ langHintTag \}\}"/);
+  // 這句話不該變成 Google 搜尋結果的摘要(Googlebot 以 en-US 渲染,看得到中文首頁上的英文提示條)
+  assert.match(region, /data-nosnippet/);
+  // 切換 = 真的 <a href>(新分頁開啟、右鍵複製連結都正常);關閉 = <button type="button">
+  assert.match(hint, /<a href="\{\{ hrefLangHint \}\}" onClick="\{\{ acceptLangHint \}\}"/);
+  assert.match(hint, /<button type="button" onClick="\{\{ dismissLangHint \}\}" aria-label="\{\{ langHint\.dismissLabel \}\}"/);
+  // 箭頭與 × 是裝飾,不念出來
+  assert.match(hint, /<span aria-hidden="true">→<\/span>/);
+  assert.match(hint, /<span aria-hidden="true">×<\/span>/);
+  // 🔴 字不可以綁 L.*:L 是「這一頁」的語系,正好是讀提示條的人看不懂的那個
+  assert.doesNotMatch(hint, /\{\{ L\./);
+  assert.match(component, /langHint: hintLang \? \(i18n\.dict\(hintLang\)\.langHint \|\| \{\}\) : \{\}/);
+
+  // CSS:字 16px、兩個點擊區 44px(手機也一樣 —— m-compact 的 16px 下限只管 main,管不到這裡)、
+  // 鍵盤焦點看得見、配色只用站上既有的色票
+  const rule = (selector) => {
+    const m = raw.match(new RegExp(selector.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '\\s*\\{([^}]*)\\}'));
+    assert.ok(m, `找不到 ${selector} 的 CSS`);
+    return m[1];
+  };
+  assert.match(rule('.ifm-langhint__msg'), /font-size:16px/);
+  assert.match(rule('.ifm-langhint__switch'), /min-height:44px/);
+  assert.match(rule('.ifm-langhint__switch'), /font-size:16px/);
+  assert.match(rule('.ifm-langhint__close'), /width:44px/);
+  assert.match(rule('.ifm-langhint__close'), /height:44px/);
+  assert.match(raw, /\.ifm-langhint__switch:focus-visible,\s*\.ifm-langhint__close:focus-visible\s*\{[^}]*outline:3px solid #0B6B40/);
+  assert.doesNotMatch(rule('.ifm-langhint'), /position:\s*(fixed|absolute)/, '提示條跟著文件流,不可以蓋住內容');
+  for (const [fg, bg] of [
+    ['#0E1A14', '#F3FAF6'], // 內文
+    ['#0B6B40', '#F3FAF6'], // 切換連結
+    ['#074E2E', '#F3FAF6'], // 切換連結 hover
+    ['#4B5A52', '#F3FAF6'], // ×
+    ['#0E1A14', '#E6EAE7'], // × hover
+  ]) {
+    assert.ok(contrastRatio(fg, bg) >= 4.5, `${fg} on ${bg} = ${contrastRatio(fg, bg).toFixed(2)}`);
+  }
+  // 焦點框對底色至少 3:1(WCAG 1.4.11)
+  assert.ok(contrastRatio('#0B6B40', '#F3FAF6') >= 3);
+});

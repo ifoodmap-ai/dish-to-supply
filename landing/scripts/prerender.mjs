@@ -126,6 +126,12 @@ const RUNTIME_ONLY_NODES = [
   //    而且靜態層在水合時整個會被交接 shim 刪掉、地圖由 drawMap() 重畫。
   //    所以：序列化前把它清掉 —— 產出變成決定性的，首頁也少 178 KB。
   'div[aria-hidden="true"][style*="pointer-events"] > svg',
+  // 🔴 語系提示條（首頁頂端「Prefer English? Switch to English →」那條）：它看的是**訪客的
+  //    瀏覽器語系與 localStorage**，是每個人不同的執行期狀態，不是頁面內容，不跑 JS 的爬蟲
+  //    不該看到它。正常情況下它根本不會出現 —— bootstrapScript() 把瀏覽器語系鎖成跟路由
+  //    同一個語系、又清空了 storage，i18n.js 的 suggestLang() 因此回 null。這裡再剝一次是
+  //    保險：將來有人改了語系設定或提示條規則，也烤不進去（verifyOutput 會再用 class 驗一次）。
+  '.ifm-langhint',
 ];
 
 // 捲動狀態 class：只反映「使用者捲到哪」，不是頁面內容

@@ -1,5 +1,5 @@
-// 22 條公開網址 × 真實瀏覽器,逐條檢查:語系、title、有沒有未解析的 {{ }}、有沒有橫向溢出、
-// 英文頁有沒有殘留中文、內部連結前綴對不對
+// 22 條公開網址 × 真實瀏覽器,逐條檢查:語系、canonical、h1 的語言、語系提示條、title、
+// 有沒有未解析的 {{ }}、有沒有橫向溢出、英文頁有沒有殘留中文、內部連結前綴對不對
 import { spawn } from 'node:child_process';
 import { rmSync } from 'node:fs';
 const BASE = process.argv[2];
@@ -28,15 +28,16 @@ ws.onmessage = (e) => { const m = JSON.parse(e.data); if (m.id && pending.has(m.
 const send = (method, params = {}) => new Promise((res) => { const i = ++id; pending.set(i, res); ws.send(JSON.stringify({ id: i, method, params })); });
 await send('Page.enable'); await send('Runtime.enable');
 await send('Emulation.setDeviceMetricsOverride', { width:1280, height:900, deviceScaleFactor:1, mobile:false });
-// 固定用「瀏覽器偏好英文」來跑 —— 這樣中文深層網址若被誤轉,會立刻露餡
+// 固定用「瀏覽器偏好英文、什麼都沒存過」來跑 —— 這就是 Googlebot 渲染時的語系設定
+// (navigator 是 en-US、每次都沒有 localStorage)。中文網址(包括裸網址 /)若被誤轉,會立刻露餡。
 await send('Emulation.setUserAgentOverride', { userAgent:'', acceptLanguage:'en-US,en' });
 await send('Page.addScriptToEvaluateOnNewDocument', { source:
   `Object.defineProperty(navigator,'languages',{get:()=>['en-US','en']});`
   + `Object.defineProperty(navigator,'language',{get:()=>'en-US'});`
-  + `try{localStorage.removeItem('ifm.lang')}catch(e){}` });
+  + `try{localStorage.removeItem('ifm.lang');localStorage.removeItem('ifm.langHintDismissed')}catch(e){}` });
 
 let fails = 0;
-console.log('路徑'.padEnd(18), '語系', '溢出', '未解析', '殘中', '連結前綴', 'title');
+console.log('路徑'.padEnd(18), '語系', 'canon', 'h1', '提示條', '溢出', '未解析', '殘中', '連結前綴', 'title');
 for (const [path, wantLang] of ROUTES) {
   await send('Page.navigate', { url: BASE + path });
   await sleep(3000);
@@ -46,22 +47,39 @@ for (const [path, wantLang] of ROUTES) {
     + `let zhLeft=0;const w=document.createTreeWalker(document.body,NodeFilter.SHOW_TEXT);let n;`
     + `while((n=w.nextNode())){const el=n.parentElement;if(!el||el.tagName==='SCRIPT'||el.tagName==='STYLE')continue;`
     + `const t=(n.nodeValue||'').trim();if(t&&cjk.test(t)&&t!=='中文'&&t!=='食')zhLeft++;}`
-    + `const langAnchor=document.querySelector('header a[lang]');`
-    + `const internal=[...document.querySelectorAll('a[href^="/"]')].map(a=>a.getAttribute('href')).filter(h=>h!==langAnchor?.getAttribute('href'));`
+    // 語言切換連結(header 的語言鈕、首頁的語系提示條)本來就指向另一個語系,不算前綴錯誤
+    + `const internal=[...document.querySelectorAll('a[href^="/"]')].filter(a=>!a.matches('header a[lang], .ifm-langhint a')).map(a=>a.getAttribute('href'));`
     + `const wrongPrefix=internal.filter(h=>document.documentElement.lang==='en'?!h.startsWith('/en'):h.startsWith('/en')).length;`
+    + `const canon=document.querySelector('link[rel="canonical"]');`
+    + `const h1=[...document.querySelectorAll('h1')].find(h=>{const r=h.getBoundingClientRect();return r.width>0&&r.height>0;});`
+    + `const hint=document.querySelector('.ifm-langhint');`
     + `return{path:location.pathname,lang:document.documentElement.lang,title:document.title,`
-    + `overflow:document.documentElement.scrollWidth>innerWidth,unresolved,zhLeft,wrongPrefix};})()` });
+    + `overflow:document.documentElement.scrollWidth>innerWidth,unresolved,zhLeft,wrongPrefix,`
+    + `canonicalPath:canon?new URL(canon.getAttribute('href'),location.href).pathname:null,`
+    + `h1Cjk:h1?cjk.test(h1.textContent):null,`
+    + `hint:hint?hint.getAttribute('lang'):null,`
+    + `hintCjk:hint?cjk.test(hint.textContent+(hint.getAttribute('aria-label')||'')):null,`
+    + `hintInMain:hint?!!hint.closest('main'):false};})()` });
   const v = ev.result?.result?.value;
-  // 規則:裸網址 / 允許依瀏覽器語系自動落到 /en(這裡刻意用偏好英文的瀏覽器跑);
-  // 深層網址一律必須留在原地、照網址的語系渲染。
-  const rootRedirectOk = path === '/' && v.path === '/en' && v.lang === 'en';
-  const langOk = rootRedirectOk || ((v.lang === 'en' ? 'en' : 'zh') === wantLang && v.path === path);
-  const zhOk = (wantLang === 'zh' && !rootRedirectOk) ? true : v.zhLeft === 0;
-  const ok = langOk && !v.overflow && v.unresolved === 0 && zhOk && v.wrongPrefix === 0;
+  // 規則(2026-09-24 起):裸網址 / 不再依瀏覽器語系自動轉,只有按過語言鈕(localStorage['ifm.lang'])
+  // 的人才轉 —— 這裡什麼都沒存,所以每一條(包括 /)都必須留在原地、照網址的語系渲染,
+  // canonical 指回自己、h1 是該語系。以前 / 會被轉去 /en,Googlebot 看到的就是「/ 是英文、canonical 是 /en」。
+  const langOk = (v.lang === 'en' ? 'en' : 'zh') === wantLang && v.path === path;
+  const canonOk = v.canonicalPath === path;
+  const h1Ok = v.h1Cjk === (wantLang === 'zh');
+  // 語系提示條只出現在中文首頁 /(瀏覽器偏好英文、頁面是中文),要用英文寫、在 main 外面。
+  // /en 跟瀏覽器同語系、深層頁不出提示條 —— 其他 21 條一律不可以有。
+  const wantHint = path === '/' ? 'en' : null;
+  const hintOk = v.hint === wantHint && (!v.hint || (!v.hintCjk && !v.hintInMain));
+  const zhOk = wantLang === 'zh' ? true : v.zhLeft === 0;
+  const ok = langOk && canonOk && h1Ok && hintOk && !v.overflow && v.unresolved === 0 && zhOk && v.wrongPrefix === 0;
   if (!ok) fails++;
   console.log(
     (ok ? '✅ ' : '❌ ') + path.padEnd(16),
     (langOk ? v.lang : `${v.lang}@${v.path}!`).padEnd(5),
+    (canonOk ? 'ok' : `${v.canonicalPath}!`).padEnd(6),
+    (h1Ok ? 'ok' : 'NG!').padEnd(3),
+    (hintOk ? (v.hint || '-') : `${v.hint || '無'}!`).padEnd(6),
     (v.overflow ? 'YES' : '-').padEnd(5),
     String(v.unresolved).padEnd(7),
     (wantLang === 'zh' ? '-' : String(v.zhLeft)).padEnd(5),

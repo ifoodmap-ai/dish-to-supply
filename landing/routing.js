@@ -48,6 +48,10 @@
   var htmlLangByLang = { zh: 'zh-Hant', en: 'en' };
   var ogLocaleByLang = { zh: 'zh_TW', en: 'en_US' };
 
+  function isKnownLang(lang) {
+    return lang === DEFAULT_LANG || Object.prototype.hasOwnProperty.call(PREFIXED_LANGS, lang);
+  }
+
   function normalizePath(pathname) {
     var path = typeof pathname === 'string' ? pathname : '/';
     path = path.split(/[?#]/, 1)[0].replace(/\/+$/, '');
@@ -201,10 +205,17 @@
         renderRoute({ page: current.page, lang: lang, slug: current.slug }, false);
         return true;
       },
-      // 只在「裸網址 /」時依瀏覽器語系自動落地,而且不留歷史紀錄(replaceState)。
-      // 深層網址一律照網址渲染 —— 否則 Googlebot 帶 Accept-Language: en 逛中文頁會被踢走,
-      // 中文版就索引不到了。
+      // 裸網址 / 的自動落地,不留歷史紀錄(replaceState)。
+      // 🔴 lang 必須是「使用者按過語言鈕」的紀錄(IfmI18n.storedLang()),沒存過就是 null → 不轉。
+      //    絕不可以傳瀏覽器語系進來(IfmI18n.detect() / fromNavigator() 都會看 navigator):
+      //    Googlebot 以 en-US 渲染、又沒有 localStorage,依瀏覽器語系轉的話,它看到的 / 是英文、
+      //    canonical 指向 /en,跟 hreflang(中文版 = /)互相矛盾 —— Google 會忽略 hreflang,
+      //    中文首頁可能被併進英文版(2026-09-24 正式站實測)。Google 也明講不要依推測的語系轉址。
+      //    瀏覽器語系不同的訪客,改由首頁頂端的提示條建議(IfmI18n.suggestLang),讓他自己選。
+      // 深層網址一律照網址渲染,就算按過語言鈕也一樣 —— 同樣是為了爬蟲,
+      // 而且從搜尋結果或分享連結進來的深層網址,網址本身就是「要看哪個語系」的答案。
       applyPreferredLang: function (lang) {
+        if (!isKnownLang(lang)) return false;
         var current = pathToRoute(win.location.pathname);
         if (current.page !== 'home' || current.lang === lang) return false;
         if (normalizePath(win.location.pathname) !== pageToPath('home', DEFAULT_LANG)) return false;
