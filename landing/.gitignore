@@ -5,3 +5,6 @@ node_modules
 !.env.example
 .DS_Store
 .worktrees/
+
+# npm run prerender 的本機產出(CI 用 --in-place 直接覆蓋乾淨 checkout,不經過這裡)
+dist/

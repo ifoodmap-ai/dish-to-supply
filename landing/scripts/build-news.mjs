@@ -3,6 +3,9 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+// 中文文章沒填 excerpt 時從內文開頭截。規則與 prerender.mjs 共用同一份實作,靜態 head 與 SPA 換頁時的
+// syncSeo() 才會拿到一樣的描述(否則 Googlebot 水合後會被蓋回新聞列表那段共用文案)。
+import { autoExcerpt } from './seo-head.mjs';
 
 const [zhPath, enPath, outPath = 'news.js'] = process.argv.slice(2);
 
@@ -78,11 +81,13 @@ const articles = zh.filter((a) => (a.blocks || []).length).map((a) => {
     if (b.links && b.links.length) out.links = b.links.map((l) => ({ text: l.text, href: l.href }));
     return out;
   });
+  const zhBlocks = body(a.blocks || []);
+  const enBlocks = body(e.blocks || []);
   return {
     id: a.id, slug, date: a.date, cover,
     coverW: coverSize && coverSize.w, coverH: coverSize && coverSize.h,
-    zh: { title: a.title, excerpt: a.excerpt || '', category: a.category, blocks: body(a.blocks || []) },
-    en: { title: e.title, excerpt: e.excerpt || '', category: e.category, blocks: body(e.blocks || []) },
+    zh: { title: a.title, excerpt: a.excerpt || autoExcerpt(zhBlocks, 'zh'), category: a.category, blocks: zhBlocks },
+    en: { title: e.title, excerpt: e.excerpt || autoExcerpt(enBlocks, 'en'), category: e.category, blocks: enBlocks },
     editorialNote: e.editorialNote || a.editorialNote || null,
   };
 }).sort((x, y) => (x.date < y.date ? 1 : x.date > y.date ? -1 : y.id - x.id)); // 新到舊

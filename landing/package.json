@@ -7,6 +7,9 @@
     "dev": "npx serve -s .",
     "start": "npx serve -s .",
     "test": "node --test tests/*.test.cjs",
-    "smoke": "node scripts/smoke-i18n.mjs http://127.0.0.1:4322"
+    "smoke": "node scripts/smoke-i18n.mjs http://127.0.0.1:4322",
+    "prerender": "node scripts/prerender.mjs",
+    "prerender:ci": "node scripts/prerender.mjs --in-place",
+    "prerender:check": "node scripts/prerender.mjs --check"
   }
 }

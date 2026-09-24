@@ -20,13 +20,26 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
+          # 24 = Vercel 專案的 function runtime(.vercel/project.json 的 nodeVersion)。
+          # 以前是 20,跟正式環境不一致;而 prerender.mjs 用到的全域 WebSocket 要 Node 22 以上才有,
+          # 留在 20 的話預渲染那步會直接 ReferenceError。
+          node-version: 24
 
       - name: Install Vercel CLI
         run: npm i -g vercel@latest
 
       - name: Pull Vercel project settings
         run: vercel pull --yes --environment=production --token="${{ secrets.VERCEL_TOKEN }}"
+
+      - name: Check Chrome is available
+        # ubuntu-latest 的 runner image 內建。沒有就在這裡明確失敗,不要讓預渲染跑到一半才丟「找不到 Chrome」
+        run: google-chrome --version
+
+      - name: Prerender all routes
+        # 把每條路由 × 每個語系渲染成實體 HTML,讓不跑 JavaScript 的爬蟲(GPTBot、ClaudeBot、FB/X 分享卡)
+        # 讀得到內容與正確的 head。--in-place 只在這個乾淨 checkout 裡覆蓋,產出不進 git。
+        # 這步沒跑到(例如有人手動 vercel deploy)的話,得到的是預渲染之前的站 —— 退化,不是壞掉。
+        run: node scripts/prerender.mjs --in-place
 
       - name: Build
         run: vercel build --prod --token="${{ secrets.VERCEL_TOKEN }}"

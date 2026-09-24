@@ -300,6 +300,8 @@
 
   return {
     DEFAULT_LANG: DEFAULT_LANG,
+    publicBaseUrl: publicBaseUrl,
+    pathByPage: pathByPage,
     alternateUrlsForPath: alternateUrlsForPath,
     canonicalUrlForPath: canonicalUrlForPath,
     createDrawerFocusManager: createDrawerFocusManager,
