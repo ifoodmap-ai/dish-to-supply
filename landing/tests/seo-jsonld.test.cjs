@@ -12,7 +12,7 @@ const routing = require('../routing.js');
 const load = () => import('../scripts/seo-head.mjs');
 const ROOT = path.join(__dirname, '..');
 const BASE = routing.publicBaseUrl;
-const LOGO = { url: BASE + '/logo.png', width: 192, height: 56 };
+const LOGO = { url: BASE + '/apple-touch-icon.png', width: 180, height: 180 };
 const STATIC_PAGES = Object.keys(routing.pathByPage);
 
 function build(mod, page, lang, slug = null) {

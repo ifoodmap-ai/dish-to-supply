@@ -259,9 +259,10 @@ export const ORGANIZATION = {
     // 多出一個 URL 變體）。頁面上的 LINE 按鈕仍然用帶參數的完整連結，不受影響。
     'https://line.me/R/ti/p/@750yvxki',
   ],
-  // 站上現有的 logo（192×56）。⚠️ 低於 Google Organization logo 的最小 112×112，
-  // prerender 每次 build 都會提醒；要換成方形 logo 請業主提供，不要自己做一張。
-  logoPath: '/logo.png',
+  // 用方形的品牌符號(apple-touch-icon,180×180,透明底)。業主 2026-09-25 同意。
+  // 原本是 header 那張橫式 logo.png(192×56),低於 Google Organization logo 的最小 112×112,
+  // Google 可能不採用。這裡只影響結構化資料;網站 header 顯示的仍是 logo.png。
+  logoPath: '/apple-touch-icon.png',
 };
 
 /**

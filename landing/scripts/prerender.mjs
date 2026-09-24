@@ -846,7 +846,7 @@ async function main() {
   }
   console.log(`og:image：${langs.map((l) => `${l} → ${ogImageFor(l)}`).join('｜')}（皆為 ${OG_IMAGE_SIZE.width}×${OG_IMAGE_SIZE.height}）`);
 
-  // JSON-LD 的 logo（SPEC §4-3）：站上現有的 logo.png，尺寸從檔案讀，不寫死。
+  // JSON-LD 的 logo（SPEC §4-3）：路徑在 seo-head.mjs 的 ORGANIZATION.logoPath，尺寸從檔案讀，不寫死。
   const logoAbs = path.join(ROOT, ORGANIZATION.logoPath);
   if (!fs.existsSync(logoAbs)) throw new Error(`找不到 ${ORGANIZATION.logoPath}（JSON-LD Organization.logo）`);
   const logo = { url: publicBaseUrl + ORGANIZATION.logoPath, ...pngSize(fs.readFileSync(logoAbs)) };
