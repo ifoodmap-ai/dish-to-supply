@@ -24,6 +24,10 @@
  * 補齊 SPEC 要求但程式沒產的（og:image:width/height/alt、og:locale:alternate）、
  * 砍掉 SPEC 判定該砍的（twitter:title/description/image）、把中文文章頁那句
  * 共用 description 換成文章自己的摘要，並讓所有絕對網址都出自 publicBaseUrl。
+ * 英文頁的 og:image 用 og-image-en.png（中文頁維持 og-image.png）。
+ * JSON-LD（SPEC §4）也在這一步寫進靜態 <head>：首頁 Organization + WebSite、
+ * 文章頁 Article + BreadcrumbList、/legal/:slug BreadcrumbList，其他頁不放
+ * （內容由 seo-head.mjs 的 buildJsonLd() 決定，auditJsonLd() 逐頁驗）。
  *
  * 水合（hydration）設計 —— 刻意保守，目標是「support.js 看到的 DOM 跟改動前一樣」：
  *   1. 預渲染內容放在 <div id="ifm-prerendered">（不是 #dc-root，免得 index.html
@@ -59,8 +63,10 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import {
-  OG_IMAGE_ALT, OG_LOCALE, REQUIRED_HEAD_TAGS, FORBIDDEN_HEAD_TAGS,
-  articleDescription, buildHeadNormalizeScript, fullWidthEquivalent,
+  OG_IMAGE_ALT, OG_IMAGE_PATH, OG_IMAGE_SIZE, OG_LOCALE, ORGANIZATION,
+  REQUIRED_HEAD_TAGS, FORBIDDEN_HEAD_TAGS,
+  articleDescription, auditJsonLd, buildHeadNormalizeScript, buildJsonLd, expectedJsonLdTypes,
+  fullWidthEquivalent, pngSize, serializeJsonLd,
 } from './seo-head.mjs';
 import {
   LLMS_CONTACT, LLMS_TAGLINE, STATIC_LASTMOD,
@@ -688,11 +694,19 @@ function headScriptSrcs(html) {
   return [...scope.matchAll(/<script\b[^>]*\bsrc\s*=\s*["']([^"']+)["']/gi)].map((m) => m[1]);
 }
 
-function verifyOutput({ route, html, sourceScripts, originalScriptSrcs, publicBaseUrl }) {
+const JSONLD_RE = /<script\b[^>]*\btype="application\/ld\+json"[^>]*>([\s\S]*?)<\/script>/gi;
+
+function verifyOutput({ route, page, slug, lang, html, sourceScripts, originalScriptSrcs, publicBaseUrl }) {
   const problems = [];
   const visible = stripStyles(stripScripts(html));
   const headMatch = /<head\b[^>]*>([\s\S]*?)<\/head>/i.exec(html);
   const head = headMatch ? headMatch[1] : '';
+
+  // ── SPEC §4：JSON-LD 必須在靜態 <head>、每塊都是合法 JSON、型別剛好是這種頁面該有的 ──
+  const jsonLdBlocks = [...head.matchAll(JSONLD_RE)].map((m) => m[1]);
+  const jsonLdTotal = [...html.matchAll(JSONLD_RE)].length;
+  if (jsonLdTotal !== jsonLdBlocks.length) problems.push('JSON-LD 跑到 <head> 之外（SPEC §4-1：一律放 <head>）');
+  problems.push(...auditJsonLd(jsonLdBlocks, { publicBaseUrl, page, slug, lang }));
 
   // 🔴 head 裡不可以多出原始 index.html 沒有的 <script src>：
   //    support.js 注入的 React CDN 如果被烤進去，載入時會變成兩份 React。
@@ -764,8 +778,9 @@ function verifyOutput({ route, html, sourceScripts, originalScriptSrcs, publicBa
   const ogTitle = pick(/<meta\s+property="og:title"\s+content="([^"]*)"/i);
   const ogLocale = pick(/<meta\s+property="og:locale"\s+content="([^"]*)"/i);
   return {
-    route, bracesVisible, bracesTotal, title, desc, canonical, htmlLang, hreflangs, ogTitle, ogLocale,
+    route, page, slug, bracesVisible, bracesTotal, title, desc, canonical, htmlLang, hreflangs, ogTitle, ogLocale,
     titleWidth: fullWidthEquivalent(title), descWidth: fullWidthEquivalent(desc),
+    jsonLdBlocks: jsonLdBlocks.length,
     bytes: Buffer.byteLength(html), problems,
   };
 }
@@ -800,21 +815,38 @@ async function main() {
   const { routes, langs, pages, dynamicPages, via, api, publicBaseUrl, baseVia, hreflangZh } = discoverRoutes();
   const i18n = require(path.join(ROOT, 'i18n.js'));
   const newsMod = require(path.join(ROOT, 'news.js'));
+  const legalMod = require(path.join(ROOT, 'legal.js'));
   console.log(`路由來源：${via}`);
   console.log(`絕對網址來源：${baseVia} → ${publicBaseUrl}`);
   console.log(`語系 ${langs.join('/')}｜靜態頁 ${pages.length}｜動態頁 ${dynamicPages.join(',') || '（無）'}｜共 ${routes.length} 條路由`);
   console.log(`模板抽出：${(Buffer.byteLength(templateOut) / 1024).toFixed(0)} KB → ${TEMPLATE_FILE}（從 <helmet> 移出 ${stripped.length} 個 head 標籤）`);
 
-  // og-image：SPEC §3-5 要求英文版另有一張。沒有的話沿用中文那張並講清楚 ——
-  // 指到不存在的圖比用中文圖更糟（整個分享預覽會沒有圖）。
-  const ogImageFor = (lang) => {
-    if (lang !== 'zh' && fs.existsSync(path.join(ROOT, `og-image-${lang}.png`))) return `/og-image-${lang}.png`;
-    return '/og-image.png';
-  };
+  // og-image：每個語系一張（SPEC §3-5；英文頁用 og-image-en.png，中文頁維持 og-image.png）。
+  // 🔴 找不到就直接失敗，不再默默退回中文圖 —— 英文頁的 og:image:alt 描述的是英文那張圖，
+  //    退回中文圖就變成「中文圖配英文說明」。圖也必須真的是 1200×630：head 裡的
+  //    og:image:width / height 寫的就是這兩個數字。
+  //    （沒有列在 OG_IMAGE_PATH 的新語系一律用中文圖＋中文 alt，兩者仍然一致。）
+  const ogImageFor = (lang) => OG_IMAGE_PATH[lang] || OG_IMAGE_PATH.zh;
+  const ogAltFor = (lang) => (OG_IMAGE_PATH[lang] ? OG_IMAGE_ALT[lang] : OG_IMAGE_ALT.zh);
   for (const lang of langs) {
-    if (lang !== 'zh' && ogImageFor(lang) === '/og-image.png') {
-      console.log(`⚠️  找不到 og-image-${lang}.png，${lang} 版沿用中文那張（SPEC §3-5 的「應過」項，非阻擋條件）`);
+    const rel = ogImageFor(lang);
+    const abs = path.join(ROOT, rel);
+    if (!fs.existsSync(abs)) throw new Error(`找不到 ${rel}（${lang} 版的 og:image，SPEC §3-5）。這張圖要跟原始碼一起 commit。`);
+    const { width, height } = pngSize(fs.readFileSync(abs));
+    if (width !== OG_IMAGE_SIZE.width || height !== OG_IMAGE_SIZE.height) {
+      throw new Error(`${rel} 是 ${width}×${height}，但 og:image:width/height 宣告的是 ${OG_IMAGE_SIZE.width}×${OG_IMAGE_SIZE.height}`);
     }
+    if (!OG_IMAGE_ALT[lang] && OG_IMAGE_PATH[lang]) throw new Error(`${rel} 沒有對應的 OG_IMAGE_ALT.${lang}`);
+  }
+  console.log(`og:image：${langs.map((l) => `${l} → ${ogImageFor(l)}`).join('｜')}（皆為 ${OG_IMAGE_SIZE.width}×${OG_IMAGE_SIZE.height}）`);
+
+  // JSON-LD 的 logo（SPEC §4-3）：站上現有的 logo.png，尺寸從檔案讀，不寫死。
+  const logoAbs = path.join(ROOT, ORGANIZATION.logoPath);
+  if (!fs.existsSync(logoAbs)) throw new Error(`找不到 ${ORGANIZATION.logoPath}（JSON-LD Organization.logo）`);
+  const logo = { url: publicBaseUrl + ORGANIZATION.logoPath, ...pngSize(fs.readFileSync(logoAbs)) };
+  if (logo.width < 112 || logo.height < 112) {
+    console.log(`⚠️  ${ORGANIZATION.logoPath} 是 ${logo.width}×${logo.height}，低於 Google Organization logo 的最小 112×112 ——` +
+      ' Google 可能不採用這張當 logo。要換成方形 logo 請業主提供（非阻擋條件）。');
   }
 
   const { server, port } = await startPrerenderServer({ routes, indexHtml, templateJs });
@@ -866,23 +898,38 @@ async function main() {
       //    中文文章頁換成自己的 description、絕對網址改由 publicBaseUrl 算）
       const other = route.lang === 'zh' ? 'en' : 'zh';
       const alt = api.alternateUrlsForPath(route.path);
+      const canonical = publicBaseUrl + route.path;
       let description = null;
+      let article = null;
       if (route.page === 'article') {
-        const article = newsMod.bySlug(route.slug, route.lang);
+        article = newsMod.bySlug(route.slug, route.lang);
         if (!article) throw new Error(`${route.path} 找不到對應的文章（news.js）`);
         description = articleDescription(article, route.lang);
         if (!description) throw new Error(`${route.path} 算不出 description`);
       }
+      let legalDoc = null;
+      if (route.page === 'legal' && route.slug) {
+        legalDoc = legalMod.bySlug(route.slug, route.lang);
+        if (!legalDoc) throw new Error(`${route.path} 找不到對應的文件（legal.js）`);
+      }
+      // SPEC §4：這一頁的 JSON-LD（沒有的頁面回傳空陣列 → head 裡不會有任何 ld+json）
+      const jsonLd = buildJsonLd({
+        page: route.page, lang: route.lang, slug: route.slug, publicBaseUrl, canonical,
+        dict: i18n.dict(route.lang), otherDict: i18n.dict(other),
+        article, legalDoc, logo,
+        urlFor: (page) => publicBaseUrl + api.pageToPath(page, route.lang, null),
+      });
       await chrome.evaluate(buildHeadNormalizeScript({
-        canonical: publicBaseUrl + route.path,
+        canonical,
         ogImage: publicBaseUrl + ogImageFor(route.lang),
-        ogImageAlt: OG_IMAGE_ALT[route.lang] || OG_IMAGE_ALT.zh,
+        ogImageAlt: ogAltFor(route.lang),
         ogLocale: OG_LOCALE[route.lang] || OG_LOCALE.zh,
         ogLocaleAlt: OG_LOCALE[other] || OG_LOCALE.en,
         ogType: route.page === 'article' ? 'article' : 'website',
         alternates: alt,
         hreflangZh,
         description,
+        jsonLd: jsonLd.map(serializeJsonLd),
       }));
 
       return await chrome.evaluate(serializeScript);
@@ -892,7 +939,10 @@ async function main() {
       const out = await renderRoute(route);
       const rel = outputFileFor(route.path);
       written.set(rel, out.html);
-      const v = verifyOutput({ route: route.path, html: out.html, sourceScripts, originalScriptSrcs, publicBaseUrl });
+      const v = verifyOutput({
+        route: route.path, page: route.page, slug: route.slug, lang: route.lang,
+        html: out.html, sourceScripts, originalScriptSrcs, publicBaseUrl,
+      });
       const lost = verifyStrippedTagsSurvive(stripped, out.html);
       if (lost.length) v.problems.push('從 <helmet> 移出的標籤在產出裡找不到：' + lost.join(', '));
       results.push(v);
@@ -1023,6 +1073,16 @@ async function main() {
   const shortDescs = results.filter((r) => (r.htmlLang === 'en' ? r.desc.length < 120 : r.descWidth < 50));
   if (longTitles.length) console.log(`\n⚠️  ${longTitles.length} 頁 title 超過 SPEC §3-4 的寬度建議：` + longTitles.slice(0, 5).map((r) => r.route).join(' '));
   if (shortDescs.length) console.log(`⚠️  ${shortDescs.length} 頁 description 低於 SPEC §3-4 的下限（zh 50 全形字 / en 120 字元）：` + shortDescs.slice(0, 6).map((r) => r.route).join(' '));
+
+  // SPEC §4：JSON-LD 的分布（型別不對的頁面上面已經逐頁列成 ❌，這裡只是總覽）
+  const ldSummary = new Map();
+  for (const r of results) {
+    const key = expectedJsonLdTypes(r.page, r.slug).join(' + ') || '不放';
+    const e = ldSummary.get(key) || { routes: 0, blocks: 0 };
+    e.routes += 1; e.blocks += r.jsonLdBlocks;
+    ldSummary.set(key, e);
+  }
+  console.log('\nJSON-LD：' + [...ldSummary].map(([k, e]) => `${k} ${e.routes} 頁（${e.blocks} 個 <script>）`).join('｜'));
 
   console.log(`\n${results.length} 條路由｜${((Date.now() - t0) / 1000).toFixed(1)}s`);
   if (bad.length) { console.error(`❌ ${bad.length} 條有問題`); process.exit(1); }
