@@ -123,6 +123,22 @@ export const OG_IMAGE_ALT = {
 
 export const OG_LOCALE = { zh: 'zh_TW', en: 'en_US' };
 
+/**
+ * 文章頁的 og:image 用「這篇自己的封面」做成的 1200×630 分享圖(scripts/build-og-covers.mjs 產生,
+ * 已 commit 在 assets/news/og/)。不直接用封面原檔:17 張比例從 1.00 到 2.00 不等,其中 4 張小於
+ * Facebook 大卡門檻 600×315,直接用會從大圖卡片降級成小縮圖;3 張正方形會被上下各裁掉一半。
+ * 中英兩篇共用同一張封面,所以也共用同一張分享圖。
+ */
+export function ogPathForCover(cover) {
+  const base = String(cover).split('/').pop().replace(/\.[a-z]+$/i, '').replace(/-cover$/, '');
+  return `/assets/news/og/${base}-og.jpg`;
+}
+
+/** og:image:alt 描述「圖裡有什麼」(ogp.me)——文章分享圖就是那篇的封面。 */
+export function articleOgAlt(title, lang) {
+  return lang === 'en' ? `Cover image: ${title}` : `文章封面:${title}`;
+}
+
 /** PNG 的寬高在 IHDR（byte 16–23，big-endian）。給 og-image / logo 的尺寸自檢用，不為此裝影像套件。 */
 export function pngSize(buf) {
   if (!buf || buf.length < 24 || buf.subarray(0, 8).toString('hex') !== '89504e470d0a1a0a' ||
@@ -130,6 +146,23 @@ export function pngSize(buf) {
     throw new Error('不是 PNG（讀不到 IHDR）');
   }
   return { width: buf.readUInt32BE(16), height: buf.readUInt32BE(20) };
+}
+
+/** JPEG 的寬高在 SOF 區段(跳過 DHT/DQT 等非 SOF 的 0xC4/0xC8/0xCC)。給文章分享圖的尺寸自檢用。 */
+export function jpegSize(buf) {
+  if (!buf || buf[0] !== 0xff || buf[1] !== 0xd8) throw new Error('不是 JPEG');
+  let i = 2;
+  while (i + 9 < buf.length) {
+    if (buf[i] !== 0xff) { i++; continue; }
+    const m = buf[i + 1];
+    if (m === 0xd8 || m === 0x01 || (m >= 0xd0 && m <= 0xd7)) { i += 2; continue; }
+    const len = buf.readUInt16BE(i + 2);
+    if (m >= 0xc0 && m <= 0xcf && m !== 0xc4 && m !== 0xc8 && m !== 0xcc) {
+      return { width: buf.readUInt16BE(i + 7), height: buf.readUInt16BE(i + 5) };
+    }
+    i += 2 + len;
+  }
+  throw new Error('JPEG 裡找不到 SOF');
 }
 
 /* ─────────────────────── 在頁面裡跑的那段正規化腳本 ─────────────────────── */

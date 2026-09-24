@@ -64,6 +64,7 @@ import { fileURLToPath } from 'node:url';
 
 import {
   OG_IMAGE_ALT, OG_IMAGE_PATH, OG_IMAGE_SIZE, OG_LOCALE, ORGANIZATION,
+  ogPathForCover, articleOgAlt, jpegSize,
   REQUIRED_HEAD_TAGS, FORBIDDEN_HEAD_TAGS,
   articleDescription, auditJsonLd, buildHeadNormalizeScript, buildJsonLd, expectedJsonLdTypes,
   fullWidthEquivalent, pngSize, serializeJsonLd,
@@ -844,6 +845,22 @@ async function main() {
     }
     if (!OG_IMAGE_ALT[lang] && OG_IMAGE_PATH[lang]) throw new Error(`${rel} 沒有對應的 OG_IMAGE_ALT.${lang}`);
   }
+  // 文章頁的分享圖:每篇一張,找不到或尺寸不是 1200×630 就直接失敗 —— 不默默退回全站橫幅,
+  // 因為 og:image:width / height 宣告的就是 1200×630,圖不對就是在騙爬蟲。
+  //   新增文章或換封面後:node scripts/build-og-covers.mjs,再 commit assets/news/og/
+  {
+    const covers = new Set(newsMod.all('zh').map((a) => a.cover).filter(Boolean));
+    for (const cover of covers) {
+      const rel = ogPathForCover(cover);
+      const abs = path.join(ROOT, rel);
+      if (!fs.existsSync(abs)) throw new Error(`找不到文章分享圖 ${rel}(封面 ${cover})。跑 node scripts/build-og-covers.mjs 產生後 commit`);
+      const { width, height } = jpegSize(fs.readFileSync(abs));
+      if (width !== OG_IMAGE_SIZE.width || height !== OG_IMAGE_SIZE.height) {
+        throw new Error(`${rel} 是 ${width}×${height},不是 ${OG_IMAGE_SIZE.width}×${OG_IMAGE_SIZE.height}`);
+      }
+    }
+    console.log(`文章分享圖:${covers.size} 張,皆為 ${OG_IMAGE_SIZE.width}×${OG_IMAGE_SIZE.height}`);
+  }
   console.log(`og:image：${langs.map((l) => `${l} → ${ogImageFor(l)}`).join('｜')}（皆為 ${OG_IMAGE_SIZE.width}×${OG_IMAGE_SIZE.height}）`);
 
   // JSON-LD 的 logo（SPEC §4-3）：路徑在 seo-head.mjs 的 ORGANIZATION.logoPath，尺寸從檔案讀，不寫死。
@@ -927,8 +944,8 @@ async function main() {
       });
       await chrome.evaluate(buildHeadNormalizeScript({
         canonical,
-        ogImage: publicBaseUrl + ogImageFor(route.lang),
-        ogImageAlt: ogAltFor(route.lang),
+        ogImage: publicBaseUrl + (article && article.cover ? ogPathForCover(article.cover) : ogImageFor(route.lang)),
+        ogImageAlt: article && article.cover ? articleOgAlt(article.title, route.lang) : ogAltFor(route.lang),
         ogLocale: OG_LOCALE[route.lang] || OG_LOCALE.zh,
         ogLocaleAlt: OG_LOCALE[other] || OG_LOCALE.en,
         ogType: route.page === 'article' ? 'article' : 'website',
