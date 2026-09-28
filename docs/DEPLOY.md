@@ -119,3 +119,104 @@ SUPABASE_ACCESS_TOKEN=sbp_... supabase functions deploy ai --project-ref cwvpehq
 **一定要帶 `--no-verify-jwt`。** 主站前端(`src/lib/api.ts`)與形象站的代理(`ifoodmap-landing/api/ai-chat.js`)
 呼叫這支時都只送 `apikey`、沒有 `Authorization` header;少了這個旗標會把 JWT 驗證打開,
 兩邊立刻全部 401(`UNAUTHORIZED_NO_AUTH_HEADER`)。2026-09-22 踩過一次,形象站 AI 助手斷了幾分鐘。
+
+## 表單 lead 通知(notify-lead)
+
+官網表單送出後自動寄信到 **`ifoodmaptw@gmail.com`**。
+
+```
+瀏覽器 --(PostgREST INSERT)--> partnership_leads / landing_leads
+          --(AFTER INSERT trigger, pg_net 非同步)--> notify-lead Edge Function
+          --(Resend)--> ifoodmaptw@gmail.com
+```
+
+**為什麼需要這個機制**:`landing_leads` 與 `partnership_leads` 對 anon 只開
+INSERT、**沒有任何 SELECT policy**,而 27 個 admin 頁面裡沒有一頁列出它們
+(只有 `AnalysisDetailPage.tsx` / `AdminOrderDetailPage.tsx` 會用 `analysis_id`
+反查 `landing_leads`)。換句話說**表單送進來在後台完全看不到** ——
+在做出後台列表頁之前,寄信是唯一會讓業主知道「有人來敲門」的機制。
+
+**為什麼要解耦成 trigger → Edge Function**:形象站是純靜態站,瀏覽器端只管
+INSERT。寄信失敗不會讓使用者看到錯誤,lead 也不會掉。
+
+| 元件 | 位置 |
+|---|---|
+| Edge Function | `supabase/functions/notify-lead/index.ts` |
+| Trigger + 設定表 | `supabase/migrations/20260923120000_lead_notifications.sql` |
+| 收件人 / 寄件人 | Supabase secrets `LEAD_NOTIFY_TO` / `LEAD_NOTIFY_FROM`(未設時用程式內預設) |
+| 共享密鑰 | Supabase secret `LEAD_HOOK_SECRET` **與** `public.app_config.lead_hook_secret`(兩邊必須一致) |
+| Function URL | `public.app_config.lead_notify_function_url` |
+
+### 怎麼改收件人
+
+不用改程式、不用重新部署 —— 設一個 secret 就好(多個收件人用逗號分隔):
+
+```bash
+SUPABASE_ACCESS_TOKEN=sbp_... supabase secrets set \
+  LEAD_NOTIFY_TO=ifoodmaptw@gmail.com,someone@else.com \
+  --project-ref cwvpehqcvbfuynabpqop
+```
+
+⚠️ **改 secret 會讓專案上所有 Edge Function 重新部署一次**(版號都會 +1)。
+這是 Supabase 的正常行為,原始碼與 `verify_jwt` 設定都不會變 —— 但改完
+順手確認一下 `ai` 沒被影響(它斷掉會讓形象站的 AI 助手掛掉)。
+
+### 寄件網域
+
+目前這個 Resend 帳號驗證過的網域只有 **`gathertaiwan.com`** 與 `beunion.tw`,
+**`ifoodmap.com.tw` 還沒驗證**,所以沿用 `notify` 那支已經在用的
+`noreply@gathertaiwan.com`。這是寄給業主自己的內部通知信,網域不一致沒關係;
+之後若要寄給客戶,請先在 Resend 驗證 ifoodmap 自己的網域再改 `LEAD_NOTIFY_FROM`。
+
+信件的 `reply_to` 會設成 lead 填的 `contact_email`(只有 `partnership_leads` 有這欄),
+所以業主在 Gmail 直接按回覆就是回給對方。
+
+### 🔴 部署一定要帶 `--no-verify-jwt`
+
+```bash
+SUPABASE_ACCESS_TOKEN=sbp_... supabase functions deploy notify-lead \
+  --project-ref cwvpehqcvbfuynabpqop --no-verify-jwt
+```
+
+DB trigger 是 `pg_net` 直接打 HTTP,**沒有使用者 JWT 可帶**。少了這個旗標會把
+JWT 驗證打開,webhook 每次都被擋成 401,信一封都不會寄 ——
+而且因為 trigger 吞掉錯誤,**不會有任何地方報錯**,會靜默失效。
+(同一個坑 2026-09-22 在 `ai` 那支踩過,害兩個網站全部 401。)
+
+安全性不是靠 JWT,是靠**共享密鑰**:Edge Function 檢查
+`Authorization: Bearer <LEAD_HOOK_SECRET>`(或自訂 header `x-lead-hook-secret`),
+不符就回 401。沒有這道檢查,它等於是一個「任何人都能叫它寄信到業主信箱」的公開端點。
+
+### 換密鑰
+
+兩邊要一起改,否則 trigger 打過去會被自己的函式擋成 401:
+
+```bash
+NEW=$(openssl rand -hex 32)
+SUPABASE_ACCESS_TOKEN=sbp_... supabase secrets set LEAD_HOOK_SECRET=$NEW \
+  --project-ref cwvpehqcvbfuynabpqop
+# 再把同一個值寫進 app_config(走 Management API,記得帶 User-Agent)
+# update public.app_config set value='<NEW>', updated_at=now() where key='lead_hook_secret';
+```
+
+### 怎麼確認它還活著
+
+`pg_net` 會把每次呼叫的回應存下來,這是最直接的證據:
+
+```sql
+select id, status_code, left(content, 200), created
+from net._http_response order by id desc limit 5;
+```
+
+`status_code = 200` 且 content 裡有 `"sent":true` 就是有寄出去。
+真正送達與否去 Resend 後台(或 `GET https://api.resend.com/emails/<resend_id>`)
+看 `last_event` 是不是 `delivered`。
+
+### 新增欄位不用改 Edge Function
+
+`notify-lead` 會把 record 裡**所有非空欄位**列進信裡 —— 沒在 `SPECS` 定義
+中文標籤的欄位也會顯示(用原始欄位名)。所以之後表單加欄位不會漏資料,
+只是標籤會是英文;要中文標籤再回去 `SPECS` 補。
+
+⚠️ 只有 `partnership_leads` 與 `landing_leads` 在白名單裡,其他 table 一律
+跳過不寄 —— 不要讓這支變成通用寄信機。
