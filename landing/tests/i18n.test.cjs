@@ -336,7 +336,8 @@ test('internal links are language-aware bindings, never hard-coded paths', () =>
       href,
       // a.href 是文章列表在 sc-for 裡逐篇算出來的網址(已經帶語系前綴),
       // 跟 hrefXxx 一樣是綁定,不是寫死的路徑。
-      // q.linkHref 是常見問題答案裡的外連(值來自字典,是完整的 https:// 網址);
+      // q.linkHref 是常見問題答案裡的連結(字典裡是完整的 https:// 網址,或 renderVals() 會換掉的
+      // {supplierApplicationUrl} 這類產品站網址佔位符,見 tests/faq.test.cjs);
       // 它會落進這條檢查只是因為 markup 上寫的是綁定而不是字面網址,不是寫死的內部路徑。
       // d.href 是法律文件在 sc-for 裡逐份算出來的網址(pageToPath 產的,已帶語系前綴);
       // t.href 是同一頁目錄的 #錨點,不跨頁也不跨語系。

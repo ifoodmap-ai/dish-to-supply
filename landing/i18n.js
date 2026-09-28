@@ -638,15 +638,15 @@
           {
             "question": "我是食材供應商，該如何加入食材地圖，成為合作供應商？",
             "paras": [
-              "註冊帳號後，填妥供應商資料，通過平台審核後，即可開通上接受食材需求轉單服務。"
+              "先填寫「申請供應商上架」表單，不需要先註冊帳號。平台審核通過後，會寄一封邀請信到你填寫的 Email，點信中的連結設定密碼，即可登入供應商後台，開始接收食材需求轉單。"
             ],
-            "linkHref": "",
-            "linkText": ""
+            "linkHref": "{supplierApplicationUrl}",
+            "linkText": "前往「申請供應商上架」表單"
           },
           {
             "question": "請問成為合作供應商需要費用嗎？",
             "paras": [
-              "註冊供應商資訊並審核開通後，及可以收到符合供應商販售食材和配送區域的食材需求單，但如果想要近一步與買家聯繫報價洽談後續，則需成為付費合作供應商。"
+              "註冊供應商資訊並審核開通後，即可收到符合供應商販售食材和配送區域的食材需求單，但如果想要進一步與買家聯繫報價洽談後續，則需成為付費合作供應商。"
             ],
             "linkHref": "https://www.ifoodmap.com.tw/how/pointRule",
             "linkText": "查看收費方案"
@@ -1297,10 +1297,10 @@
           {
             "question": "I'm an ingredient supplier. How do I join iFoodmap and become a listed supplier?",
             "paras": [
-              "Create an account, fill in your supplier details, and once it clears our review your account is opened up to receive forwarded ingredient requests."
+              "Start with the supplier application form — you don't need to create an account first. Once the platform approves your application, we'll email an invitation to the address you entered. Click the link in that email to set your password, then sign in to the supplier dashboard and start receiving forwarded ingredient requests."
             ],
-            "linkHref": "",
-            "linkText": ""
+            "linkHref": "{supplierApplicationUrl}",
+            "linkText": "Go to the supplier application form"
           },
           {
             "question": "Is there a fee to become a listed supplier?",

@@ -2543,6 +2543,13 @@ class Component extends DCLogic {
     const cw = this.state.cw ?? 1200;
     const isMobile = cw < 880;
     const productBaseUrl = window.IFM_PRODUCT_BASE_URL;
+    /* 產品站上的入口網址只在這裡算一次:頁面上的按鈕綁這幾個值,
+       常見問題答案的 linkHref 也用 {supplierApplicationUrl} 這類佔位符引用同一個值(見下面的 qaItems)。 */
+    const productUrls = {
+      restaurantRegistrationUrl: productBaseUrl + '/register/restaurant',
+      supplierApplicationUrl: productBaseUrl + '/join',
+      loginUrl: productBaseUrl + '/',
+    };
 
     const g = (key) => this.go(key);
     const closeMenuThen = (fn) => (event) => { this.setState({ menuOpen: false }); fn(event); };
@@ -2575,11 +2582,13 @@ class Component extends DCLogic {
 
     /* 常見問題。字典只放文字,型別旗標在這裡攤平 —— 模板只有 sc-if 沒有 switch。
        注意 L.qa.items 是陣列,不能在 markup 直接綁 {{ L.qa.items }}:
-       tests/i18n.test.cjs 規定每個 {{ L.* }} 綁定都必須解析成字串。 */
-    const qaItems = ((L.qa && L.qa.items) || []).map((item) => ({
-      ...item,
-      hasLink: !!item.linkHref,
-    }));
+       tests/i18n.test.cjs 規定每個 {{ L.* }} 綁定都必須解析成字串。
+       linkHref 可以是完整網址,或 {supplierApplicationUrl} 這類佔位符(換成 productUrls 的值,字典裡不寫死產品站網域);
+       換完還不是 http(s) 網址(例如佔位符打錯)就不顯示連結,不要送出壞掉的 href。 */
+    const qaItems = ((L.qa && L.qa.items) || []).map((item) => {
+      const linkHref = i18n && item.linkHref ? i18n.format(item.linkHref, productUrls) : '';
+      return { ...item, linkHref, hasLink: /^https?:\/\//.test(linkHref) };
+    });
 
     const legalApi = typeof window !== 'undefined' ? window.IfmLegal : null;
     // 法律文件。slug 來自網址(/legal/:slug);沒有 slug 就是文件索引,查不到就是「找不到」。
@@ -2708,9 +2717,7 @@ class Component extends DCLogic {
       ariaCurrentContact: page === 'contact' ? 'page' : null,
       ariaCurrentNews: page === 'news' || page === 'article' ? 'page' : null,
       ariaCurrentQa: page === 'qa' ? 'page' : null,
-      restaurantRegistrationUrl: productBaseUrl + '/register/restaurant',
-      supplierApplicationUrl: productBaseUrl + '/join',
-      loginUrl: productBaseUrl + '/',
+      ...productUrls,
 
       /* 響應式選單 */
       isMobile, isDesktop: !isMobile,
