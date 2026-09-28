@@ -220,3 +220,102 @@ from net._http_response order by id desc limit 5;
 
 ⚠️ 只有 `partnership_leads` 與 `landing_leads` 在白名單裡,其他 table 一律
 跳過不寄 —— 不要讓這支變成通用寄信機。
+
+## 餐廳新增成員(invite-restaurant-member)
+
+餐廳後台「分店與成員」頁(`src/pages/restaurant/RestaurantTeamPage.tsx`)的「新增成員」按鈕
+(只有老闆看得到)會呼叫這支 Edge Function:建帳號 → 寫 `restaurant_accounts` → 寄邀請信。
+寄信沿用 `approve-supplier` 的做法(`inviteUserByEmail`,同一個 Auth 邀請信模板),
+但帳號改成**先用 `createUser` 建**(帶好 `app_metadata`):email 唯一索引保證同一個 email
+同時被邀兩次時只有一個請求建得起來,失敗時的 rollback 只會刪到自己建的帳號。
+(`approve-supplier` 是「先 invite 再 `updateUserById`」:email 已有帳號時會沿用那個帳號並覆寫它的
+`app_metadata.role` —— 這裡刻意不照抄這一段。)
+
+| 元件 | 位置 |
+|---|---|
+| Edge Function | `supabase/functions/invite-restaurant-member/index.ts`(只接 Deno);邏輯在 `handler.ts`、輸入驗證在 `validate.ts`,兩支都有 vitest(`handler.test.ts` 用假 client 測每條分支) |
+| SQL(唯讀函式) | `supabase/migrations/20260928150000_restaurant_member_invites.sql` |
+| SQL(頻率限制) | `supabase/migrations/20260928160000_restaurant_invite_guards.sql`(`restaurant_invite_attempts` 表 + `claim_restaurant_invite_slot()`) |
+| 前端 | `RestaurantTeamPage.tsx`(測試 `RestaurantTeamPage.test.tsx`) |
+
+兩個 migration 2026-09-28 已用 Management API 套上線並補 ledger。
+
+### 🔴 部署用預設的 JWT 驗證(不要加 `--no-verify-jwt`)
+
+```bash
+SUPABASE_ACCESS_TOKEN=sbp_... supabase functions deploy invite-restaurant-member \
+  --project-ref cwvpehqcvbfuynabpqop --use-api
+```
+
+跟 `ai` / `notify-lead` **相反**:這支一定是已登入的老闆從瀏覽器呼叫(帶 `Authorization: Bearer <使用者 JWT>`
++ `apikey`),所以讓 gateway 先擋掉沒登入的請求。`--use-api` 是因為本機沒有 Docker。
+確認活著:不帶 token 打會回 gateway 的 401 `UNAUTHORIZED_NO_AUTH_HEADER`;
+帶 anon key 當 Bearer 會回**函式自己的** 401 `{"code":"UNAUTHENTICATED",...}`(代表已部署、且 JWT 驗證是開的)。
+
+### 授權邏輯(全部在伺服器端,不信前端)
+
+1. `auth.getUser(JWT)` 失敗 → **401**
+2. 呼叫者在 `restaurant_accounts` 沒有任何 `role='owner' AND is_active` 的列 → **403**
+3. 輸入驗證(email 格式、姓名 1–50 字、角色只能是 `owner` / `manager` / `purchaser`、分店/餐廳要是 UUID)→ **400**
+4. 前端帶的 `restaurant_id` 只用來「指定哪一家」,必須在呼叫者當老闆的店裡,否則 **403**
+   (沒帶且只當一家店的老闆 → 就是那家;是多家店的老闆又沒帶 → 400)
+5. 餐廳已停用 → 403;分店不屬於這家店 / 已停用 → 400
+6. 頻率限制:同一家店一小時內超過 20 次嘗試 → **429**。在資料庫裡原子化(advisory lock + 計數 + 記一筆
+   在同一個交易),同時灌一堆請求也不會超量(2026-09-28 實測 8 個併發、上限 3 → 剛好 3 個過)。
+   **排在查 email 之前**,所以回 409 的嘗試也算 —— 不然有人可以不限次數地探測誰有註冊
+7. 這個 email 已經有帳號 → **409**,**一律不綁、不改**(`restaurant_invite_email_status()` 查,只開給 service_role):
+   - 已是本店成員、還沒點邀請信 → `INVITE_PENDING`(訊息會教對方用「忘記密碼」設定密碼)
+   - 已是本店啟用中成員 → `ALREADY_MEMBER`
+   - 曾是本店成員、目前停用 → `MEMBER_INACTIVE`(請在列表按「啟用」,不用重新邀請)
+   - 其他任何帳號(供應商、別家餐廳、平台管理員、註冊到一半的)→ `EMAIL_TAKEN`,訊息刻意不透露是哪種身分
+8. `createUser`(`email_confirm: false`、`app_metadata = { role: "restaurant", invited_by, invited_restaurant_id }`,
+   不會寄信)→ 寫 `restaurant_accounts` → `inviteUserByEmail` 寄信。
+   後兩步失敗就刪掉剛建的 auth user(成員資料 cascade 刪掉);刪除失敗重試一次,
+   還是失敗回 `ROLLBACK_FAILED`(請聯絡客服,不要重試)。log 只記 id 與錯誤 code,不記 email
+
+`app_metadata.role = "restaurant"` 只是身分標記(沒有程式靠它判斷權限);**店內角色以 `restaurant_accounts.role` 為準** ——
+老闆之後可以在成員頁改角色,寫進 JWT 會過期。**絕不能**對既有帳號呼叫 `updateUserById(app_metadata)`:
+`app_metadata` 的 `role` 只有一格,覆蓋掉 `admin` 等於拔掉平台管理員權限(第 7 步先擋掉,就是為了這個)。
+`invited_restaurant_id` 也留給之後用:見下方「已知風險」。
+
+### 「邀請中」怎麼判斷
+
+`restaurant_member_directory(p_restaurant)`:`invited_at IS NOT NULL AND email_confirmed_at IS NULL`,
+也就是**還沒點信裡的連結**。只有該店成員查得到;email 只回給老闆(與平台管理員),店長/採購員拿到 null。
+不能用「有沒有密碼」判斷 —— GoTrue 在受邀者點連結的當下就會替他設一組隨機臨時密碼。
+
+### 邀請信連結會落在哪
+
+`redirectTo = ${SITE_URL}/reset-password?type=recovery`(`SITE_URL` 沒設時用 `https://dish-to-supply.vercel.app`)。
+`/reset-password` 只在收到 `PASSWORD_RECOVERY` 事件時才顯示「設定新密碼」,而 supabase-js 解析網址時
+**query 參數優先於 hash**,所以多帶 `?type=recovery` 就會進「設定新密碼」(2026-09-28 用無頭瀏覽器實測)。
+連結過期(`mailer_otp_exp` = 3600 秒,**1 小時**)時沒有 session,會落到「忘記密碼」表單 ——
+請對方用同一個 Email 重設密碼即可,這也是正確的退路。
+
+⚠️ `approve-supplier` 的邀請連結目前**沒有**帶 `?type=recovery`:受邀的供應商點信後其實已登入,
+但畫面停在「忘記密碼」。治本是讓 `ResetPasswordPage` 也認 `type=invite`。
+
+### 已知風險(還沒處理)
+
+**Email 預先佔用**:任何人都能自助註冊成老闆,再邀請一個「還沒註冊」的 email。如果對方沒理邀請信、
+之後自己去註冊餐廳,GoTrue 對「已存在但未確認」的帳號只會重寄確認信,對方點完回到
+`/register/complete` 時,那一頁看到已有 `restaurant_accounts` 就直接導進 `/restaurant` ——
+等於落進邀請者的店。治本要改 `RegisterCompletePage`:帳號帶有 `app_metadata.invited_restaurant_id`
+時不要自動完成,讓使用者選「加入這家店」或「建立自己的餐廳」。
+
+### 寄信用哪個 SMTP、頻率限制
+
+邀請信是 **Supabase Auth 自己寄的**(模板在 Dashboard → Authentication → Email Templates → Invite user,
+主旨「iFoodmap 邀請你加入」),不是 `notify-lead` 那條 Resend API:
+
+| 設定 | 值(2026-09-28 從 Management API `config/auth` 讀到) |
+|---|---|
+| SMTP | `smtp.resend.com:465`,user `resend`(密碼是一把 Resend API key) |
+| 寄件人 | `iFoodmap 食材地圖 <noreply@gathertaiwan.com>` —— 同樣借用 gathertaiwan.com,ifoodmap 自己的網域還沒驗證 |
+| `rate_limit_email_sent` | **每小時 100 封,全專案共用**(邀請、忘記密碼、註冊確認信都算在一起) |
+| `smtp_max_frequency` | 同一個收件人 20 秒內只寄一封 |
+| 邀請連結效期 | `mailer_otp_exp` = 3600 秒 |
+
+因為是自訂 SMTP,Supabase 預設 SMTP 那個「每小時 2 封」的限制不適用。Resend 帳號本身的方案額度
+(若是免費方案也有每日上限)沒有辦法從這邊確認,要去 Resend 後台看。
+寄信是同步的:函式回 200 代表 Resend 已經收下這封信(實測約 6 秒)。

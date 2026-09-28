@@ -9,7 +9,10 @@ import {
   MapPin,
   UserX,
   UserCheck,
+  UserPlus,
   Building2,
+  Mail,
+  Loader2,
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -18,9 +21,11 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Skeleton } from "@/components/ui/skeleton";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogFooter,
   DialogHeader,
   DialogTitle,
@@ -71,6 +76,59 @@ interface ProfileRow {
   display_name: string | null;
 }
 
+/** restaurant_member_directory() 的一列:邀請狀態;email 只有老闆拿得到 */
+interface DirectoryRow {
+  user_id: string;
+  email: string | null;
+  invited_at: string | null;
+  invite_pending: boolean | null;
+}
+
+type InviteField = "email" | "name" | "role" | "branch_id";
+
+/** invite-restaurant-member 的回應:成功帶 data,失敗帶 code / message(/ field) */
+interface InviteResponse {
+  data?: {
+    member: MemberRow;
+    email: string;
+    display_name: string;
+    invite_pending: boolean;
+  };
+  code?: string;
+  message?: string;
+  field?: string;
+}
+
+interface InviteForm {
+  email: string;
+  name: string;
+  role: RestaurantRole;
+  /** ALL_BRANCHES = 全店(不限分店) */
+  branchId: string;
+}
+
+/** Radix Select 不收空字串當值,「全店」用這個代號,送出時轉成 null */
+const ALL_BRANCHES = "__all__";
+
+// 與 Edge Function(supabase/functions/invite-restaurant-member/validate.ts)同一套規則與訊息;
+// 前端只是讓使用者早點看到錯,真正的把關在伺服器端。
+const INVITE_EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const INVITE_NAME_MAX = 50;
+
+const inviteFnUrl = () =>
+  `${String(import.meta.env.VITE_SUPABASE_URL ?? "").replace(/\/+$/, "")}/functions/v1/invite-restaurant-member`;
+
+const validateInvite = (f: InviteForm): Partial<Record<InviteField, string>> => {
+  const errors: Partial<Record<InviteField, string>> = {};
+  const email = f.email.trim();
+  if (!email) errors.email = "請輸入 Email";
+  else if (email.length > 254 || !INVITE_EMAIL_RE.test(email)) errors.email = "Email 格式不正確";
+  const name = f.name.trim();
+  if (!name) errors.name = "請輸入姓名";
+  else if ([...name].length > INVITE_NAME_MAX) errors.name = `姓名最多 ${INVITE_NAME_MAX} 個字`;
+  return errors;
+};
+
 interface BranchForm {
   id: string | null;
   name: string;
@@ -92,6 +150,11 @@ const ROLE_OPTIONS: { value: RestaurantRole; label: string; hint: string }[] = [
   { value: "manager", label: "店長", hint: "可看成本、管理分店與採購" },
   { value: "purchaser", label: "採購員", hint: "只能下單收貨,看不到成本" },
 ];
+
+/** 新增成員表單:權限由小到大排,預設選最小的「採購員」 */
+const INVITE_ROLE_OPTIONS = (["purchaser", "manager", "owner"] as const).map(
+  (v) => ROLE_OPTIONS.find((r) => r.value === v)!,
+);
 
 const ROLE_LABEL: Record<RestaurantRole, string> = {
   owner: "老闆",
@@ -127,6 +190,21 @@ const RestaurantTeamPage = () => {
   const [savingBranch, setSavingBranch] = useState(false);
   const [toggleTarget, setToggleTarget] = useState<MemberRow | null>(null);
   const [busyMemberId, setBusyMemberId] = useState<string | null>(null);
+
+  // 邀請狀態(user_id → 是否還沒點邀請信)與 email(只有老闆拿得到)
+  const [pendingInvites, setPendingInvites] = useState<Record<string, boolean>>({});
+  const [memberEmails, setMemberEmails] = useState<Record<string, string>>({});
+
+  const [inviteOpen, setInviteOpen] = useState(false);
+  const [inviteForm, setInviteForm] = useState<InviteForm>({
+    email: "",
+    name: "",
+    role: "purchaser",
+    branchId: ALL_BRANCHES,
+  });
+  const [inviteErrors, setInviteErrors] = useState<Partial<Record<InviteField, string>>>({});
+  const [inviteError, setInviteError] = useState<string | null>(null);
+  const [inviting, setInviting] = useState(false);
 
   const fetchBranches = async (): Promise<BranchRow[] | null> => {
     const { data, error } = (await (supabase as never as {
@@ -239,6 +317,32 @@ const RestaurantTeamPage = () => {
         });
         setProfiles(map);
       }
+
+      // 邀請狀態讀不到不影響主要功能 —— 只是少了「邀請中」標籤,所以不跳錯誤
+      let dirRows: DirectoryRow[] | null = null;
+      try {
+        ({ data: dirRows } = (await (supabase as never as {
+          rpc: (
+            fn: string,
+            args: Record<string, unknown>,
+          ) => PromiseLike<{ data: DirectoryRow[] | null; error: { message: string } | null }>;
+        }).rpc("restaurant_member_directory", { p_restaurant: account.restaurant_id })) as {
+          data: DirectoryRow[] | null;
+          error: { message: string } | null;
+        });
+      } catch {
+        dirRows = null;
+      }
+
+      if (cancelled) return;
+      const pendingMap: Record<string, boolean> = {};
+      const emailMap: Record<string, string> = {};
+      (dirRows ?? []).forEach((d) => {
+        if (d.invite_pending) pendingMap[d.user_id] = true;
+        if (d.email) emailMap[d.user_id] = d.email;
+      });
+      setPendingInvites(pendingMap);
+      setMemberEmails(emailMap);
 
       setLoading(false);
     };
@@ -404,6 +508,99 @@ const RestaurantTeamPage = () => {
     toast.success(next ? "已重新啟用成員" : "已停用成員");
   };
 
+  /* ---------------- 新增成員(寄邀請信) ---------------- */
+
+  const activeBranches = branches.filter((b) => b.is_active !== false);
+
+  const openInvite = () => {
+    // 預設分店:老闆自己的分店 → 第一個啟用中的分店 → 全店
+    const defaultBranch = activeBranches.some((b) => b.id === account.branch_id)
+      ? (account.branch_id as string)
+      : (activeBranches[0]?.id ?? ALL_BRANCHES);
+    setInviteForm({ email: "", name: "", role: "purchaser", branchId: defaultBranch });
+    setInviteErrors({});
+    setInviteError(null);
+    setInviteOpen(true);
+  };
+
+  const updateInvite = <K extends keyof InviteForm>(key: K, value: InviteForm[K]) => {
+    setInviteForm((f) => ({ ...f, [key]: value }));
+    const field: InviteField = key === "branchId" ? "branch_id" : (key as InviteField);
+    setInviteErrors((errs) => (errs[field] ? { ...errs, [field]: undefined } : errs));
+    setInviteError(null);
+  };
+
+  const handleInvite = async (e?: React.FormEvent) => {
+    e?.preventDefault();
+    if (!isOwner || inviting) return;
+
+    const errors = validateInvite(inviteForm);
+    setInviteErrors(errors);
+    setInviteError(null);
+    if (Object.keys(errors).length > 0) return;
+
+    setInviting(true);
+    try {
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+      const token = session?.access_token;
+      if (!token) {
+        setInviteError("登入已過期,請重新登入後再試");
+        return;
+      }
+
+      let res: Response;
+      try {
+        // 建帳號、寄信一定要在伺服器端(service role)做 —— 瀏覽器只負責呼叫
+        res = await fetch(inviteFnUrl(), {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+            apikey: String(import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY ?? ""),
+          },
+          body: JSON.stringify({
+            email: inviteForm.email.trim().toLowerCase(),
+            name: inviteForm.name.trim(),
+            role: inviteForm.role,
+            branch_id: inviteForm.branchId === ALL_BRANCHES ? null : inviteForm.branchId,
+            // 只用來指定「哪一家」;伺服器會再確認你是這家店的老闆
+            restaurant_id: account.restaurant_id,
+          }),
+        });
+      } catch {
+        setInviteError("連線失敗,請檢查網路後再試一次");
+        return;
+      }
+
+      const json = (await res.json().catch(() => null)) as InviteResponse | null;
+      const result = json?.data;
+      if (!res.ok || !result?.member) {
+        const message = json?.message || `新增失敗(${res.status}),請稍後再試`;
+        const field = json?.field;
+        if (field === "email" || field === "name" || field === "role" || field === "branch_id") {
+          setInviteErrors({ [field]: message });
+        } else {
+          setInviteError(message);
+        }
+        return;
+      }
+
+      const { member, email, display_name } = result;
+      setMembers((list) => [...list.filter((x) => x.id !== member.id), member]);
+      setProfiles((p) => ({ ...p, [member.user_id]: display_name }));
+      setMemberEmails((m) => ({ ...m, [member.user_id]: email }));
+      setPendingInvites((p) => ({ ...p, [member.user_id]: true }));
+      setInviteOpen(false);
+      toast.success(`已寄出邀請信給 ${display_name}`, {
+        description: `請對方到 ${email} 收信,點連結設定密碼後即可登入(連結 1 小時內有效)。`,
+      });
+    } finally {
+      setInviting(false);
+    }
+  };
+
   const memberName = (m: MemberRow) => {
     if (profiles[m.user_id]) return profiles[m.user_id];
     if (m.user_id === myUserId && myEmail) return myEmail;
@@ -524,19 +721,33 @@ const RestaurantTeamPage = () => {
       {/* ── 成員管理 ── */}
       <Card className="border-slate-200">
         <CardHeader className="pb-3">
-          <CardTitle className="text-base text-slate-700 flex items-center gap-2">
-            <Users className="h-4 w-4 text-emerald-600" />
-            成員管理
-          </CardTitle>
-          <p className="text-xs text-slate-400 mt-1">
-            調整每位同事的權限;採購員看不到任何成本與毛利數字
-          </p>
+          <div className="flex items-start justify-between gap-3">
+            <div>
+              <CardTitle className="text-base text-slate-700 flex items-center gap-2">
+                <Users className="h-4 w-4 text-emerald-600" />
+                成員管理
+              </CardTitle>
+              <p className="text-xs text-slate-400 mt-1">
+                調整每位同事的權限;採購員看不到任何成本與毛利數字
+              </p>
+            </div>
+            {isOwner && (
+              <Button
+                onClick={openInvite}
+                disabled={loading}
+                className="h-11 bg-emerald-600 hover:bg-emerald-700 text-white shrink-0"
+              >
+                <UserPlus className="h-4 w-4 mr-1.5" />
+                新增成員
+              </Button>
+            )}
+          </div>
         </CardHeader>
         <CardContent>
           {!isOwner && (
             <div className="mb-4 flex items-start gap-2 rounded-md border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
               <Lock className="h-4 w-4 shrink-0 mt-0.5" />
-              <span>只有老闆可以調整成員角色或停用帳號,以下為唯讀檢視。</span>
+              <span>只有老闆可以新增成員、調整角色或停用帳號,以下為唯讀檢視。</span>
             </div>
           )}
 
@@ -550,6 +761,9 @@ const RestaurantTeamPage = () => {
             <div className="py-12 text-center text-slate-400 text-sm">
               <Users className="h-10 w-10 mx-auto mb-3 opacity-40" />
               <p>目前沒有其他成員</p>
+              {isOwner && (
+                <p className="mt-1 text-xs">點右上角「新增成員」寄邀請信給同事</p>
+              )}
             </div>
           ) : (
             <div className="space-y-2">
@@ -557,6 +771,8 @@ const RestaurantTeamPage = () => {
                 const active = m.is_active ?? true;
                 const isSelf = m.user_id === myUserId;
                 const busy = busyMemberId === m.id;
+                const invitePending = !!pendingInvites[m.user_id];
+                const email = isOwner ? memberEmails[m.user_id] : undefined;
                 return (
                   <div
                     key={m.id}
@@ -575,6 +791,16 @@ const RestaurantTeamPage = () => {
                             你自己
                           </Badge>
                         )}
+                        {invitePending && (
+                          <Badge
+                            variant="outline"
+                            className="bg-amber-50 text-amber-700 border-amber-200"
+                            title="已寄出邀請信,對方還沒點信中的連結設定密碼"
+                          >
+                            <Mail className="h-3 w-3 mr-1" aria-hidden="true" />
+                            邀請中
+                          </Badge>
+                        )}
                         {!active && (
                           <Badge
                             variant="outline"
@@ -584,10 +810,18 @@ const RestaurantTeamPage = () => {
                           </Badge>
                         )}
                       </div>
+                      {email && email !== memberName(m) && (
+                        <p className="text-xs text-slate-500 mt-0.5 break-all">{email}</p>
+                      )}
                       <p className="text-xs text-slate-400 mt-1">
-                        {branchName(m.branch_id)} · 加入於{" "}
+                        {branchName(m.branch_id)} · {invitePending ? "邀請於" : "加入於"}{" "}
                         {new Date(m.created_at).toLocaleDateString("zh-TW")}
                       </p>
+                      {invitePending && isOwner && (
+                        <p className="text-xs text-amber-700 mt-1">
+                          對方還沒點邀請信。連結 1 小時內有效,過期請對方到登入頁按「忘記密碼」,用這個 Email 設定密碼。
+                        </p>
+                      )}
                     </div>
 
                     {isOwner ? (
@@ -720,6 +954,200 @@ const RestaurantTeamPage = () => {
               onClick={handleSaveBranch}
             >
               {savingBranch ? "儲存中…" : "儲存"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* 新增成員 Dialog(只有老闆打得開) */}
+      <Dialog
+        open={inviteOpen && isOwner}
+        onOpenChange={(o) => {
+          if (!inviting) setInviteOpen(o);
+        }}
+      >
+        {/* 右上角關閉鈕是 shadcn 內建的 16px 小圖示;手機上放大到 44px 點擊區(只影響這個 Dialog) */}
+        <DialogContent className="max-h-[90dvh] overflow-y-auto [&>button.absolute]:right-1.5 [&>button.absolute]:top-1.5 [&>button.absolute]:flex [&>button.absolute]:h-11 [&>button.absolute]:w-11 [&>button.absolute]:items-center [&>button.absolute]:justify-center">
+          <DialogHeader>
+            <DialogTitle>新增成員</DialogTitle>
+            <DialogDescription>
+              我們會寄一封邀請信到對方的信箱,對方點信中連結設定密碼後,就能用這個 Email 登入{" "}
+              {account.restaurant_name} 的後台。
+            </DialogDescription>
+          </DialogHeader>
+
+          <form
+            id="invite-member-form"
+            onSubmit={handleInvite}
+            noValidate
+            className="space-y-4 py-1"
+          >
+            <div className="space-y-1.5">
+              <Label htmlFor="invite-email" className="text-slate-600">
+                Email *
+              </Label>
+              <Input
+                id="invite-email"
+                type="email"
+                inputMode="email"
+                autoComplete="off"
+                autoCapitalize="none"
+                spellCheck={false}
+                className="h-11"
+                value={inviteForm.email}
+                onChange={(e) => updateInvite("email", e.target.value)}
+                placeholder="例:staff@example.com"
+                aria-invalid={!!inviteErrors.email}
+                aria-describedby={inviteErrors.email ? "invite-email-error" : undefined}
+                disabled={inviting}
+              />
+              {inviteErrors.email && (
+                <p id="invite-email-error" className="text-xs text-red-600">
+                  {inviteErrors.email}
+                </p>
+              )}
+            </div>
+
+            <div className="space-y-1.5">
+              <Label htmlFor="invite-name" className="text-slate-600">
+                姓名 *
+              </Label>
+              <Input
+                id="invite-name"
+                autoComplete="off"
+                className="h-11"
+                value={inviteForm.name}
+                onChange={(e) => updateInvite("name", e.target.value)}
+                placeholder="例:王小明"
+                maxLength={INVITE_NAME_MAX + 10}
+                aria-invalid={!!inviteErrors.name}
+                aria-describedby={inviteErrors.name ? "invite-name-error" : undefined}
+                disabled={inviting}
+              />
+              {inviteErrors.name && (
+                <p id="invite-name-error" className="text-xs text-red-600">
+                  {inviteErrors.name}
+                </p>
+              )}
+            </div>
+
+            <fieldset className="space-y-1.5" disabled={inviting}>
+              <legend className="text-sm font-medium text-slate-600 mb-1.5">角色</legend>
+              <RadioGroup
+                value={inviteForm.role}
+                onValueChange={(v) => updateInvite("role", v as RestaurantRole)}
+                className="gap-2"
+              >
+                {INVITE_ROLE_OPTIONS.map((r) => {
+                  const selected = inviteForm.role === r.value;
+                  return (
+                    <Label
+                      key={r.value}
+                      htmlFor={`invite-role-${r.value}`}
+                      className={`flex min-h-11 cursor-pointer items-start gap-3 rounded-md border px-3 py-2.5 leading-normal transition-colors ${
+                        selected
+                          ? "border-emerald-500 bg-emerald-50/60"
+                          : "border-slate-200 hover:bg-slate-50"
+                      }`}
+                    >
+                      <RadioGroupItem
+                        id={`invite-role-${r.value}`}
+                        value={r.value}
+                        className="mt-0.5 shrink-0"
+                      />
+                      <span className="min-w-0">
+                        <span className="block text-sm font-medium text-slate-800">
+                          {r.label}
+                        </span>
+                        <span className="block text-xs font-normal text-slate-500 mt-0.5">
+                          {r.hint}
+                        </span>
+                      </span>
+                    </Label>
+                  );
+                })}
+              </RadioGroup>
+              {inviteForm.role === "owner" && (
+                <p className="text-xs text-amber-700">
+                  老闆擁有全部權限,包括新增、停用其他成員。請只給信得過的人。
+                </p>
+              )}
+              {inviteErrors.role && <p className="text-xs text-red-600">{inviteErrors.role}</p>}
+            </fieldset>
+
+            {branches.length > 0 && (
+              <div className="space-y-1.5">
+                <Label htmlFor="invite-branch" className="text-slate-600">
+                  分店
+                </Label>
+                <Select
+                  value={inviteForm.branchId}
+                  onValueChange={(v) => updateInvite("branchId", v)}
+                  disabled={inviting}
+                >
+                  <SelectTrigger
+                    id="invite-branch"
+                    className="h-11"
+                    aria-invalid={!!inviteErrors.branch_id}
+                  >
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {/* 只放純文字 —— SelectItem 的 children 會被 Radix 鏡射到 trigger 上 */}
+                    <SelectItem value={ALL_BRANCHES} className="min-h-11">
+                      全店(不限分店)
+                    </SelectItem>
+                    {activeBranches.map((b) => (
+                      <SelectItem key={b.id} value={b.id} className="min-h-11">
+                        {b.name ?? "未命名分店"}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-slate-400">這位成員建立的採購單會記在這個分店</p>
+                {inviteErrors.branch_id && (
+                  <p className="text-xs text-red-600">{inviteErrors.branch_id}</p>
+                )}
+              </div>
+            )}
+
+            {inviteError && (
+              <div
+                role="alert"
+                className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700"
+              >
+                {inviteError}
+              </div>
+            )}
+          </form>
+
+          <DialogFooter className="gap-2 sm:gap-0">
+            <Button
+              type="button"
+              variant="outline"
+              className="h-11"
+              onClick={() => setInviteOpen(false)}
+              disabled={inviting}
+            >
+              取消
+            </Button>
+            <Button
+              type="submit"
+              form="invite-member-form"
+              className="h-11 bg-emerald-600 hover:bg-emerald-700 text-white"
+              disabled={inviting}
+            >
+              {inviting ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-1.5 animate-spin" />
+                  寄送中…
+                </>
+              ) : (
+                <>
+                  <Mail className="h-4 w-4 mr-1.5" />
+                  寄出邀請
+                </>
+              )}
             </Button>
           </DialogFooter>
         </DialogContent>
