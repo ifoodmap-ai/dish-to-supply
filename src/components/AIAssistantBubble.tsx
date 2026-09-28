@@ -4,9 +4,13 @@
 //   · 供應商後台與公開頁不掛(公開的舊首頁 Index.tsx 有自己內嵌的 Chatbot)。
 //
 // 兩種模式:
-//   · restaurant:小標「找食材嗎？」(業主指定)。對話送出需求後收起面板,導去 /restaurant/analyze,
-//     需求放在 router state(ChatRequirementsLocationState),由分析頁接手;已經在分析頁也照樣導
-//     (同一路由、新的 location.key)。傳了 onRequirementsSubmit 就改交給它,不導頁。
+//   · restaurant:小標「找食材嗎？」(業主指定)。AI 整理出需求後「不會自己跳頁」—— 使用者可能正在
+//     智慧採購頁填單,被拉走清單就不見了。對話裡改放一張結果卡,按「到 AI 菜單分析查看」才收起面板、
+//     導去 /restaurant/analyze(需求放在 router state:ChatRequirementsLocationState,由分析頁接手;
+//     已經在分析頁也照樣導,同一路由、新的 location.key)。
+//     結果回來時使用者看不到面板(收起來了、或已經不在送出時那一頁)→ 跳 toast「AI 已整理好 N 項食材」,
+//     按「查看」才導頁;泡泡已經卸載(登出、切到別的後台)→ 什麼都不做。
+//     傳了 onRequirementsSubmit 就改交給它(不放結果卡、不導頁)。
 //   · admin:管理員後台是另一個網站(VITE_PORTAL=admin),沒有 /restaurant/* 路由 —— 所以不交接、
 //     不導頁:不把 onRequirementsSubmit 傳給 Chatbot,它就只會回話,不會擷取需求(也不會在後台建待審分析)。
 //
@@ -34,6 +38,7 @@ import type { CSSProperties, KeyboardEvent, RefObject } from "react";
 import { createPortal } from "react-dom";
 import { useLocation, useNavigate } from "react-router-dom";
 import { X } from "lucide-react";
+import { toast } from "sonner";
 import Chatbot from "@/components/Chatbot";
 import type { AnalysisMeta } from "@/components/MenuUpload";
 import { cn } from "@/lib/utils";
@@ -182,7 +187,6 @@ export default function AIAssistantBubble(props: AIAssistantBubbleProps): JSX.El
 
   const [open, setOpen] = useState(false);
   const [pastFold, setPastFold] = useState(false);
-  const [announcement, setAnnouncement] = useState("");
   const isDesktop = useSyncExternalStore(subscribeDesktop, getIsDesktop, () => true);
   const isModal = open && !isDesktop;
 
@@ -199,9 +203,37 @@ export default function AIAssistantBubble(props: AIAssistantBubbleProps): JSX.El
   useEffect(() => {
     overrideRef.current = props.variant === "admin" ? undefined : props.onRequirementsSubmit;
   });
+  const hasOverride = props.variant !== "admin" && !!props.onRequirementsSubmit;
+
+  // AI 結果回來時要知道的幾件事:泡泡還在不在、面板開著沒、使用者是不是還在送出時那一頁
+  const mountedRef = useRef(true);
+  const openRef = useRef(open);
+  const lastLocationKey = useRef(locationKey);
+  const sentAtKeyRef = useRef<string | null>(null);
+  const toastIdRef = useRef<string | number | undefined>(undefined);
+
+  useLayoutEffect(() => {
+    openRef.current = open;
+  }, [open]);
+
+  const dismissResultToast = () => {
+    if (toastIdRef.current === undefined) return;
+    toast.dismiss(toastIdRef.current);
+    toastIdRef.current = undefined;
+  };
+
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => {
+      mountedRef.current = false;
+      // 登出、切到別的後台:留在畫面上的「查看」不能再把人拉回餐廳後台
+      dismissResultToast();
+    };
+  }, []);
 
   const openPanel = useCallback(() => {
-    setAnnouncement("");
+    // 面板裡就有結果卡,提醒用的 toast 可以收了
+    dismissResultToast();
     setOpen(true);
   }, []);
 
@@ -220,17 +252,12 @@ export default function AIAssistantBubble(props: AIAssistantBubbleProps): JSX.El
   // 使用者自己關的(Esc / × / 遮罩 / 泡泡):焦點一律回泡泡
   const closePanel = useCallback(() => hidePanel(true), [hidePanel]);
 
-  // 餐廳版:需求交給覆寫回呼,沒有覆寫就導去分析頁
-  const handleRequirementsSubmit = useCallback(
+  // 餐廳版:使用者按了結果卡的主按鈕、或 toast 的「查看」,才收起面板導去分析頁
+  const goToAnalysis = useCallback(
     (requirements: string[], meta: AnalysisMeta) => {
+      if (!mountedRef.current) return;
+      dismissResultToast();
       hidePanel(focusIsInPanel());
-      const override = overrideRef.current;
-      if (override) {
-        setAnnouncement(`AI 已整理出 ${requirements.length} 項採購需求，結果顯示在頁面上。`);
-        override(requirements, meta);
-        return;
-      }
-      setAnnouncement(`AI 已整理出 ${requirements.length} 項採購需求，已帶到 AI 菜單分析頁。`);
       // 只挑分析頁用得到的欄位,確定能放進 history.state
       const state: ChatRequirementsLocationState = {
         chatRequirements: requirements.map(String),
@@ -241,8 +268,33 @@ export default function AIAssistantBubble(props: AIAssistantBubbleProps): JSX.El
     [hidePanel, navigate],
   );
 
+  // 使用者每送出一句話,記下當時在哪一頁
+  const handleSend = useCallback(() => {
+    sentAtKeyRef.current = lastLocationKey.current;
+  }, []);
+
+  // 餐廳版:AI 整理好需求了(Chatbot 只在自己還掛著時才會叫這裡)。不自己跳頁 —— 結果卡已經在對話裡。
+  // 使用者這時看不到面板(收起來了、或已經不在送出時那一頁)才跳 toast,按「查看」才導頁。
+  const handleResult = useCallback(
+    (requirements: string[], meta: AnalysisMeta) => {
+      if (!mountedRef.current) return;
+      const override = overrideRef.current;
+      if (override) {
+        hidePanel(focusIsInPanel());
+        override(requirements, meta);
+        return;
+      }
+      const userIsWatching = openRef.current && lastLocationKey.current === sentAtKeyRef.current;
+      if (userIsWatching) return;
+      dismissResultToast();
+      toastIdRef.current = toast(`AI 已整理好 ${requirements.length} 項食材`, {
+        action: { label: "查看", onClick: () => goToAnalysis(requirements, meta) },
+      });
+    },
+    [hidePanel, goToAnalysis],
+  );
+
   // 換頁就收起,不要在新頁面上還開著蓋住內容。useLayoutEffect:在畫面畫出來之前就收,不會閃一下
-  const lastLocationKey = useRef(locationKey);
   useLayoutEffect(() => {
     if (lastLocationKey.current === locationKey) return;
     lastLocationKey.current = locationKey;
@@ -434,14 +486,15 @@ export default function AIAssistantBubble(props: AIAssistantBubbleProps): JSX.El
             variant="panel"
             greeting={copy.greeting}
             // admin 不傳:Chatbot 只有拿到 onRequirementsSubmit 才會擷取需求並交接,不傳就是純對話
-            onRequirementsSubmit={mode === "admin" ? undefined : handleRequirementsSubmit}
+            onSend={mode === "admin" ? undefined : handleSend}
+            onRequirementsSubmit={mode === "admin" ? undefined : handleResult}
+            resultAction={
+              mode === "admin" || hasOverride ? undefined : { label: "到 AI 菜單分析查看", onClick: goToAnalysis }
+            }
           />
         </div>
       </div>
 
-      <p role="status" className="sr-only">
-        {announcement}
-      </p>
     </div>,
     document.body,
   );

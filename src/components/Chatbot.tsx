@@ -2,18 +2,26 @@ import { useState, useRef, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
-import { Send, Bot, User } from "lucide-react";
+import { Send, Bot, User, ArrowRight } from "lucide-react";
 import { toast } from "sonner";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { analyzeChat, chatReply, formatIngredient } from "@/lib/api";
 import { track } from "@/lib/analytics";
 import type { AnalysisMeta } from "@/components/MenuUpload";
 
+/** 對話整理出來的採購需求(= onRequirementsSubmit 的兩個參數) */
+interface ChatResult {
+  requirements: string[];
+  meta: AnalysisMeta;
+}
+
 interface Message {
   id: number;
   text: string;
   sender: "user" | "bot";
   timestamp: Date;
+  /** 只有 panel 版傳了 resultAction 時才會有:這則訊息畫成結果卡 */
+  result?: ChatResult;
 }
 
 interface ChatbotProps {
@@ -31,12 +39,29 @@ interface ChatbotProps {
    * 管理員版泡泡是純對話、不交接,原本那句「幫您找到合適的供應商」對它不成立,才另外傳一句。
    */
   greeting?: string;
+  /** 使用者每送出一句話時通知一聲(泡泡用來記下「送出時在哪一頁」) */
+  onSend?: () => void;
+  /**
+   * 只給 panel 版用:整理出需求後,在對話裡放一張結果卡(取代「正在為您媒合供應商…」那句),
+   * 卡上的主按鈕要做什麼由呼叫端決定 —— 不會自己跳走。onRequirementsSubmit 照樣會被呼叫。
+   */
+  resultAction?: { label: string; onClick: (requirements: string[], meta: AnalysisMeta) => void };
 }
 
 // panel 版新增的無障礙標籤,字典裡沒有對應的 key(字典檔不在這次改動範圍),先放這裡
 const PANEL_INPUT_LABEL = { zh: "輸入食材需求", en: "Describe the ingredients you need" } as const;
 
-const Chatbot = ({ onRequirementsSubmit, variant = "card", greeting }: ChatbotProps) => {
+/** 結果卡的摘要:「已整理 3 項食材：牛肉 5kg、洋蔥 3kg、青蔥」,超過 3 項只列前 3 項再加「…」 */
+const summarizeResult = (requirements: string[]) =>
+  `已整理 ${requirements.length} 項食材：${requirements.slice(0, 3).join("、")}${requirements.length > 3 ? "…" : ""}`;
+
+const Chatbot = ({
+  onRequirementsSubmit,
+  variant = "card",
+  greeting,
+  onSend,
+  resultAction,
+}: ChatbotProps) => {
   const { t, language } = useLanguage();
 
   const [messages, setMessages] = useState<Message[]>([
@@ -52,6 +77,16 @@ const Chatbot = ({ onRequirementsSubmit, variant = "card", greeting }: ChatbotPr
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const listRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+
+  // 元件還在嗎?AI 回得慢時使用者可能已經換頁、登出、切到別的後台(Chatbot 被卸載),
+  // 那之後什麼都不做:不再 setState、不再擷取需求,也不再呼叫 onRequirementsSubmit。
+  const mountedRef = useRef(true);
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => {
+      mountedRef.current = false;
+    };
+  }, []);
 
   const scrollToBottom = () => {
     // listRef 只有 panel 版會掛上。panel 在固定定位的泡泡面板裡,只捲訊息列表自己 ——
@@ -75,6 +110,20 @@ const Chatbot = ({ onRequirementsSubmit, variant = "card", greeting }: ChatbotPr
     ]);
   };
 
+  // text 是之後送給 AI 的對話內容(完整清單);畫面上畫成結果卡
+  const pushResultMessage = (requirements: string[], meta: AnalysisMeta) => {
+    setMessages((prev) => [
+      ...prev,
+      {
+        id: Date.now() + Math.random(),
+        text: `已為您整理出採購需求:\n${requirements.join("\n")}`,
+        sender: "bot",
+        timestamp: new Date(),
+        result: { requirements, meta },
+      },
+    ]);
+  };
+
   // Detect when the customer wants us to start supplier matching.
   const wantsMatching = (msg: string) => {
     const lower = msg.toLowerCase();
@@ -92,6 +141,7 @@ const Chatbot = ({ onRequirementsSubmit, variant = "card", greeting }: ChatbotPr
     try {
       // Real conversational reply from Gemini.
       const { reply } = await chatReply(apiMessages);
+      if (!mountedRef.current) return;
       if (reply) pushBotMessage(reply);
 
       // If the customer is ready to match suppliers, extract requirements via AI
@@ -99,22 +149,29 @@ const Chatbot = ({ onRequirementsSubmit, variant = "card", greeting }: ChatbotPr
       if (wantsMatching(userMessage) && onRequirementsSubmit) {
         track("analysis_started", { source: "chat" });
         const result = await analyzeChat(apiMessages);
+        if (!mountedRef.current) return;
         if (result.ingredients.length > 0) {
           track("analysis_completed", { source: "chat", count: result.ingredients.length });
           const formatted = result.ingredients.map(formatIngredient);
-          pushBotMessage(`已為您整理出採購需求:\n${formatted.join("\n")}\n\n正在為您媒合供應商…`);
-          onRequirementsSubmit(formatted, {
+          const meta: AnalysisMeta = {
             analysisId: result.analysisId,
             names: result.ingredients.map((i) => i.name),
-          });
+          };
+          if (variant === "panel" && resultAction) {
+            pushResultMessage(formatted, meta);
+          } else {
+            pushBotMessage(`已為您整理出採購需求:\n${formatted.join("\n")}\n\n正在為您媒合供應商…`);
+          }
+          onRequirementsSubmit(formatted, meta);
         }
       }
     } catch (error) {
+      if (!mountedRef.current) return;
       const message = error instanceof Error ? error.message : "AI 服務暫時無法使用";
       pushBotMessage(`抱歉,AI 服務暫時無法回覆,請稍後再試。(${message})`);
       toast.error(`AI 對話失敗:${message}`);
     } finally {
-      setIsTyping(false);
+      if (mountedRef.current) setIsTyping(false);
     }
   };
 
@@ -131,6 +188,7 @@ const Chatbot = ({ onRequirementsSubmit, variant = "card", greeting }: ChatbotPr
     const history = [...messages, userMessage];
     setMessages(history);
     setInputValue("");
+    onSend?.();
     void respond(history, userMessage.text);
   };
 
@@ -153,32 +211,41 @@ const Chatbot = ({ onRequirementsSubmit, variant = "card", greeting }: ChatbotPr
           aria-label={t('chat.title')}
           className="min-h-0 flex-1 space-y-3 overflow-y-auto overscroll-contain bg-[#f6f9f5] p-4"
         >
-          {messages.map((message) => (
-            <div
-              key={message.id}
-              className={`flex ${message.sender === "user" ? "justify-end" : "justify-start"}`}
-            >
+          {messages.map((message) =>
+            message.result ? (
+              <ResultCard
+                key={message.id}
+                result={message.result}
+                timestamp={message.timestamp}
+                action={resultAction}
+              />
+            ) : (
               <div
-                className={`max-w-[88%] rounded-[15px] px-3.5 py-2.5 ${
-                  message.sender === "user"
-                    ? "rounded-tr-[5px] bg-gradient-to-br from-[#46c138] to-[#1f9e4e] text-[#0E1A14]"
-                    : "rounded-tl-[5px] border border-[#e8efe6] bg-white text-[#1d2b22]"
-                }`}
+                key={message.id}
+                className={`flex ${message.sender === "user" ? "justify-end" : "justify-start"}`}
               >
-                <p className="text-sm leading-relaxed whitespace-pre-line break-words">{message.text}</p>
-                <p
-                  className={`mt-1 text-[11px] leading-none ${
-                    message.sender === "user" ? "text-[#0E1A14]" : "text-slate-500"
+                <div
+                  className={`max-w-[88%] rounded-[15px] px-3.5 py-2.5 ${
+                    message.sender === "user"
+                      ? "rounded-tr-[5px] bg-gradient-to-br from-[#46c138] to-[#1f9e4e] text-[#0E1A14]"
+                      : "rounded-tl-[5px] border border-[#e8efe6] bg-white text-[#1d2b22]"
                   }`}
                 >
-                  {message.timestamp.toLocaleTimeString([], {
-                    hour: "2-digit",
-                    minute: "2-digit",
-                  })}
-                </p>
+                  <p className="text-sm leading-relaxed whitespace-pre-line break-words">{message.text}</p>
+                  <p
+                    className={`mt-1 text-[11px] leading-none ${
+                      message.sender === "user" ? "text-[#0E1A14]" : "text-slate-500"
+                    }`}
+                  >
+                    {message.timestamp.toLocaleTimeString([], {
+                      hour: "2-digit",
+                      minute: "2-digit",
+                    })}
+                  </p>
+                </div>
               </div>
-            </div>
-          ))}
+            ),
+          )}
 
           {isTyping && (
             <div className="flex justify-start">
@@ -332,5 +399,35 @@ const Chatbot = ({ onRequirementsSubmit, variant = "card", greeting }: ChatbotPr
     </section>
   );
 };
+
+/** panel 版的結果卡:整理好的食材摘要 + 呼叫端給的主按鈕(按了才動作,不會自己跳走) */
+const ResultCard = ({
+  result,
+  timestamp,
+  action,
+}: {
+  result: ChatResult;
+  timestamp: Date;
+  action?: ChatbotProps["resultAction"];
+}) => (
+  <div className="flex justify-start">
+    <div className="w-full max-w-[88%] rounded-[15px] rounded-tl-[5px] border border-[#cdeec0] bg-white px-3.5 py-3 text-[#1d2b22]">
+      <p className="text-sm font-semibold leading-relaxed break-words">{summarizeResult(result.requirements)}</p>
+      {action && (
+        <button
+          type="button"
+          onClick={() => action.onClick(result.requirements, result.meta)}
+          className="mt-2.5 inline-flex min-h-11 items-center gap-1.5 rounded-full bg-gradient-to-br from-[#46c138] to-[#1f9e4e] px-4 text-[13.5px] font-bold text-[#0E1A14] transition hover:brightness-105 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0B6B40] focus-visible:ring-offset-2 motion-reduce:transition-none"
+        >
+          {action.label}
+          <ArrowRight aria-hidden="true" className="h-4 w-4" />
+        </button>
+      )}
+      <p className="mt-2 text-[11px] leading-none text-slate-500">
+        {timestamp.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+      </p>
+    </div>
+  </div>
+);
 
 export default Chatbot;

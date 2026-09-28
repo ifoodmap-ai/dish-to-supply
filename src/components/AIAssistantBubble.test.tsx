@@ -1,5 +1,7 @@
-// AI 小助手泡泡:開關、Esc、焦點、手機全螢幕、換頁收起,以及兩種模式送出需求後的去向:
-//   · restaurant(預設):收起 → 導去 /restaurant/analyze,需求放在 router state
+// AI 小助手泡泡:開關、Esc、焦點、手機全螢幕、換頁收起,以及兩種模式整理出需求後的去向:
+//   · restaurant(預設):不會自己跳頁。對話裡出現結果卡,按「到 AI 菜單分析查看」才導去
+//     /restaurant/analyze(需求放在 router state);使用者看不到面板時改跳 toast,按「查看」才導;
+//     泡泡已經卸載就什麼都不做
 //   · admin:純對話,不擷取需求、不導頁(管理員站沒有 /restaurant/*)
 //
 // 用真的 Chatbot(variant="panel")跑整段對話,只 mock 掉 AI 呼叫 ——
@@ -15,11 +17,13 @@ import { LanguageProvider } from "@/contexts/LanguageContext";
 import type { AnalysisResult } from "@/lib/api";
 import AIAssistantBubble from "./AIAssistantBubble";
 
-const { chatReply, analyzeChat, track, toastError } = vi.hoisted(() => ({
+const { chatReply, analyzeChat, track, toastError, toastFn, toastDismiss } = vi.hoisted(() => ({
   chatReply: vi.fn(),
   analyzeChat: vi.fn(),
   track: vi.fn(),
   toastError: vi.fn(),
+  toastFn: vi.fn((..._args: unknown[]) => "result-toast"),
+  toastDismiss: vi.fn(),
 }));
 
 vi.mock("@/integrations/supabase/client", () => ({ supabase: {} }));
@@ -32,8 +36,15 @@ vi.mock("@/lib/api", async () => {
 vi.mock("@/lib/analytics", () => ({ track }));
 
 vi.mock("sonner", () => ({
-  toast: { error: toastError, success: vi.fn(), info: vi.fn() },
+  toast: Object.assign(toastFn, { error: toastError, success: vi.fn(), info: vi.fn(), dismiss: toastDismiss }),
 }));
+
+type ToastOptions = { action: { label: string; onClick: () => void } };
+/** 泡泡跳出的「AI 已整理好」toast:文字與「查看」動作 */
+const resultToast = () => {
+  const [message, options] = toastFn.mock.calls[0] as [string, ToastOptions];
+  return { message, options };
+};
 
 const ANALYSIS: AnalysisResult = {
   analysisId: "analysis-1",
@@ -85,6 +96,23 @@ const renderBubble = (props: BubbleProps = {}, path = "/restaurant/orders") =>
       </LanguageProvider>
     </MemoryRouter>,
   );
+
+/**
+ * Router 一直在、只有泡泡被拿掉 —— 跟真的一樣(登出、切到供應商後台時整個 App 的 Router 還在)。
+ * 這樣泡泡卸載後如果還偷偷導頁,LocationProbe 會記到。
+ */
+const renderRemovableBubble = (path = "/restaurant/orders") => {
+  const Tree = ({ showBubble }: { showBubble: boolean }) => (
+    <MemoryRouter initialEntries={[path]}>
+      <LanguageProvider>
+        {showBubble && <AIAssistantBubble />}
+        <LocationProbe />
+      </LanguageProvider>
+    </MemoryRouter>
+  );
+  const view = render(<Tree showBubble />);
+  return { removeBubble: () => view.rerender(<Tree showBubble={false} />) };
+};
 
 const fab = (name = "找食材嗎？AI 採購助手") => screen.getByRole("button", { name });
 const tip = () => screen.getByTestId("ai-assistant-tip");
@@ -285,8 +313,10 @@ describe("AIAssistantBubble 開關與焦點(桌機)", () => {
   });
 });
 
-describe("AIAssistantBubble 餐廳版送出需求(預設:導去分析頁)", () => {
-  it("在別的頁面送出需求 → 收起面板、焦點回泡泡,導去 /restaurant/analyze 並帶上需求", async () => {
+describe("AIAssistantBubble 餐廳版整理出需求(不會自己跳頁)", () => {
+  const GO = { name: "到 AI 菜單分析查看" };
+
+  it("面板裡出現結果卡、不自動導頁;按「到 AI 菜單分析查看」才收起面板、導去分析頁,state 形狀正確", async () => {
     chatReply.mockResolvedValueOnce({ reply: "了解,我來幫您整理。" });
     analyzeChat.mockResolvedValueOnce(ANALYSIS);
     const user = userEvent.setup();
@@ -296,29 +326,56 @@ describe("AIAssistantBubble 餐廳版送出需求(預設:導去分析頁)", () =
     await user.type(chatInput(), REQUEST);
     await user.click(screen.getByRole("button", { name: "發送" }));
 
-    await waitFor(() => expect(currentLocation().pathname).toBe("/restaurant/analyze"));
+    const dialog = screen.getByRole("dialog", { name: "AI 採購助手" });
+    const go = await within(dialog).findByRole("button", GO);
+    expect(within(dialog).getByText("已整理 3 項食材：牛肉 5kg、洋蔥 3kg、青蔥")).toBeInTheDocument();
+    expect(within(dialog).queryByText(/正在為您媒合供應商/)).toBeNull();
+    // 不自己跳頁、不跳 toast、面板照樣開著,焦點還在輸入框
+    expect(locations.map((l) => l.pathname)).toEqual(["/restaurant/orders"]);
+    expect(toastFn).not.toHaveBeenCalled();
+    expect(dialog).toHaveAttribute("data-state", "open");
+    expect(chatInput()).toHaveFocus();
+
+    await user.click(go);
+
+    expect(currentLocation().pathname).toBe("/restaurant/analyze");
     const { state } = currentLocation();
     expect(state).toEqual(HANDOFF_STATE);
     // router state 會存進 history.state,必須可序列化
     expect(structuredClone(state)).toEqual(HANDOFF_STATE);
-    expect(analyzeChat).toHaveBeenCalledTimes(1);
-
     expect(screen.queryByRole("dialog")).toBeNull();
     expect(fab()).toHaveAttribute("aria-expanded", "false");
     expect(fab()).toHaveFocus();
-    expect(screen.getByRole("status")).toHaveTextContent(
-      "AI 已整理出 3 項採購需求，已帶到 AI 菜單分析頁。",
-    );
 
-    // 再打開時對話紀錄還在(Chatbot 沒被卸載),報讀訊息清掉
+    // 再打開時對話紀錄與結果卡都還在(Chatbot 沒被卸載)
     await user.click(fab());
-    const dialog = screen.getByRole("dialog", { name: "AI 採購助手" });
-    expect(within(dialog).getByText(REQUEST)).toBeInTheDocument();
-    expect(within(dialog).getByText(/已為您整理出採購需求/)).toBeInTheDocument();
-    expect(screen.getByRole("status")).toBeEmptyDOMElement();
+    const reopened = screen.getByRole("dialog", { name: "AI 採購助手" });
+    expect(within(reopened).getByText(REQUEST)).toBeInTheDocument();
+    expect(within(reopened).getByRole("button", GO)).toBeInTheDocument();
   });
 
-  it("已經在分析頁也照樣導頁(同一路由、新的 location.key),讓分析頁接手新的 state", async () => {
+  it("超過 3 項時結果卡只列前 3 項再加「…」,導頁時帶完整清單", async () => {
+    chatReply.mockResolvedValueOnce({ reply: "了解,我來幫您整理。" });
+    analyzeChat.mockResolvedValueOnce({
+      ...ANALYSIS,
+      ingredients: [...ANALYSIS.ingredients, { name: "雞蛋", quantity: "60", unit: "顆" }],
+    });
+    const user = userEvent.setup();
+    renderBubble();
+
+    await user.click(fab());
+    await user.type(chatInput(), REQUEST);
+    pressEnter(chatInput());
+    await user.click(await screen.findByRole("button", GO));
+
+    expect(screen.queryByText("已整理 4 項食材：牛肉 5kg、洋蔥 3kg、青蔥…")).not.toBeNull();
+    expect(currentLocation().state).toEqual({
+      chatRequirements: ["牛肉 5kg", "洋蔥 3kg", "青蔥", "雞蛋 60顆"],
+      chatMeta: { analysisId: "analysis-1", names: ["牛肉", "洋蔥", "青蔥", "雞蛋"] },
+    });
+  });
+
+  it("已經在分析頁:按結果卡也照樣導頁(同一路由、新的 location.key),讓分析頁接手新的 state", async () => {
     chatReply.mockResolvedValueOnce({ reply: "了解,我來幫您整理。" });
     analyzeChat.mockResolvedValueOnce(ANALYSIS);
     const user = userEvent.setup();
@@ -328,48 +385,18 @@ describe("AIAssistantBubble 餐廳版送出需求(預設:導去分析頁)", () =
     await user.click(fab());
     await user.type(chatInput(), REQUEST);
     pressEnter(chatInput());
+    const go = await screen.findByRole("button", GO);
+    expect(currentLocation().key).toBe(before.key);
 
-    await waitFor(() => expect(currentLocation().key).not.toBe(before.key));
+    await user.click(go);
+
+    expect(currentLocation().key).not.toBe(before.key);
     expect(currentLocation().pathname).toBe("/restaurant/analyze");
     expect(currentLocation().state).toEqual(HANDOFF_STATE);
     expect(screen.queryByRole("dialog")).toBeNull();
   });
 
-  it("有傳 onRequirementsSubmit 就交給它、不導頁", async () => {
-    const onRequirementsSubmit = vi.fn();
-    chatReply.mockResolvedValueOnce({ reply: "了解,我來幫您整理。" });
-    analyzeChat.mockResolvedValueOnce(ANALYSIS);
-    const user = userEvent.setup();
-    renderBubble({ onRequirementsSubmit }, "/restaurant/orders");
-
-    await user.click(fab());
-    await user.type(chatInput(), REQUEST);
-    pressEnter(chatInput());
-
-    await waitFor(() => expect(onRequirementsSubmit).toHaveBeenCalledTimes(1));
-    expect(onRequirementsSubmit).toHaveBeenCalledWith(HANDOFF_STATE.chatRequirements, HANDOFF_STATE.chatMeta);
-    expect(locations.map((l) => l.pathname)).toEqual(["/restaurant/orders"]);
-    expect(screen.queryByRole("dialog")).toBeNull();
-    expect(fab()).toHaveFocus();
-    expect(screen.getByRole("status")).toHaveTextContent("AI 已整理出 3 項採購需求，結果顯示在頁面上。");
-  });
-
-  it("只是聊天(沒講到找供應商)時面板保持打開、不導頁", async () => {
-    chatReply.mockResolvedValueOnce({ reply: "請問每週大約需要多少牛肉?" });
-    const user = userEvent.setup();
-    renderBubble();
-
-    await user.click(fab());
-    await user.type(chatInput(), "我是火鍋店,每週要進牛肉");
-    pressEnter(chatInput());
-
-    expect(await screen.findByText("請問每週大約需要多少牛肉?")).toBeInTheDocument();
-    expect(analyzeChat).not.toHaveBeenCalled();
-    expect(locations.map((l) => l.pathname)).toEqual(["/restaurant/orders"]);
-    expect(screen.getByRole("dialog", { name: "AI 採購助手" })).toBeInTheDocument();
-  });
-
-  it("面板收起之後 AI 才回來:照樣導頁與報讀,但不搶走頁面上的焦點", async () => {
+  it("面板收起後結果才回來:不導頁、不搶焦點,改跳 toast;按 toast 的「查看」才導頁", async () => {
     const reply = deferred<{ reply: string }>();
     chatReply.mockReturnValueOnce(reply.promise);
     analyzeChat.mockResolvedValueOnce(ANALYSIS);
@@ -386,11 +413,163 @@ describe("AIAssistantBubble 餐廳版送出需求(預設:導去分析頁)", () =
     await act(async () => {
       reply.resolve({ reply: "了解,我來幫您整理。" });
     });
+    await waitFor(() => expect(toastFn).toHaveBeenCalledTimes(1));
 
-    await waitFor(() => expect(currentLocation().pathname).toBe("/restaurant/analyze"));
-    expect(currentLocation().state).toEqual(HANDOFF_STATE);
+    expect(locations.map((l) => l.pathname)).toEqual(["/restaurant/orders"]);
     expect(pageButton).toHaveFocus();
-    expect(screen.getByRole("status")).toHaveTextContent("AI 已整理出 3 項採購需求");
+    const { message, options } = resultToast();
+    expect(message).toBe("AI 已整理好 3 項食材");
+    expect(options.action.label).toBe("查看");
+
+    act(() => {
+      options.action.onClick();
+    });
+
+    expect(currentLocation().pathname).toBe("/restaurant/analyze");
+    expect(currentLocation().state).toEqual(HANDOFF_STATE);
+    expect(toastDismiss).toHaveBeenCalledWith("result-toast");
+  });
+
+  it("toast 跳出後使用者自己打開面板:toast 收掉,結果卡在面板裡,按了才導頁", async () => {
+    const reply = deferred<{ reply: string }>();
+    chatReply.mockReturnValueOnce(reply.promise);
+    analyzeChat.mockResolvedValueOnce(ANALYSIS);
+    const user = userEvent.setup();
+    renderBubble();
+
+    await user.click(fab());
+    await user.type(chatInput(), REQUEST);
+    pressEnter(chatInput());
+    await user.keyboard("{Escape}");
+    await act(async () => {
+      reply.resolve({ reply: "了解,我來幫您整理。" });
+    });
+    await waitFor(() => expect(toastFn).toHaveBeenCalledTimes(1));
+
+    await user.click(fab());
+
+    expect(toastDismiss).toHaveBeenCalledWith("result-toast");
+    expect(locations.map((l) => l.pathname)).toEqual(["/restaurant/orders"]);
+    await user.click(within(screen.getByRole("dialog", { name: "AI 採購助手" })).getByRole("button", GO));
+    expect(currentLocation().pathname).toBe("/restaurant/analyze");
+    expect(currentLocation().state).toEqual(HANDOFF_STATE);
+  });
+
+  it("換頁後結果才回來(就算在新頁面又打開了面板):不導頁,改跳 toast", async () => {
+    const reply = deferred<{ reply: string }>();
+    chatReply.mockReturnValueOnce(reply.promise);
+    analyzeChat.mockResolvedValueOnce(ANALYSIS);
+    const user = userEvent.setup();
+    renderBubble({}, "/restaurant/orders");
+
+    await user.click(fab());
+    await user.type(chatInput(), REQUEST);
+    pressEnter(chatInput());
+    await user.click(screen.getByRole("link", { name: "我的供應商" }));
+    expect(currentLocation().pathname).toBe("/restaurant/suppliers");
+    await user.click(fab());
+
+    await act(async () => {
+      reply.resolve({ reply: "了解,我來幫您整理。" });
+    });
+    await waitFor(() => expect(toastFn).toHaveBeenCalledTimes(1));
+
+    expect(resultToast().message).toBe("AI 已整理好 3 項食材");
+    expect(currentLocation().pathname).toBe("/restaurant/suppliers");
+    expect(locations.some((l) => l.pathname === "/restaurant/analyze")).toBe(false);
+    expect(screen.getByRole("dialog", { name: "AI 採購助手" })).toHaveAttribute("data-state", "open");
+  });
+
+  it("卸載後結果才回來(登出、切到別的後台):不導頁、沒有 toast、沒有 React 警告", async () => {
+    const analysis = deferred<AnalysisResult>();
+    chatReply.mockResolvedValueOnce({ reply: "了解,我來幫您整理。" });
+    analyzeChat.mockReturnValueOnce(analysis.promise);
+    const user = userEvent.setup();
+    const { removeBubble } = renderRemovableBubble();
+
+    await user.click(fab());
+    await user.type(chatInput(), REQUEST);
+    pressEnter(chatInput());
+    await waitFor(() => expect(analyzeChat).toHaveBeenCalledTimes(1));
+
+    const errorSpy = vi.spyOn(console, "error");
+    const warnSpy = vi.spyOn(console, "warn");
+    removeBubble();
+    expect(document.querySelector("[data-ai-assistant]")).toBeNull();
+    await act(async () => {
+      analysis.resolve(ANALYSIS);
+    });
+
+    expect(locations.map((l) => l.pathname)).toEqual(["/restaurant/orders"]);
+    expect(toastFn).not.toHaveBeenCalled();
+    expect(errorSpy).not.toHaveBeenCalled();
+    expect(warnSpy).not.toHaveBeenCalled();
+    errorSpy.mockRestore();
+    warnSpy.mockRestore();
+  });
+
+  it("卸載時 AI 還在回話:之後連需求擷取都不做(不建待審分析、不導頁、沒有 toast、沒有 React 警告)", async () => {
+    const reply = deferred<{ reply: string }>();
+    chatReply.mockReturnValueOnce(reply.promise);
+    analyzeChat.mockResolvedValueOnce(ANALYSIS);
+    const user = userEvent.setup();
+    const { removeBubble } = renderRemovableBubble();
+
+    await user.click(fab());
+    await user.type(chatInput(), REQUEST);
+    pressEnter(chatInput());
+
+    const errorSpy = vi.spyOn(console, "error");
+    const warnSpy = vi.spyOn(console, "warn");
+    removeBubble();
+    await act(async () => {
+      reply.resolve({ reply: "了解,我來幫您整理。" });
+    });
+
+    expect(analyzeChat).not.toHaveBeenCalled();
+    expect(locations.map((l) => l.pathname)).toEqual(["/restaurant/orders"]);
+    expect(toastFn).not.toHaveBeenCalled();
+    expect(errorSpy).not.toHaveBeenCalled();
+    expect(warnSpy).not.toHaveBeenCalled();
+    errorSpy.mockRestore();
+    warnSpy.mockRestore();
+  });
+
+  it("有傳 onRequirementsSubmit 就交給它:不放結果卡、不導頁", async () => {
+    const onRequirementsSubmit = vi.fn();
+    chatReply.mockResolvedValueOnce({ reply: "了解,我來幫您整理。" });
+    analyzeChat.mockResolvedValueOnce(ANALYSIS);
+    const user = userEvent.setup();
+    renderBubble({ onRequirementsSubmit }, "/restaurant/orders");
+
+    await user.click(fab());
+    await user.type(chatInput(), REQUEST);
+    pressEnter(chatInput());
+
+    await waitFor(() => expect(onRequirementsSubmit).toHaveBeenCalledTimes(1));
+    expect(onRequirementsSubmit).toHaveBeenCalledWith(HANDOFF_STATE.chatRequirements, HANDOFF_STATE.chatMeta);
+    expect(locations.map((l) => l.pathname)).toEqual(["/restaurant/orders"]);
+    expect(screen.queryByRole("button", GO)).toBeNull();
+    expect(toastFn).not.toHaveBeenCalled();
+    expect(screen.queryByRole("dialog")).toBeNull();
+    expect(fab()).toHaveFocus();
+  });
+
+  it("只是聊天(沒講到找供應商)時面板保持打開、不導頁、沒有結果卡", async () => {
+    chatReply.mockResolvedValueOnce({ reply: "請問每週大約需要多少牛肉?" });
+    const user = userEvent.setup();
+    renderBubble();
+
+    await user.click(fab());
+    await user.type(chatInput(), "我是火鍋店,每週要進牛肉");
+    pressEnter(chatInput());
+
+    expect(await screen.findByText("請問每週大約需要多少牛肉?")).toBeInTheDocument();
+    expect(analyzeChat).not.toHaveBeenCalled();
+    expect(screen.queryByRole("button", GO)).toBeNull();
+    expect(toastFn).not.toHaveBeenCalled();
+    expect(locations.map((l) => l.pathname)).toEqual(["/restaurant/orders"]);
+    expect(screen.getByRole("dialog", { name: "AI 採購助手" })).toBeInTheDocument();
   });
 });
 
@@ -427,7 +606,8 @@ describe('AIAssistantBubble variant="admin"(管理員後台)', () => {
     expect(locations.map((l) => l.pathname)).toEqual(["/admin/orders"]);
     expect(locations.some((l) => l.pathname.startsWith("/restaurant"))).toBe(false);
     expect(screen.getByRole("dialog", { name: "AI 助手" })).toBeInTheDocument();
-    expect(screen.getByRole("status")).toBeEmptyDOMElement();
+    expect(screen.queryByRole("button", { name: "到 AI 菜單分析查看" })).toBeNull();
+    expect(toastFn).not.toHaveBeenCalled();
   });
 });
 
@@ -522,7 +702,7 @@ describe("AIAssistantBubble 手機(<640px)全螢幕", () => {
     expect(close).toHaveFocus();
   });
 
-  it("送出需求後一樣收起、還原背景捲動,再導去分析頁", async () => {
+  it("結果卡一樣在面板裡;按了才收起、還原背景捲動,再導去分析頁", async () => {
     chatReply.mockResolvedValueOnce({ reply: "了解,我來幫您整理。" });
     analyzeChat.mockResolvedValueOnce(ANALYSIS);
     const user = userEvent.setup();
@@ -533,7 +713,14 @@ describe("AIAssistantBubble 手機(<640px)全螢幕", () => {
     await user.type(chatInput(), REQUEST);
     pressEnter(chatInput());
 
-    await waitFor(() => expect(currentLocation().pathname).toBe("/restaurant/analyze"));
+    const go = await screen.findByRole("button", { name: "到 AI 菜單分析查看" });
+    expect(locations.map((l) => l.pathname)).toEqual(["/restaurant/orders"]);
+    expect(document.body.style.overflow).toBe("hidden");
+
+    await user.click(go);
+
+    expect(currentLocation().pathname).toBe("/restaurant/analyze");
+    expect(currentLocation().state).toEqual(HANDOFF_STATE);
     expect(screen.queryByRole("dialog")).toBeNull();
     expect(document.body.style.overflow).toBe("");
     expect(fab()).toHaveFocus();

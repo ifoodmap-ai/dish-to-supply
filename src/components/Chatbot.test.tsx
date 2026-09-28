@@ -64,6 +64,9 @@ let timeSpy: MockInstance;
 let fetchGuard: ReturnType<typeof vi.fn>;
 
 beforeEach(() => {
+  // clearMocks 不會清掉排隊中、沒用完的 mockResolvedValueOnce,整個重設才不會漏到下一個測試
+  chatReply.mockReset();
+  analyzeChat.mockReset();
   // 訊息時間戳記隨執行當下與系統語系變動,固定下來快照才穩定
   timeSpy = vi.spyOn(Date.prototype, "toLocaleTimeString").mockReturnValue("10:30");
   // jsdom 沒有 scrollIntoView
@@ -205,6 +208,47 @@ describe('Chatbot variant="panel"(AI 小助手泡泡的面板)', () => {
     ]);
   });
 
+  it("傳了 resultAction:整理出需求後放結果卡(不寫「正在為您媒合供應商」),按了才呼叫 onClick", async () => {
+    const onRequirementsSubmit = vi.fn();
+    const onSend = vi.fn();
+    const onClick = vi.fn();
+    chatReply.mockResolvedValueOnce({ reply: "了解,我來幫您整理。" });
+    analyzeChat.mockResolvedValueOnce(ANALYSIS);
+    renderWithLanguage(
+      <Chatbot
+        variant="panel"
+        onSend={onSend}
+        onRequirementsSubmit={onRequirementsSubmit}
+        resultAction={{ label: "到 AI 菜單分析查看", onClick }}
+      />,
+    );
+
+    const input = screen.getByRole("textbox", { name: "輸入食材需求" });
+    fireEvent.change(input, { target: { value: "牛肉 5kg、洋蔥 3kg、青蔥,幫我找供應商" } });
+    fireEvent.click(screen.getByRole("button", { name: "發送" }));
+    expect(onSend).toHaveBeenCalledTimes(1);
+
+    const go = await screen.findByRole("button", { name: "到 AI 菜單分析查看" });
+    expect(screen.getByText("已整理 3 項食材：牛肉 5kg、洋蔥 3kg、青蔥")).toBeInTheDocument();
+    expect(screen.queryByText(/正在為您媒合供應商/)).toBeNull();
+    const meta = { analysisId: "analysis-1", names: ["牛肉", "洋蔥", "青蔥"] };
+    expect(onRequirementsSubmit).toHaveBeenCalledWith(["牛肉 5kg", "洋蔥 3kg", "青蔥"], meta);
+    expect(onClick).not.toHaveBeenCalled();
+
+    fireEvent.click(go);
+    expect(onClick).toHaveBeenCalledWith(["牛肉 5kg", "洋蔥 3kg", "青蔥"], meta);
+
+    // 之後送給 AI 的對話裡,結果卡那一則是完整清單(不是空字串)
+    chatReply.mockResolvedValueOnce({ reply: "還需要什麼嗎?" });
+    fireEvent.change(input, { target: { value: "再加雞蛋" } });
+    fireEvent.click(screen.getByRole("button", { name: "發送" }));
+    expect(await screen.findByText("還需要什麼嗎?")).toBeInTheDocument();
+    expect(chatReply.mock.calls[1][0]).toContainEqual({
+      role: "bot",
+      text: "已為您整理出採購需求:\n牛肉 5kg\n洋蔥 3kg\n青蔥",
+    });
+  });
+
   it("英文介面時輸入框的可及名稱也是英文", () => {
     // LanguageProvider 從 localStorage 讀語系;測試環境的 localStorage 不可靠,直接換掉
     vi.stubGlobal("localStorage", {
@@ -218,3 +262,64 @@ describe('Chatbot variant="panel"(AI 小助手泡泡的面板)', () => {
     expect(screen.getByRole("button", { name: "Send" })).toBeInTheDocument();
   });
 });
+
+describe("Chatbot 卸載之後 AI 才回來(使用者換頁、登出)", () => {
+  it("回話還沒回來就卸載:之後不擷取需求、不呼叫 onRequirementsSubmit、沒有 React 警告", async () => {
+    const onRequirementsSubmit = vi.fn();
+    const reply = deferred<{ reply: string }>();
+    chatReply.mockReturnValueOnce(reply.promise);
+    analyzeChat.mockResolvedValueOnce(ANALYSIS);
+    const { unmount } = renderWithLanguage(<Chatbot onRequirementsSubmit={onRequirementsSubmit} />);
+
+    const input = screen.getByPlaceholderText(PLACEHOLDER);
+    fireEvent.change(input, { target: { value: "牛肉 5kg,幫我找供應商" } });
+    fireEvent.click(screen.getByRole("button"));
+
+    const errorSpy = vi.spyOn(console, "error");
+    unmount();
+    await act(async () => {
+      reply.resolve({ reply: "了解" });
+    });
+
+    expect(analyzeChat).not.toHaveBeenCalled();
+    expect(onRequirementsSubmit).not.toHaveBeenCalled();
+    expect(errorSpy).not.toHaveBeenCalled();
+    errorSpy.mockRestore();
+  });
+
+  it("需求整理到一半卸載:不呼叫 onRequirementsSubmit;AI 失敗也不跳錯誤 toast", async () => {
+    const onRequirementsSubmit = vi.fn();
+    const analysis = deferred<AnalysisResult>();
+    chatReply.mockResolvedValueOnce({ reply: "了解" });
+    analyzeChat.mockReturnValueOnce(analysis.promise);
+    const first = renderWithLanguage(<Chatbot variant="panel" onRequirementsSubmit={onRequirementsSubmit} />);
+
+    const input = screen.getByRole("textbox", { name: "輸入食材需求" });
+    fireEvent.change(input, { target: { value: "牛肉 5kg,幫我找供應商" } });
+    fireEvent.click(screen.getByRole("button", { name: "發送" }));
+    await waitFor(() => expect(analyzeChat).toHaveBeenCalledTimes(1));
+
+    const errorSpy = vi.spyOn(console, "error");
+    first.unmount();
+    await act(async () => {
+      analysis.resolve(ANALYSIS);
+    });
+    expect(onRequirementsSubmit).not.toHaveBeenCalled();
+
+    // 另一次:AI 失敗時元件已經不在 → 不跳「AI 對話失敗」
+    const failed = deferred<{ reply: string }>();
+    chatReply.mockReturnValueOnce(failed.promise);
+    const second = renderWithLanguage(<Chatbot onRequirementsSubmit={vi.fn()} />);
+    fireEvent.change(screen.getByPlaceholderText(PLACEHOLDER), { target: { value: "你好" } });
+    fireEvent.click(screen.getByRole("button"));
+    second.unmount();
+    await act(async () => {
+      failed.reject(new Error("網路逾時"));
+    });
+
+    expect(toastError).not.toHaveBeenCalled();
+    expect(errorSpy).not.toHaveBeenCalled();
+    errorSpy.mockRestore();
+  });
+});
+

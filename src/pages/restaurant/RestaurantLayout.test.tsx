@@ -134,7 +134,7 @@ describe("RestaurantLayout 的 AI 小助手泡泡", () => {
     expect(within(screen.getByRole("dialog", { name: "AI 採購助手" })).getByText("我要進牛肉")).toBeInTheDocument();
   });
 
-  it("在訂單頁用對話送出需求 → 收起面板,導去 /restaurant/analyze,需求放在 router state", async () => {
+  it("在訂單頁用對話送出需求 → 面板出現結果卡、不自動導頁;按「到 AI 菜單分析查看」才導去 /restaurant/analyze 並帶 router state", async () => {
     chatReply.mockResolvedValueOnce({ reply: "了解,我來幫您整理。" });
     analyzeChat.mockResolvedValueOnce(ANALYSIS);
     const user = userEvent.setup();
@@ -143,6 +143,12 @@ describe("RestaurantLayout 的 AI 小助手泡泡", () => {
     await user.click(fab());
     await user.type(chatInput(), "牛肉 5kg、洋蔥 3kg,幫我找供應商");
     fireEvent.keyPress(chatInput(), { key: "Enter", code: "Enter", charCode: 13 });
+
+    const go = await screen.findByRole("button", { name: "到 AI 菜單分析查看" });
+    // 使用者可能正在這頁填東西,結果回來也不能自己把人拉走:沒按之前不會導頁
+    expect(screen.getByRole("heading", { name: "訂單與收貨頁" })).toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: "AI 菜單分析頁" })).toBeNull();
+    await user.click(go);
 
     expect(await screen.findByRole("heading", { name: "AI 菜單分析頁" })).toBeInTheDocument();
     const state = JSON.parse(screen.getByTestId("handoff").textContent ?? "null");
