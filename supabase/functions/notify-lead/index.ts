@@ -16,6 +16,15 @@
 // 安全性:這支是 --no-verify-jwt 部署的(DB trigger 沒有使用者 JWT 可用),
 // 改用共享密鑰 LEAD_HOOK_SECRET 驗證。沒有密鑰就回 401 ——
 // 不能做成任何人都能打的公開寄信端點。
+//
+// 2026-09-28 起也處理「供應商入駐申請」(supplier_applications):
+//   trigger 只帶申請 id 過來,要寄哪些信(申請者確認信、業主通知)、有沒有超過頻率限制,
+//   都已經在資料庫裡決定好並排隊(migration 20260928180000_supplier_application_mail.sql)。
+//   這裡只把排好隊的信寄出去,邏輯在 supplier-application.ts(有 vitest)。
+import { createClient } from "npm:@supabase/supabase-js@2";
+import { type Db, defaultLog } from "../_shared/db.ts";
+import { createResendSender, mailConfigFromEnv } from "../_shared/supplier-mail.ts";
+import { NotFoundError, processSupplierApplication } from "./supplier-application.ts";
 
 const RESEND_KEY = Deno.env.get("RESEND_API_KEY") ?? "";
 const HOOK_SECRET = Deno.env.get("LEAD_HOOK_SECRET") ?? "";
@@ -203,7 +212,37 @@ Deno.serve(async (req) => {
   const record = body.record;
   if (!record || typeof record !== "object") return json({ message: "record is required" }, 400);
 
-  // 白名單 —— 只有這兩張表會寄信,別讓這支變成通用寄信機
+  // 供應商入駐申請:只寄資料庫裡排好隊(queued)的信,payload 裡只用得到申請 id
+  if (table === "supplier_applications") {
+    if (body.type && body.type !== "INSERT") {
+      return json({ data: { skipped: true, reason: `ignoring ${body.type}` } });
+    }
+    try {
+      const db = createClient(
+        Deno.env.get("SUPABASE_URL")!,
+        Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
+        { auth: { autoRefreshToken: false, persistSession: false } },
+      ) as unknown as Db;
+      const result = await processSupplierApplication(
+        {
+          db,
+          send: createResendSender(RESEND_KEY),
+          config: mailConfigFromEnv((k) => Deno.env.get(k)),
+          log: defaultLog,
+        },
+        record.id,
+      );
+      return json({ data: result });
+    } catch (e) {
+      const message = e instanceof Error ? e.message : "unknown";
+      // pg_net 不會重試:至少在 function log 留下紀錄,排隊中的信可以用 supplier_application_mails 查到
+      defaultLog("error", { at: "notify-lead.supplier_applications", application_id: String(record.id ?? ""), error: message });
+      if (e instanceof NotFoundError) return json({ message }, 404);
+      return json({ message: "supplier application mail failed", error: message }, 500);
+    }
+  }
+
+  // 白名單 —— 只有這兩張表會照 record 內容寄信,別讓這支變成通用寄信機
   const spec = SPECS[table];
   if (!spec) return json({ data: { skipped: true, reason: `no spec for table ${table}` } });
   if (body.type && body.type !== "INSERT") {

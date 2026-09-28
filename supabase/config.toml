@@ -1,1 +1,27 @@
 project_id = "clifabmiylsouyfvcazw"
+
+# 每支 Edge Function 的 JWT 驗證寫死在這裡,部署時一律指定單一 function 名稱並帶對應旗標:
+#   verify_jwt = false → supabase functions deploy <name> --project-ref cwvpehqcvbfuynabpqop --no-verify-jwt --use-api
+#   verify_jwt = true  → supabase functions deploy <name> --project-ref cwvpehqcvbfuynabpqop --use-api
+# 部署完用 GET /v1/projects/cwvpehqcvbfuynabpqop/functions 確認 verify_jwt。
+# (2026-09-22 ai 被誤開 JWT 驗證,形象站 AI 助手全部 401;見 docs/DEPLOY.md)
+
+# 主站前端與形象站代理只送 apikey、不帶使用者 JWT
+[functions.ai]
+verify_jwt = false
+
+# DB trigger(pg_net)呼叫,靠 NOTIFY_SECRET 共享密鑰驗證
+[functions.notify]
+verify_jwt = false
+
+# DB trigger(pg_net)呼叫,靠 LEAD_HOOK_SECRET 共享密鑰驗證(官網表單 lead、供應商入駐申請)
+[functions.notify-lead]
+verify_jwt = false
+
+# 平台管理員從後台呼叫(核准 / 退件),函式內再檢查 app_metadata.role = admin
+[functions.approve-supplier]
+verify_jwt = true
+
+# 餐廳老闆從後台呼叫(新增成員)
+[functions.invite-restaurant-member]
+verify_jwt = true
