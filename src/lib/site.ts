@@ -1,14 +1,14 @@
 // 形象站(對外行銷首頁)的網址 —— 全站唯一的出處,別的地方不要再寫死。
 //
 // 產品站的 `/` 是登入頁,所以對「還沒登入的訪客」來說,「首頁」指的是形象站首頁。
-// 形象站之後會換正式網域:建置時設 VITE_LANDING_URL 就好(結尾斜線可有可無),
-// 不用改程式;要改沒設時的預設值,也只改下面這一行。
+// 預設值是形象站的正式網域(業主的 ifoodmap.ai,2026-09-29 起);要臨時指到別的網址,
+// 建置時設 VITE_LANDING_URL 就好(結尾斜線可有可無),不用改程式;要改預設值,也只改下面這一行。
 
 import type { useLanguage } from "@/contexts/LanguageContext";
 
 type SiteLanguage = ReturnType<typeof useLanguage>["language"];
 
-const DEFAULT_LANDING_URL = "https://ifoodmap-landing.vercel.app";
+const DEFAULT_LANDING_URL = "https://ifoodmap.ai";
 
 /** 形象站網址,不含結尾斜線。 */
 export const LANDING_URL = (
