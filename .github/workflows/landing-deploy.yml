@@ -1,26 +1,63 @@
-name: Deploy to Vercel (Production)
+name: Landing – Deploy to Vercel (Production)
 
+# 形象站(landing/)的正式部署。2026-09-28 由 ifoodmap-ai/ifoodmap-landing 的 deploy.yml 搬來,
+# 部署流程不變;新增:部署前先跑 npm test、PR 只跑測試。
+# 只在 landing/** 或這個檔本身有變動時觸發;產品端的 deploy-vercel.yml、product-ci.yml 反過來排除 landing/**。
 on:
   push:
     branches: [main]
+    paths:
+      - "landing/**"
+      - ".github/workflows/landing-deploy.yml"
+  pull_request:
+    paths:
+      - "landing/**"
+      - ".github/workflows/landing-deploy.yml"
   workflow_dispatch:
   # 每年 1/1 00:05(台北)自動重建一次:頁尾版權年份是程式算的,訪客永遠看到當年;
   # 但爬蟲讀的是預渲染時烤進靜態 HTML 的年份,不重建就會停在去年。
+  # paths 對排程無效;排程只在預設分支 main 上跑。
   # ⚠️ 這是公開 repo:GitHub 會在「60 天沒有任何活動」時自動停用排程。被停用的話,
   #    訪客看到的年份仍然正確,只有爬蟲看到的年份要等下次推版才更新。
   schedule:
     - cron: '5 16 31 12 *'
 
-concurrency:
-  group: vercel-prod
-  cancel-in-progress: true
+permissions:
+  contents: read
+
+defaults:
+  run:
+    working-directory: landing
 
 jobs:
-  deploy:
+  test:
     runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+
+      - name: Unit tests
+        run: npm test
+
+  deploy:
+    needs: test
+    if: github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    # 放在 job 層:PR 的測試不會取消正式部署。
+    concurrency:
+      group: landing-vercel-prod
+      cancel-in-progress: true
     env:
+      # 跟 dish-to-supply、ifoodmap-admin 同一個 Vercel team,沿用本 repo 既有的 secret。
       VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
-      VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+      # 形象站 Vercel 專案(ifoodmap-landing)的 ID,不是機密,刻意寫死。
+      # 🔴 不要改成 secrets.VERCEL_PROJECT_ID —— 本 repo 那個 secret 是已經不用的舊 "ifoodmap" 專案。
+      # 🔴 Vercel 上這個專案的 Root Directory 必須保持空白:這裡已經在 landing/ 裡跑 vercel build,
+      #    改成 landing 的話 CLI 會去找 landing/landing。
+      VERCEL_PROJECT_ID: prj_WPUVbErNzPtiWEwp4xnvF3FzNvc6
     steps:
       - uses: actions/checkout@v4
 

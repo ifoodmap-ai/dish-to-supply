@@ -1,5 +1,8 @@
 # DEPLOY — iFoodMap（GitHub → Vercel →（選用）Supabase → Railway）
 
+> ⚠️ 這份是最初建站時的範本流程，**已經不是現在的部署方式**。2026-09-28 起形象站住在 `ifoodmap-ai/dish-to-supply` 的 `landing/`，
+> 由根目錄的 `.github/workflows/landing-deploy.yml` 部署，說明見根目錄 `docs/DEPLOY.md` 的「形象站（landing/）」一節。
+
 逐步指令。**階段 1–3 就能把 100% 還原的網站上線**；階段 4–6 才是讓需求表單真正運作的後端整合（可日後再做）。
 
 ---

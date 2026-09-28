@@ -22,6 +22,7 @@ test('年份是程式算的,不是寫死的', () => {
 });
 
 test('每年 1/1 自動重建,讓爬蟲看到的靜態 HTML 年份也會換', () => {
-  const wf = fs.readFileSync(path.join(ROOT, '.github/workflows/deploy.yml'), 'utf8');
-  assert.match(wf, /schedule:\s*\n\s*-\s*cron:\s*'5 16 31 12 \*'/, 'deploy.yml 要有每年 12/31 16:05 UTC(= 台北 1/1 00:05)的排程');
+  // 2026-09-28 起形象站住在 dish-to-supply 的 landing/,部署 workflow 在 repo 根目錄的 .github/
+  const wf = fs.readFileSync(path.join(ROOT, '..', '.github/workflows/landing-deploy.yml'), 'utf8');
+  assert.match(wf, /schedule:\s*\n\s*-\s*cron:\s*'5 16 31 12 \*'/, 'landing-deploy.yml 要有每年 12/31 16:05 UTC(= 台北 1/1 00:05)的排程');
 });

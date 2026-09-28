@@ -1,5 +1,9 @@
 # iFoodMap 食材地圖 — 形象網站（部署原始碼）
 
+> **2026-09-28 起，形象站原始碼住在 `ifoodmap-ai/dish-to-supply` 的 `landing/`**（連同完整歷史從 `ifoodmap-ai/ifoodmap-landing` 併進來）。
+> 舊 repo 已凍結、準備封存，**不要再 push 到舊 repo** —— 它的部署 workflow 停用前，推上去會用舊內容蓋掉正式站。
+> 現在怎麼部署，見 repo 根目錄 `docs/DEPLOY.md` 的「形象站（landing/）」一節。下文的 `ifoodmap_deploy/` 就是現在的 `landing/`。
+
 > 給 **Claude Code** 的交接包。這份包裡的 **就是網站本身的原始碼**，直接部署即可 **100% 還原**設計師交付的成品——不是用其他框架重寫的版本，所以不會有任何視覺誤差。
 
 ---
