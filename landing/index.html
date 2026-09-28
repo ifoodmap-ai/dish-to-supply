@@ -286,7 +286,6 @@
   .mc-hottag      { color:#5E6E65; border:1px solid #E6EAE7; }
   .mc-flowcta     { background:#0B6B40; }
   .mc-catcell     { background:#fff; }
-  .mc-problemcta  { background:transparent; color:#fff; }
   .mc-newscard    { border:1px solid #E1E7E3; }
   .mc-ctaprimary  { background:#0B6B40; }
   .mc-ctasecondary{ background:transparent; color:#0E1A14; }
@@ -322,9 +321,6 @@
   .mc-catcell:hover,
   .mc-catcell:focus-visible { background:#F7F9F8; }
 
-  .mc-problemcta:hover,
-  .mc-problemcta:focus-visible { background:#fff; color:#0E1A14; }
-
   .mc-newscard:hover,
   .mc-newscard:focus-within { border-color:#0B6B40; }
 
@@ -350,9 +346,6 @@
   .mc-alllink:focus-visible,
   .mc-ctaprimary:focus-visible,
   .mc-ctasecondary:focus-visible { outline:3px solid #0B6B40; outline-offset:3px; }
-
-  /* 深色底(問題卡、頁尾)上綠框看不見,換成亮黃綠 */
-  .mc-problemcta:focus-visible { outline:3px solid #C3D543; outline-offset:3px; }
 
   /* 新聞卡的可聚焦元素是裡面那條 <a>,框往內縮才不會跑到圓角卡片外面 */
   .mc-newscard a:focus-visible { outline:3px solid #0B6B40; outline-offset:-3px; border-radius:20px; }
@@ -945,25 +938,6 @@
                 <span class="mc-catlabel" style="font-size:14.5px;color:#0E1A14">{{ c.name }}</span>
               </div>
             </a>
-          </sc-for>
-        </div>
-      </div>
-    </section>
-
-    <section class="ifm-v2" style="background:#0E1A14;color:#E9EFEB">
-      <div class="mc-sec mc-problem" style="max-width:1240px;margin:0 auto;padding:clamp(52px,8vw,88px) 20px;display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:56px">
-        <div>
-          <div class="mc-eyebrow" style="font-family:'Space Grotesk',sans-serif;font-size:11.5px;letter-spacing:.2em;color:#7FA490">THE PROBLEM</div>
-          <h2 style="margin-top:16px;font-size:clamp(26px,3.4vw,36px);line-height:1.45;color:#fff">{{ L.home.problemTitleA }}<br>{{ L.home.problemTitleB }}</h2>
-          <p class="mc-problemp" style="margin-top:20px;font-size:15.5px;line-height:1.95;color:#AFC0B6;font-weight:300;max-width:420px;text-wrap:pretty">{{ L.home.problemBody }}</p>
-          <a href="{{ hrefHow }}" class="mc-problemcta" onClick="{{ goHow }}" style="display:inline-block;margin-top:26px;border:1px solid rgba(255,255,255,.4);padding:14px 30px;border-radius:999px;font-size:14.5px;font-weight:700;text-decoration:none;cursor:pointer">{{ L.home.problemCta }}</a>
-        </div>
-        <div>
-          <sc-for list="{{ pains }}" as="p" hint-placeholder-count="4">
-            <div class="mc-painrow" style="display:flex;gap:16px;align-items:center;padding:18px 0;border-top:1px solid rgba(255,255,255,.14)">
-              <img class="mc-painicon" src="{{ p.icon }}" alt="" width="120" height="120" loading="lazy" style="width:44px;height:44px;flex:0 0 44px;display:block">
-              <span class="mc-painline" style="font-size:15px;line-height:1.85;color:#CFDAD3;font-weight:300">{{ p.text }}</span>
-            </div>
           </sc-for>
         </div>
       </div>
@@ -2818,8 +2792,6 @@ class Component extends DCLogic {
       flowA: list('flow').slice(0, 3).map((s, i) => ({ n: String(i + 1), title: s.title, desc: s.desc, img: FLOW_IMGS[i] })),
       flowB: list('flow').slice(3, 6).map((s, i) => ({ n: String(i + 4), title: s.title, desc: s.desc, img: FLOW_IMGS[i + 3] })),
       categories: list('categories').map((name, i) => ({ name, img: CATEGORY_IMGS[i] })),
-      // pains 原本是純字串陣列,配圖之後要變成物件(模板改用 p.text)
-      pains: list('pains').map((text, i) => ({ text, icon: `/assets/home-pain-${i + 1}.svg` })),
       testimonials: list('testimonials'),
       trust: list('trust').map((t, i) => ({ no: NO_LABELS[i], title: t.title, desc: t.desc, icon: `/assets/home-trust-${i + 1}.svg` })),
       // 首頁的文章區以前是三筆寫死的假文章。現在 /news 有真的 18 篇了,直接取最新三篇,
@@ -2998,10 +2970,10 @@ class Component extends DCLogic {
   .supplier-detail-list li  { font-size: 16px !important; }
   /* 圓圈裡的序號是裝飾性數字（"1"~"4"），跟著放大會撐破圓圈 */
   .ifm-eyebrow__no { font-size: 13px !important; width: 24px !important; height: 24px !important; }
-  /* 首頁四個純裝飾的英文 kicker(B2B MATCHING ENGINE / WHO IT'S FOR / HOW IT WORKS /
-     THE PROBLEM)手機版整個隱藏。它們沒帶任何下方標題沒說的資訊,為了通過字級體檢被放大到
+  /* 首頁三個純裝飾的英文 kicker(B2B MATCHING ENGINE / WHO IT'S FOR / HOW IT WORKS)
+     手機版整個隱藏。它們沒帶任何下方標題沒說的資訊,為了通過字級體檢被放大到
      16px 之後跟內文一樣大,階層反而被壓平,還多吃約 90px 高度。
-     .mc-eyebrow 這個 class 全站只有那四處在用,所以一條規則就夠。
+     .mc-eyebrow 這個 class 全站只有那三處在用,所以一條規則就夠。
      帶資訊的 eyebrow 一律保留:.ifm-eyebrow__no 的編號球、/restaurants 與 /suppliers 的
      「01 · MENU ANALYSIS」那種「編號 + 分類」、以及各頁用使用者語言寫的區段標籤。 */
   .mc-eyebrow { display: none !important; }
@@ -3083,14 +3055,6 @@ class Component extends DCLogic {
   .mc-catimg     { height: 40px !important; width: 40px !important; border-radius: 10px !important; }
   .mc-catname    { padding: 8px 4px 10px !important; min-height: 44px; display: flex; align-items: center; justify-content: center; }
   .mc-catlabel   { line-height: 1.3 !important; }
-
-  /* 「過去找食材」深色區 */
-  .mc-problem    { gap: 24px !important; }
-  .mc-problemp   { margin-top: 12px !important; line-height: 1.7 !important; }
-  .mc-problemcta { display: inline-flex !important; align-items: center; min-height: 44px !important; margin-top: 18px !important; padding: 12px 24px !important; }
-  .mc-painrow    { padding: 12px 0 !important; gap: 12px !important; }
-  .mc-painicon   { width: 34px !important; height: 34px !important; flex: 0 0 34px !important; }
-  .mc-painline   { line-height: 1.55 !important; }
 
   /* 「使用者怎麼說」 */
   .mc-quotegrid  { margin-top: 18px !important; gap: 12px !important; }

@@ -350,7 +350,6 @@ test('homepage names four audiences, twelve categories and three trust features 
     ['雙邊評價機制', '標章與檢驗連動', 'LINE 即時通知'],
   );
   assert.match(home, /任何有食材需求的人，<br>都適用/);
-  assert.match(home, /過去找食材，<br>永遠是那幾家/);
 });
 
 test('homepage illustrations are real files and no design placeholder text leaks through', () => {
@@ -427,8 +426,6 @@ test('small homepage labels meet WCAG AA contrast on the design palette', () => 
     ['#4B5A52', '#FFFFFF'], // 內文
     ['#4B5A52', '#F7F9F8'], // 內文 on 灰底
     ['#0B6B40', '#F7F9F8'], // kicker
-    ['#AFC0B6', '#0E1A14'], // 深色段內文
-    ['#7FA490', '#0E1A14'], // 深色段 kicker
     ['#4E7460', '#EFF6F2'], // 流程卡文字
     ['#8A6118', '#FBF3E5'], // 流程卡文字(琥珀)
   ]) {
@@ -924,10 +921,9 @@ test('the FAQ nav entries all point at /qa, and 平台功能 is gone from the me
   assert.doesNotMatch(source, /goHowMobile/);
   assert.equal(dict('zh').nav.features, undefined);
   assert.equal(dict('en').nav.features, undefined);
-  // 🔴 hrefHow / goHow 要留著 —— 首頁深色區的 problemCta 與頁尾那條還在用
+  // 🔴 hrefHow / goHow 要留著 —— 頁尾那條還在用
   assert.match(component, /hrefHow: anchorHref\('how-it-works'\),/);
   assert.match(component, /goHow: this\.goAnchor\('how-it-works'\),/);
-  assert.match(home, /onClick="\{\{ goHow \}\}"/);
   assert.match(footer, /<a href="\{\{ hrefHow \}\}" onClick="\{\{ goHow \}\}"/);
 });
 
@@ -966,10 +962,10 @@ test('the AI bubble carries a label so people can tell what it is', () => {
   assert.match(source, /window\.innerHeight \* 0\.6/);
 });
 
-test('the four decorative English kickers are hidden on mobile only', () => {
+test('the three decorative English kickers are hidden on mobile only', () => {
   // 它們沒帶任何下方標題沒說的資訊,為了字級體檢被放大到 16px 之後階層反而被壓平。
-  // .mc-eyebrow 全站只有首頁那四處在用。
-  assert.equal((source.match(/class="mc-eyebrow/g) || []).length, 4);
+  // .mc-eyebrow 全站只有首頁那三處在用。
+  assert.equal((source.match(/class="mc-eyebrow/g) || []).length, 3);
   const compactStart = source.indexOf('<style id="m-compact">');
   const compact = source.slice(compactStart, source.indexOf('</style>', compactStart));
   assert.match(compact, /@media \(max-width: 768px\)/);

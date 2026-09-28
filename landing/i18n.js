@@ -65,10 +65,6 @@
         "pfLeadB": "快速媒合合適的產地、加工廠與各級供應商。",
         "pfTypesAria": "可以媒合的供應商類型",
         "categoriesSub": "從產地、工廠、大盤到小盤商",
-        "problemTitleA": "過去找食材，",
-        "problemTitleB": "永遠是那幾家",
-        "problemBody": "同行介紹、上網搜尋，資訊卻不齊全；想詢價、想確認配送區域，留了聯絡方式往往好幾天沒有回覆。食材地圖把需求送到對的供應商手上，讓他們主動聯繫你。",
-        "problemCta": "了解運作方式",
         "testimonialsTitle": "使用者怎麼說",
         "quoteOpen": "「",
         "quoteClose": "」",
@@ -191,12 +187,6 @@
             "調味品",
             "酒與飲品",
             "包材耗材"
-          ],
-          "pains": [
-            "上網搜尋永遠是那幾家，資訊也不齊全",
-            "留了聯絡方式，好幾天等不到回覆",
-            "不確定對方配不配送我的區域",
-            "想比價，卻沒有第二、第三家可以問"
           ],
           "testimonials": [
             {
@@ -734,10 +724,6 @@
         "pfLeadB": "and we'll quickly match you with the right farms, processors and suppliers at every tier.",
         "pfTypesAria": "Types of suppliers we match you with",
         "categoriesSub": "From farms and factories to wholesalers and local distributors",
-        "problemTitleA": "Sourcing used to mean",
-        "problemTitleB": "the same few suppliers",
-        "problemBody": "Referrals and web searches leave you with incomplete information. You ask for a quote or check whether they deliver to your area, leave your contact details, and then hear nothing for days. iFoodmap routes your request to the right suppliers so they reach out to you.",
-        "problemCta": "See How It Works",
         "testimonialsTitle": "What Users Say",
         "quoteOpen": "“",
         "quoteClose": "”",
@@ -860,12 +846,6 @@
             "Seasonings",
             "Beverages & Alcohol",
             "Packaging & Supplies"
-          ],
-          "pains": [
-            "Web searches turn up the same few names, with incomplete details",
-            "You leave your contact details and wait days for a reply",
-            "No way to tell whether they deliver to your area",
-            "You want to compare prices but have no second or third supplier to ask"
           ],
           "testimonials": [
             {

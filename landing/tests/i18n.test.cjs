@@ -176,7 +176,6 @@ test('home data arrays match the counts the component renders', () => {
     audiences: 4,
     flow: 6,
     categories: 12,
-    pains: 4,
     testimonials: 3,
     trust: 3,
     // articlesTop 已經移除 —— 首頁文章區改吃 news.js 的真實文章
