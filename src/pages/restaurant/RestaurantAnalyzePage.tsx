@@ -21,12 +21,6 @@ import MenuUpload, { type AnalysisMeta } from "@/components/MenuUpload";
 import IngredientAnalysis from "@/components/IngredientAnalysis";
 import SupplierMatch from "@/components/SupplierMatch";
 
-const scrollTo = (id: string) => {
-  setTimeout(() => {
-    document.getElementById(id)?.scrollIntoView({ behavior: "smooth" });
-  }, 100);
-};
-
 /** 分析結果暫存,讓智慧採購頁可以接手建單 */
 export const ANALYSIS_HANDOFF_KEY = "ifm_analysis_handoff";
 
@@ -66,8 +60,24 @@ const RestaurantAnalyzePage = () => {
   const [ingredients, setIngredients] = useState<string[]>([]);
   const [rawNames, setRawNames] = useState<string[]>([]);
   const [showSuppliers, setShowSuppliers] = useState(false);
+  // 要捲到哪一區;seq 讓同一區連續要求兩次也會再捲
+  const [scrollRequest, setScrollRequest] = useState<{ id: string; seq: number } | null>(null);
 
   const hasResult = ingredients.length > 0;
+
+  const scrollTo = useCallback((id: string) => {
+    setScrollRequest((prev) => ({ id, seq: (prev?.seq ?? 0) + 1 }));
+  }, []);
+
+  // 等新的區塊畫出來(100ms)再捲。計時器歸這個 effect 管:再要求一次或頁面卸載時就清掉 ——
+  // 以前是沒人收的 setTimeout,換頁或測試環境拆掉之後才觸發,會去碰已經不在的 document
+  useEffect(() => {
+    if (!scrollRequest) return;
+    const timer = setTimeout(() => {
+      document.getElementById(scrollRequest.id)?.scrollIntoView({ behavior: "smooth" });
+    }, 100);
+    return () => clearTimeout(timer);
+  }, [scrollRequest]);
 
   // useCallback 只是讓下面接泡泡的 effect 依賴穩定,邏輯跟原本一樣
   const applyAnalysis = useCallback((list: string[], meta: AnalysisMeta) => {
@@ -85,7 +95,7 @@ const RestaurantAnalyzePage = () => {
   const handleChatRequirements = useCallback((requirements: string[], meta: AnalysisMeta) => {
     applyAnalysis(requirements, meta);
     scrollTo("analysis-results");
-  }, [applyAnalysis]);
+  }, [applyAnalysis, scrollTo]);
 
   // 泡泡從任何一頁帶需求過來(已經在這頁也一樣,只是 location.key 換新)
   useEffect(() => {

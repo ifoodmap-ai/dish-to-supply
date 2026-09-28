@@ -365,4 +365,39 @@ describe("RestaurantAnalyzePage(精簡版)", () => {
     expect(toastError).toHaveBeenCalledWith("請選擇圖片檔(JPG、PNG)");
     expect(screen.queryByAltText("菜單預覽")).not.toBeInTheDocument();
   });
+
+  describe("捲動(等區塊畫出來 0.1 秒後捲過去)", () => {
+    const scrollCalls = () => vi.mocked(Element.prototype.scrollIntoView).mock;
+
+    it("分析完捲到結果區、按「尋找供應商」捲到供應商區", async () => {
+      renderPage();
+      await analyze();
+
+      await waitFor(() => expect(scrollCalls().calls).toHaveLength(1));
+      expect(scrollCalls().contexts[0]).toBe(document.getElementById("analysis-results"));
+      expect(scrollCalls().calls[0]).toEqual([{ behavior: "smooth" }]);
+
+      fireEvent.click(screen.getByRole("button", { name: /尋找供應商/ }));
+      await waitFor(() => expect(scrollCalls().calls).toHaveLength(2));
+      expect(scrollCalls().contexts[1]).toBe(document.getElementById("supplier-section"));
+    });
+
+    it("頁面卸載時把還沒到點的捲動計時器清掉,之後不會再去碰 document", async () => {
+      // 以前是沒人收的 setTimeout:卸載(或整個測試環境拆掉)之後才觸發,
+      // 就會出現「ReferenceError: document is not defined」這種偶發的 unhandled error
+      const { unmount } = renderPage({ entry: withChatState({ chatRequirements: ["牛肉 5kg"] }) });
+      await screen.findByText("牛肉 5kg"); // 這時已經排好 0.1 秒後捲到結果區
+
+      unmount();
+      const callsAtUnmount = scrollCalls().calls.length; // 機器很慢時計時器可能在卸載前就到點,只看卸載之後
+      const getElementById = vi.spyOn(document, "getElementById");
+      try {
+        await new Promise((resolve) => setTimeout(resolve, 250));
+        expect(getElementById).not.toHaveBeenCalled();
+        expect(scrollCalls().calls).toHaveLength(callsAtUnmount);
+      } finally {
+        getElementById.mockRestore();
+      }
+    });
+  });
 });
