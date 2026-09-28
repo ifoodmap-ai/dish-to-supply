@@ -1,15 +1,17 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { Link } from "react-router-dom";
 import {
   CheckCircle2,
   ChevronDown,
+  ChevronRight,
   ChevronUp,
+  ClipboardCheck,
   Clock,
   History,
   Inbox,
   Loader2,
   PackageCheck,
   Search,
-  Send,
   ShieldX,
   Star,
   Store,
@@ -44,7 +46,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
-import { useRestaurant, canSeeCost } from "@/components/RestaurantRoute";
+import { useRestaurant, canSeeCost, needsApproval } from "@/components/RestaurantRoute";
 import {
   ORDER_STATUS,
   PIPELINE_STAGES,
@@ -70,6 +72,7 @@ interface QueryBuilder<T> extends PromiseLike<{ data: T[] | null; error: PgError
   select: (cols: string) => QueryBuilder<T>;
   insert: (values: unknown) => QueryBuilder<T>;
   eq: (col: string, val: string | number | boolean) => QueryBuilder<T>;
+  neq: (col: string, val: string | number | boolean) => QueryBuilder<T>;
   order: (col: string, opts: { ascending: boolean }) => QueryBuilder<T>;
 }
 
@@ -130,9 +133,14 @@ interface ActionConf {
   tone: "primary" | "warn" | "danger" | "plain";
 }
 
-/** 動作按鈕外觀 —— 實際會出現哪幾顆完全由 allowedTransitions 決定 */
+/**
+ * 動作按鈕外觀 —— 實際會出現哪幾顆完全由 allowedTransitions 決定。
+ *
+ * 刻意沒有 submitted(「送出訂單」):草稿只在「叫貨」分頁的待簽核區處理,
+ * 送出只給老闆/店長(業主拍板 Q8-A;資料庫 trg_guard_order_submission 也擋採購員)。
+ * 這頁的查詢本來就排除草稿,這裡再少一顆按鈕是第二道保險。
+ */
 const ACTION_CONF: Partial<Record<OrderStatus, ActionConf>> = {
-  submitted: { label: "送出訂單", icon: Send, tone: "primary" },
   confirmed: { label: "確認訂單", icon: CheckCircle2, tone: "primary" },
   cancelled: { label: "取消訂單", icon: XCircle, tone: "danger" },
   received: { label: "已收到貨", icon: PackageCheck, tone: "primary" },
@@ -228,8 +236,11 @@ const PipelineBar = ({ status }: { status: OrderStatus }) => {
 export default function RestaurantOrdersPage() {
   const { restaurant_id, restaurant_name, role } = useRestaurant();
   const showCost = canSeeCost(role);
+  const mustApprove = needsApproval(role);
 
   const [orders, setOrders] = useState<OrderRow[]>([]);
+  /** 待簽核的草稿張數 —— 草稿不在這頁列出,只在頂端提示並連到叫貨分頁 */
+  const [draftCount, setDraftCount] = useState(0);
   const [supplierMap, setSupplierMap] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(true);
   const [tab, setTab] = useState<TabKey>("all");
@@ -256,19 +267,30 @@ export default function RestaurantOrdersPage() {
   );
 
   const fetchOrders = useCallback(async () => {
-    const { data, error } = await db<OrderRow>("supplier_orders")
-      .select(
-        "id, status, supplier_id, ingredient_list, total_amount, notes, created_at, current_stage_since",
-      )
-      .eq("restaurant_id", restaurant_id)
-      .order("created_at", { ascending: false });
+    // 草稿(待簽核)不列在這頁:它們只出現在「叫貨」分頁的待簽核區,只有老闆/店長能送出
+    const [{ data, error }, { data: drafts }] = await Promise.all([
+      db<OrderRow>("supplier_orders")
+        .select(
+          "id, status, supplier_id, ingredient_list, total_amount, notes, created_at, current_stage_since",
+        )
+        .eq("restaurant_id", restaurant_id)
+        .neq("status", "draft")
+        .order("created_at", { ascending: false }),
+      db<{ id: string }>("supplier_orders")
+        .select("id")
+        .eq("restaurant_id", restaurant_id)
+        .eq("status", "draft"),
+    ]);
+
+    // 查不到張數時只是少一行提示,不影響訂單列表
+    setDraftCount((drafts ?? []).length);
 
     if (error) {
       toast.error("訂單載入失敗", { description: error.message });
       setOrders([]);
       return;
     }
-    setOrders(data ?? []);
+    setOrders((data ?? []).filter((o) => o.status !== "draft"));
   }, [restaurant_id]);
 
   useEffect(() => {
@@ -500,14 +522,37 @@ export default function RestaurantOrdersPage() {
         {!showCost && "(採購員身分不顯示金額)"}
       </p>
 
+      {/* 待簽核的草稿:只提示張數,送出/退回在叫貨分頁 */}
+      {draftCount > 0 && (
+        <div
+          data-testid="pending-approval-notice"
+          className="mb-5 flex flex-col gap-2 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800 sm:flex-row sm:items-center"
+        >
+          <ClipboardCheck className="hidden h-4 w-4 shrink-0 sm:block" />
+          <span className="flex-1">
+            {mustApprove
+              ? `待簽核 ${draftCount} 張:採購單要由老闆或店長簽核後才會送出`
+              : `待簽核 ${draftCount} 張:採購單要在「叫貨」分頁簽核後才會送出`}
+          </span>
+          <Link
+            to="/restaurant/purchase"
+            className="inline-flex items-center gap-1 self-start font-medium text-amber-900 underline-offset-2 hover:underline sm:self-auto"
+          >
+            {mustApprove ? "查看待簽核" : "前往簽核"}
+            <ChevronRight className="h-4 w-4" />
+          </Link>
+        </div>
+      )}
+
       {/* 頁籤 + 搜尋 */}
       <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-center">
-        <div className="flex w-fit gap-1 rounded-lg bg-slate-100 p-1">
+        {/* 手機上五個狀態籤放不下時橫向捲,不要把「全部」擠成一字一行 */}
+        <div className="flex w-fit max-w-full gap-1 overflow-x-auto rounded-lg bg-slate-100 p-1">
           {TABS.map((t) => (
             <button
               key={t.key}
               onClick={() => setTab(t.key)}
-              className={`rounded-md px-3 py-1.5 text-sm font-medium transition-colors ${
+              className={`shrink-0 whitespace-nowrap rounded-md px-3 py-1.5 text-sm font-medium transition-colors ${
                 tab === t.key
                   ? "bg-white text-slate-900 shadow-sm"
                   : "text-slate-500 hover:text-slate-700"
@@ -600,11 +645,13 @@ export default function RestaurantOrdersPage() {
                   )}
                 </div>
 
-                {/* 異常提示 */}
+                {/* 異常提示(取消的單不會轉客服:包含老闆/店長在叫貨分頁退回的草稿) */}
                 {meta.step < 0 && (
                   <div className="mb-3 flex items-center gap-2 rounded-lg bg-orange-50 px-3 py-2 text-sm text-orange-800">
                     <TriangleAlert className="h-4 w-4 shrink-0" />
-                    這張訂單目前為「{meta.label}」,已交由客服跟進
+                    {order.status === "cancelled"
+                      ? "這張訂單已取消"
+                      : `這張訂單目前為「${meta.label}」,已交由客服跟進`}
                   </div>
                 )}
 

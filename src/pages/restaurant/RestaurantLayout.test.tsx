@@ -124,7 +124,8 @@ describe("RestaurantLayout 的 AI 小助手泡泡", () => {
     fireEvent.keyPress(chatInput(), { key: "Enter", code: "Enter", charCode: 13 });
     expect(await screen.findByText("請問每週大約需要多少牛肉?")).toBeInTheDocument();
 
-    await user.click(screen.getByRole("link", { name: "訂單與收貨" }));
+    // 後台精簡後側欄是分區:「叫貨與訂單」點下去預設就是訂單分頁(/restaurant/orders)
+    await user.click(screen.getByRole("link", { name: "叫貨與訂單" }));
 
     expect(screen.getByRole("heading", { name: "訂單與收貨頁" })).toBeInTheDocument();
     expect(screen.queryByRole("dialog")).toBeNull();

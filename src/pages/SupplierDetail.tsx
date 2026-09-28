@@ -1,4 +1,4 @@
-import { useParams, useNavigate } from "react-router-dom";
+import { Link, useParams, useNavigate } from "react-router-dom";
 import { useState, useMemo, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
@@ -6,15 +6,12 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Star, MapPin, Phone, Mail, ArrowLeft, CheckCircle2, Search, ShoppingCart, X, Building2 } from "lucide-react";
+import { Star, MapPin, Phone, Mail, ArrowLeft, CheckCircle2, Search, ShoppingCart, Building2 } from "lucide-react";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { track } from "@/lib/analytics";
 
 interface SupplierRow {
   id: string;
@@ -39,31 +36,41 @@ interface SupplyRow {
   is_available: boolean | null;
 }
 
-interface CartItem {
-  id: string;
-  name: string;
-  category: string | null;
-  price: number | null;
-  unit: string | null;
-  pack_size: string | null;
+/**
+ * 後台精簡方案 Q7-A(業主拍板):公開頁的「詢價」退場。
+ * 原本送出詢價寫進 inquiries,但那張表只有送出者本人讀得到 —— 供應商、管理員都看不到,
+ * 頁面卻說「供應商將會收到您的詢價通知」。改成引導註冊餐廳,在餐廳後台線上叫貨(走正式訂單流程)。
+ * 既有的 inquiries 資料保留,不刪。
+ */
+const REGISTER_PATH = "/register/restaurant";
+const ORDER_CTA = "註冊餐廳即可線上叫貨";
+
+/* 這幾張表的型別不在 types.ts 裡 —— 沿用專案既有的 loose cast 慣例(原本的 `as never` 過不了 tsc) */
+type PgError = { message: string } | null;
+interface LooseQuery<T> extends PromiseLike<{ data: T | null; error: PgError }> {
+  select: (cols: string) => LooseQuery<T>;
+  eq: (col: string, val: unknown) => LooseQuery<T>;
+  order: (col: string, opts: { ascending: boolean }) => LooseQuery<T>;
+  insert: (values: unknown) => LooseQuery<T>;
+  maybeSingle: () => PromiseLike<{ data: T | null; error: PgError }>;
 }
+const db = <T,>(table: string): LooseQuery<T> =>
+  (supabase as never as { from: (t: string) => LooseQuery<T> }).from(table);
 
 const fetchSupplier = async (id: string): Promise<SupplierRow | null> => {
-  const { data, error } = (await (supabase as never)
-    .from("suppliers")
+  const { data, error } = await db<SupplierRow>("suppliers")
     .select("*")
     .eq("id", id)
     .eq("is_active", true)
-    .maybeSingle()) as { data: SupplierRow | null; error: { message: string } | null };
+    .maybeSingle();
   if (error) throw new Error(error.message);
   return data;
 };
 
 const fetchAllSupplies = async (): Promise<SupplyRow[]> => {
-  const { data, error } = (await (supabase as never)
-    .from("supplies")
+  const { data, error } = await db<SupplyRow[]>("supplies")
     .select("*")
-    .eq("is_available", true)) as { data: SupplyRow[] | null; error: { message: string } | null };
+    .eq("is_available", true);
   if (error) throw new Error(error.message);
   return data ?? [];
 };
@@ -99,10 +106,6 @@ const SupplierDetail = () => {
 
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState<string>("全部商品");
-  const [cart, setCart] = useState<CartItem[]>([]);
-  const [inquiryMessage, setInquiryMessage] = useState("");
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [dialogOpen, setDialogOpen] = useState(false);
 
   // Supplier + supplies (Railway API; supplies filtered client-side by supplier_id)
   const {
@@ -145,11 +148,10 @@ const SupplierDetail = () => {
 
   const fetchReviews = async () => {
     if (!id) return;
-    const { data } = (await (supabase as never)
-      .from("supplier_reviews")
+    const { data } = await db<Review[]>("supplier_reviews")
       .select("id, rating, comment, reviewer_name, created_at")
       .eq("supplier_id", id)
-      .order("created_at", { ascending: false })) as { data: Review[] | null };
+      .order("created_at", { ascending: false });
     setReviews(data ?? []);
   };
 
@@ -169,7 +171,7 @@ const SupplierDetail = () => {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) { toast({ title: "請先登入", description: "登入後即可撰寫評價", variant: "destructive" }); navigate("/auth"); return; }
     setSubmittingReview(true);
-    const { error } = await (supabase as never).from("supplier_reviews").insert({
+    const { error } = await db("supplier_reviews").insert({
       supplier_id: id,
       supplier_ref: 0, // legacy NOT NULL column, uuid supplier_id is authoritative
       rating: newRating,
@@ -198,95 +200,6 @@ const SupplierDetail = () => {
       return matchesSearch && matchesCategory;
     });
   }, [products, searchQuery, selectedCategory]);
-
-  const addToCart = (product: SupplyRow) => {
-    if (cart.find((item) => item.id === product.id)) {
-      toast({
-        title: "已在詢價清單中",
-        description: "此商品已經在您的詢價清單中",
-      });
-      return;
-    }
-    setCart([
-      ...cart,
-      {
-        id: product.id,
-        name: product.name,
-        category: product.category,
-        price: product.price,
-        unit: product.unit,
-        pack_size: product.pack_size,
-      },
-    ]);
-    toast({
-      title: "已加入詢價清單",
-      description: `${product.name} 已加入詢價清單`,
-    });
-  };
-
-  const removeFromCart = (productId: string) => {
-    setCart(cart.filter((item) => item.id !== productId));
-  };
-
-  const handleSubmitInquiry = async () => {
-    if (cart.length === 0) {
-      toast({
-        title: "詢價清單為空",
-        description: "請先將商品加入詢價清單",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    const { data: { user } } = await supabase.auth.getUser();
-
-    if (!user) {
-      toast({
-        title: "請先登入",
-        description: "您需要登入才能提交詢價",
-        variant: "destructive",
-      });
-      navigate("/auth");
-      return;
-    }
-
-    setIsSubmitting(true);
-
-    try {
-      const { error } = await supabase
-        .from('inquiries')
-        .insert({
-          user_id: user.id,
-          supplier_id: 0, // legacy integer column; supplier identified by name + products
-          supplier_name: supplier!.name,
-          products: JSON.parse(JSON.stringify(cart)),
-          message: inquiryMessage,
-          status: 'pending'
-        });
-
-      if (error) throw error;
-
-      track('inquiry_sent', { supplier: supplier!.name, items: cart.length });
-
-      toast({
-        title: "詢價已送出",
-        description: "供應商將會收到您的詢價通知",
-      });
-
-      setCart([]);
-      setInquiryMessage("");
-      setDialogOpen(false);
-    } catch (error) {
-      console.error("Error submitting inquiry:", error);
-      toast({
-        title: "送出失敗",
-        description: "請稍後再試",
-        variant: "destructive",
-      });
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
 
   if (supplierLoading) {
     return (
@@ -371,20 +284,31 @@ const SupplierDetail = () => {
                       </p>
                     )}
                   </div>
-                  {(supplier.contact_email || supplier.phone) && (
+                  <div className="flex w-full flex-col gap-2 md:w-auto md:items-end">
                     <Button size="lg" variant="hero" className="w-full md:w-auto" asChild>
-                      <a
-                        href={
-                          supplier.contact_email
-                            ? `mailto:${supplier.contact_email}`
-                            : `tel:${supplier.phone}`
-                        }
-                      >
-                        <Phone className="w-4 h-4 mr-2" />
-                        立即連繫
-                      </a>
+                      <Link to={REGISTER_PATH}>
+                        <ShoppingCart className="w-4 h-4 mr-2" />
+                        {ORDER_CTA}
+                      </Link>
                     </Button>
-                  )}
+                    {(supplier.contact_email || supplier.phone) && (
+                      <Button size="lg" variant="outline" className="w-full md:w-auto" asChild>
+                        <a
+                          href={
+                            supplier.contact_email
+                              ? `mailto:${supplier.contact_email}`
+                              : `tel:${supplier.phone}`
+                          }
+                        >
+                          <Phone className="w-4 h-4 mr-2" />
+                          立即連繫
+                        </a>
+                      </Button>
+                    )}
+                    <Link to="/restaurant/purchase" className="text-sm text-muted-foreground hover:text-foreground hover:underline">
+                      已經是餐廳會員?到後台叫貨
+                    </Link>
+                  </div>
                 </div>
 
                 {/* Real contact fields only */}
@@ -532,10 +456,10 @@ const SupplierDetail = () => {
                               <Button
                                 variant="outline"
                                 size="sm"
-                                className="w-full"
-                                onClick={() => addToCart(product)}
+                                className="w-full h-auto whitespace-normal py-1.5 leading-snug"
+                                asChild
                               >
-                                詢價
+                                <Link to={REGISTER_PATH}>{ORDER_CTA}</Link>
                               </Button>
                             </div>
                           </Card>
@@ -583,7 +507,7 @@ const SupplierDetail = () => {
                           </div>
                         )}
                         {!supplier.contact_email && !supplier.phone && (
-                          <p className="text-muted-foreground">請透過詢價功能與供應商聯繫。</p>
+                          <p className="text-muted-foreground">註冊餐廳後即可在後台線上叫貨。</p>
                         )}
                       </div>
                     </Card>
@@ -680,101 +604,6 @@ const SupplierDetail = () => {
           </Card>
         </div>
       </div>
-
-      {/* Floating Cart Button —— 做成品牌 logo 的大頭針造型
-          正方形只圓三個角再轉 45°,尖角就朝下;裡面的內容反轉 45° 擺正。
-          漸層取自 icon.png:上方黃綠 #c3d543 → 尖端深綠 #3b8a3b。
-          數字徽章放在外層(沒轉的座標系),不然會跟著歪。 */}
-      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <div className="fixed bottom-8 right-7 z-40 h-14 w-14">
-          <DialogTrigger asChild>
-            <button
-              type="button"
-              aria-label={`購物車${cart.length > 0 ? `,${cart.length} 項` : ""}`}
-              className="h-14 w-14 rotate-45 rounded-[50%_50%_0_50%]
-                bg-gradient-to-br from-[#c3d543] via-[#8db83c] to-[#3b8a3b]
-                shadow-lg ring-2 ring-white/80 transition-transform
-                hover:scale-105 active:scale-95
-                focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-emerald-400/60"
-            >
-              <span className="flex h-full w-full -rotate-45 items-center justify-center">
-                <ShoppingCart className="h-6 w-6 text-white drop-shadow-sm" />
-              </span>
-            </button>
-          </DialogTrigger>
-          {cart.length > 0 && (
-            <span className="pointer-events-none absolute -right-1.5 -top-1.5 flex h-6 min-w-6 items-center justify-center rounded-full bg-white px-1.5 text-xs font-bold text-emerald-700 shadow ring-1 ring-emerald-200">
-              {cart.length}
-            </span>
-          )}
-        </div>
-        <DialogContent className="max-w-2xl max-h-[80vh]">
-          <DialogHeader>
-            <DialogTitle>詢價清單</DialogTitle>
-          </DialogHeader>
-
-          <ScrollArea className="max-h-[50vh]">
-            {cart.length === 0 ? (
-              <div className="text-center py-8 text-muted-foreground">
-                詢價清單是空的
-              </div>
-            ) : (
-              <div className="space-y-3">
-                {cart.map((item) => (
-                  <Card key={item.id} className="p-3">
-                    <div className="flex items-center gap-3">
-                      <div
-                        className={`w-16 h-16 rounded flex items-center justify-center flex-shrink-0 ${categoryColor(item.category)}`}
-                      >
-                        <span className="text-xs font-bold px-1 text-center">
-                          {item.category || "食材"}
-                        </span>
-                      </div>
-                      <div className="flex-1">
-                        <h4 className="font-semibold">{item.name}</h4>
-                        <p className="text-sm text-muted-foreground">
-                          {[item.pack_size, formatPrice({ price: item.price, currency: null, unit: item.unit })]
-                            .filter(Boolean)
-                            .join(" · ")}
-                        </p>
-                      </div>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => removeFromCart(item.id)}
-                      >
-                        <X className="w-4 h-4" />
-                      </Button>
-                    </div>
-                  </Card>
-                ))}
-              </div>
-            )}
-          </ScrollArea>
-
-          {cart.length > 0 && (
-            <div className="space-y-4 pt-4 border-t">
-              <div>
-                <label className="text-sm font-medium mb-2 block">備註訊息（選填）</label>
-                <Textarea
-                  placeholder="請輸入詢價相關訊息或需求..."
-                  value={inquiryMessage}
-                  onChange={(e) => setInquiryMessage(e.target.value)}
-                  rows={3}
-                />
-              </div>
-              <Button
-                className="w-full"
-                size="lg"
-                onClick={handleSubmitInquiry}
-                disabled={isSubmitting}
-              >
-                {isSubmitting ? "送出中..." : "送出詢價"}
-              </Button>
-            </div>
-          )}
-        </DialogContent>
-      </Dialog>
     </div>
   );
 };

@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import {
   Sparkles, Plus, Trash2, Loader2, ShoppingCart, ClipboardCheck,
-  AlertTriangle, History, Send, PackagePlus,
+  History, Send, PackagePlus, Hourglass, Undo2,
 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -11,6 +11,16 @@ import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { supabase } from "@/integrations/supabase/client";
 import { useRestaurant, needsApproval } from "@/components/RestaurantRoute";
 import { ANALYSIS_HANDOFF_KEY } from "./RestaurantAnalyzePage";
@@ -98,6 +108,7 @@ const RestaurantPurchasePage = () => {
   const [drafts, setDrafts] = useState<OrderRow[]>([]);
   const [submitting, setSubmitting] = useState(false);
   const [approvingId, setApprovingId] = useState<string | null>(null);
+  const [returnTarget, setReturnTarget] = useState<OrderRow | null>(null);
 
   const loadDrafts = async () => {
     const { data } = await db<OrderRow>("supplier_orders")
@@ -240,7 +251,7 @@ const RestaurantPurchasePage = () => {
       if (error || !data) throw new Error(error?.message ?? "建立採購單失敗");
 
       if (mustApprove) {
-        toast.success("已建立採購單,等待店長簽核");
+        toast.success("已建立採購單,等待老闆或店長簽核");
       } else {
         await recordOrderEvent({
           orderId: data.id,
@@ -265,13 +276,26 @@ const RestaurantPurchasePage = () => {
     }
   };
 
+  /** 這張單在畫面載入後已被別人處理(核准、退回或取消):提示並重抓清單,不再寫任何東西 */
+  const handledElsewhere = async () => {
+    toast.error("這張採購單已經被處理", { description: "可能已由其他人核准或退回,清單已重新整理" });
+    await loadDrafts();
+  };
+
   const approve = async (order: OrderRow) => {
     setApprovingId(order.id);
     try {
-      const { error } = await db("supplier_orders")
+      // 只在還是草稿時記下核准人:停在舊畫面時,不會把別人剛退回/送出的單再核准一次
+      const { data: stamped, error } = await db<{ id: string }>("supplier_orders")
         .update({ approved_by: userId, approved_at: new Date().toISOString() })
-        .eq("id", order.id);
+        .eq("id", order.id)
+        .eq("status", "draft")
+        .select("id");
       if (error) throw new Error(error.message);
+      if (!stamped || stamped.length === 0) {
+        await handledElsewhere();
+        return;
+      }
 
       await recordOrderEvent({
         orderId: order.id,
@@ -279,13 +303,46 @@ const RestaurantPurchasePage = () => {
         toStatus: "submitted",
         actorRole: "restaurant",
         source: "restaurant_portal",
-        note: "店長核准採購單",
+        note: account.role === "owner" ? "老闆核准採購單" : "店長核准採購單",
         payload: { approved: true },
       });
       toast.success("已核准並送出");
       setDrafts((prev) => prev.filter((d) => d.id !== order.id));
     } catch (e) {
       toast.error("核准失敗", { description: (e as Error).message });
+    } finally {
+      setApprovingId(null);
+    }
+  };
+
+  /** 退回 = 取消這張草稿(不會送出)。只給老闆/店長;資料庫也允許採購員取消草稿,但畫面上不給 */
+  const returnDraft = async (order: OrderRow) => {
+    setApprovingId(order.id);
+    try {
+      // 停在舊畫面時,這張可能已被別人核准送出 —— 已送出的單不能從這裡退回
+      const { data: still, error } = await db<{ id: string }>("supplier_orders")
+        .select("id")
+        .eq("id", order.id)
+        .eq("status", "draft");
+      if (error) throw new Error(error.message);
+      if (!still || still.length === 0) {
+        await handledElsewhere();
+        return;
+      }
+
+      await recordOrderEvent({
+        orderId: order.id,
+        fromStatus: "draft",
+        toStatus: "cancelled",
+        actorRole: "restaurant",
+        source: "restaurant_portal",
+        note: "退回採購單(未送出)",
+        payload: { returned: true },
+      });
+      toast.success("已退回,這張採購單不會送出");
+      setDrafts((prev) => prev.filter((d) => d.id !== order.id));
+    } catch (e) {
+      toast.error("退回失敗", { description: (e as Error).message });
     } finally {
       setApprovingId(null);
     }
@@ -320,19 +377,27 @@ const RestaurantPurchasePage = () => {
         </p>
       </div>
 
-      {/* 待簽核區塊 —— 只有老闆/店長看得到 */}
-      {!mustApprove && drafts.length > 0 && (
-        <Card className="border-amber-200 bg-amber-50/60">
+      {/* 待簽核區:草稿只出現在這裡(訂單分頁不列草稿)。
+          老闆/店長:核准並送出、退回;採購員:只看得到「等待簽核」,沒有送出鈕(業主拍板 Q8-A)。
+          資料庫 trg_guard_order_submission 也擋採購員送出,這裡不是唯一防線。 */}
+      {drafts.length > 0 && (
+        <Card className="border-amber-200 bg-amber-50/60" data-testid="pending-approval">
           <CardHeader className="pb-3">
             <CardTitle className="text-base flex items-center gap-2 text-amber-800">
-              <ClipboardCheck className="h-4 w-4" />
-              待簽核採購單（{drafts.length}）
+              {mustApprove ? <Hourglass className="h-4 w-4" /> : <ClipboardCheck className="h-4 w-4" />}
+              {mustApprove ? "等待簽核的採購單" : "待簽核採購單"}（{drafts.length}）
             </CardTitle>
+            <p className="text-xs text-amber-700">
+              {mustApprove
+                ? "老闆或店長簽核後才會送出媒合;需要修改請聯絡店長退回"
+                : "採購員建立的採購單,核准後才會送出媒合"}
+            </p>
           </CardHeader>
           <CardContent className="space-y-3">
             {drafts.map((d) => (
               <div
                 key={d.id}
+                data-testid="pending-draft"
                 className="flex flex-col sm:flex-row sm:items-center gap-3 bg-white rounded-lg border border-amber-200 px-4 py-3"
               >
                 <div className="flex-1 min-w-0">
@@ -342,31 +407,71 @@ const RestaurantPurchasePage = () => {
                     {d.notes ? ` · ${d.notes}` : ""}
                   </p>
                 </div>
-                <Button
-                  size="sm"
-                  className="bg-emerald-600 hover:bg-emerald-700 text-white shrink-0"
-                  disabled={approvingId === d.id}
-                  onClick={() => approve(d)}
-                >
-                  {approvingId === d.id
-                    ? <Loader2 className="h-4 w-4 animate-spin mr-1.5" />
-                    : <ClipboardCheck className="h-4 w-4 mr-1.5" />}
-                  核准並送出
-                </Button>
+                {mustApprove ? (
+                  <Badge variant="outline" className="bg-amber-50 text-amber-700 border-amber-300 shrink-0 self-start sm:self-auto">
+                    <Hourglass className="h-3 w-3 mr-1" />
+                    等待簽核
+                  </Badge>
+                ) : (
+                  <div className="flex gap-2 shrink-0">
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="border-slate-200 text-slate-600"
+                      disabled={approvingId === d.id}
+                      onClick={() => setReturnTarget(d)}
+                    >
+                      <Undo2 className="h-4 w-4 mr-1.5" />
+                      退回
+                    </Button>
+                    <Button
+                      size="sm"
+                      className="bg-emerald-600 hover:bg-emerald-700 text-white"
+                      disabled={approvingId === d.id}
+                      onClick={() => approve(d)}
+                    >
+                      {approvingId === d.id
+                        ? <Loader2 className="h-4 w-4 animate-spin mr-1.5" />
+                        : <ClipboardCheck className="h-4 w-4 mr-1.5" />}
+                      核准並送出
+                    </Button>
+                  </div>
+                )}
               </div>
             ))}
           </CardContent>
         </Card>
       )}
 
-      {mustApprove && drafts.length > 0 && (
-        <div className="flex items-start gap-2 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
-          <AlertTriangle className="h-4 w-4 mt-0.5 shrink-0" />
-          <span>
-            你有 {drafts.length} 張採購單待店長簽核,簽核後才會送出媒合。
-          </span>
-        </div>
-      )}
+      {/* 退回確認 */}
+      <AlertDialog
+        open={!!returnTarget}
+        onOpenChange={(o) => {
+          if (!o) setReturnTarget(null);
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>退回這張採購單?</AlertDialogTitle>
+            <AlertDialogDescription>
+              退回後這張單不會送出媒合,會從待簽核清單移除。採購員需要的話可以重新建立一張。
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>先不要</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-red-600 hover:bg-red-700"
+              onClick={() => {
+                const target = returnTarget;
+                setReturnTarget(null);
+                if (target) returnDraft(target);
+              }}
+            >
+              確定退回
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       {/* AI 建議採購清單 */}
       <Card>
@@ -550,7 +655,7 @@ const RestaurantPurchasePage = () => {
           <div className="flex flex-col sm:flex-row sm:items-center gap-3">
             <p className="text-sm text-slate-500 flex-1">
               目前共 <span className="font-semibold text-slate-800">{cart.length}</span> 項
-              {mustApprove && <span className="text-amber-600">（採購員送出後需店長簽核）</span>}
+              {mustApprove && <span className="text-amber-600">（採購員建立的採購單要由老闆或店長簽核後才會送出）</span>}
             </p>
             <Button
               onClick={submit}
@@ -558,7 +663,7 @@ const RestaurantPurchasePage = () => {
               className="bg-emerald-600 hover:bg-emerald-700 text-white"
             >
               {submitting ? <Loader2 className="h-4 w-4 animate-spin mr-1.5" /> : <Send className="h-4 w-4 mr-1.5" />}
-              {mustApprove ? "送出待簽核" : "送出採購需求"}
+              {mustApprove ? "送交簽核" : "送出採購需求"}
             </Button>
           </div>
         </CardContent>

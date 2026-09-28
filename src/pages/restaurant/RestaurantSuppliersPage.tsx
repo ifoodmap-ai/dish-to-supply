@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import {
-  Store, Star, ShieldAlert, ExternalLink, Truck, PackageX, Clock,
+  Store, Star, ShieldAlert, Truck, PackageX, Clock, ChevronDown, ChevronUp,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -9,6 +9,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { supabase } from "@/integrations/supabase/client";
 import { useRestaurant, canSeeCost } from "@/components/RestaurantRoute";
+import { ORDER_STATUS, type OrderStatus } from "@/lib/orders";
 
 /* ── 新資料表不在 types.ts,沿用專案的 loose cast 慣例 ─────────────── */
 type Result<T> = { data: T[] | null; error: { message: string } | null };
@@ -47,13 +48,26 @@ interface MetricsRow {
   computed_at: string | null;
 }
 
+interface RecentOrder {
+  id: string;
+  status: string;
+  created_at: string;
+}
+
 interface Partner {
   supplier: SupplierRow;
   orders: number;
   amount: number;
   lastAt: string | null;
   metrics: MetricsRow | null;
+  /** 最近幾張合作的單(新到舊),展開績效時列出 */
+  recent: RecentOrder[];
 }
+
+/** 展開績效時列出的近期訂單張數 */
+const RECENT_LIMIT = 5;
+
+const statusLabel = (status: string) => ORDER_STATUS[status as OrderStatus]?.label ?? status;
 
 /** 比率可能存 0–1 或 0–100,統一換算成百分比 */
 const toPct = (v: number | null | undefined): number | null => {
@@ -71,6 +85,8 @@ const RestaurantSuppliersPage = () => {
 
   const [loading, setLoading] = useState(true);
   const [partners, setPartners] = useState<Partner[]>([]);
+  // 「查看」改成就地展開績效(PROPOSAL.md §2 / Q7-A):不再帶去公開供應商頁 —— 那頁是給訪客看的
+  const [expandedId, setExpandedId] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -84,13 +100,14 @@ const RestaurantSuppliersPage = () => {
         .order("created_at", { ascending: false })
         .limit(500);
 
-      const grouped = new Map<string, { orders: number; amount: number; lastAt: string | null }>();
+      const grouped = new Map<string, { orders: number; amount: number; lastAt: string | null; recent: RecentOrder[] }>();
       (orders ?? []).forEach((o) => {
         if (!o.supplier_id) return;
-        const cur = grouped.get(o.supplier_id) ?? { orders: 0, amount: 0, lastAt: null };
+        const cur = grouped.get(o.supplier_id) ?? { orders: 0, amount: 0, lastAt: null, recent: [] };
         cur.orders += 1;
         cur.amount += o.total_amount != null ? Number(o.total_amount) : 0;
         if (!cur.lastAt || new Date(o.created_at) > new Date(cur.lastAt)) cur.lastAt = o.created_at;
+        cur.recent.push({ id: o.id, status: o.status, created_at: o.created_at });
         grouped.set(o.supplier_id, cur);
       });
 
@@ -116,6 +133,9 @@ const RestaurantSuppliersPage = () => {
           amount: g.amount,
           lastAt: g.lastAt,
           metrics: metricsById.get(s.id) ?? null,
+          recent: [...g.recent]
+            .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+            .slice(0, RECENT_LIMIT),
         };
       }).sort((a, b) => b.orders - a.orders);
 
@@ -212,6 +232,8 @@ const RestaurantSuppliersPage = () => {
               const ontime = toPct(p.metrics?.ontime_rate);
               const shortage = toPct(p.metrics?.shortage_rate);
               const risky = (ontime != null && ontime < 80) || (shortage != null && shortage > 10);
+              const isOpen = expandedId === p.supplier.id;
+              const detailId = `supplier-detail-${p.supplier.id}`;
               return (
                 <Card key={p.supplier.id} className={risky ? "border-red-200" : undefined}>
                   <CardContent className="pt-6">
@@ -235,12 +257,19 @@ const RestaurantSuppliersPage = () => {
                           </p>
                         )}
                       </div>
-                      <Link to={`/supplier/${p.supplier.id}`} className="shrink-0">
-                        <Button variant="outline" size="sm">
-                          <ExternalLink className="h-3.5 w-3.5 mr-1.5" />
-                          查看
-                        </Button>
-                      </Link>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="shrink-0"
+                        aria-expanded={isOpen}
+                        aria-controls={detailId}
+                        onClick={() => setExpandedId(isOpen ? null : p.supplier.id)}
+                      >
+                        {isOpen
+                          ? <ChevronUp className="h-3.5 w-3.5 mr-1.5" />
+                          : <ChevronDown className="h-3.5 w-3.5 mr-1.5" />}
+                        {isOpen ? "收起" : "查看績效"}
+                      </Button>
                     </div>
 
                     <div className={`grid gap-3 ${showCost ? "grid-cols-3" : "grid-cols-2"} border-t border-slate-100 pt-3`}>
@@ -305,6 +334,56 @@ const RestaurantSuppliersPage = () => {
                     )}
                     {!p.metrics && (
                       <p className="text-[11px] text-slate-400 mt-3">尚無績效統計資料</p>
+                    )}
+
+                    {isOpen && (
+                      <div
+                        id={detailId}
+                        role="region"
+                        aria-label={`${p.supplier.name} 的績效明細`}
+                        className="mt-3 space-y-3 rounded-lg bg-slate-50 p-3"
+                      >
+                        <div>
+                          <p className="text-[11px] font-medium text-slate-500">近期合作</p>
+                          <ul className="mt-1 space-y-1">
+                            {p.recent.map((o) => (
+                              <li key={o.id} className="flex items-center justify-between gap-2 text-xs text-slate-600">
+                                <span className="font-mono">#{o.id.slice(-8).toUpperCase()}</span>
+                                <span className="text-slate-400">{new Date(o.created_at).toLocaleDateString("zh-TW")}</span>
+                                <span className="ml-auto">{statusLabel(o.status)}</span>
+                              </li>
+                            ))}
+                          </ul>
+                          {p.orders > p.recent.length && (
+                            <p className="mt-1 text-[11px] text-slate-400">只列最近 {p.recent.length} 張,共 {p.orders} 張</p>
+                          )}
+                        </div>
+                        <div className="grid grid-cols-2 gap-3">
+                          <div>
+                            <p className="text-[11px] text-slate-400">平台累計訂單</p>
+                            <p className="text-sm font-semibold text-slate-800">
+                              {p.metrics?.orders_total != null ? p.metrics.orders_total : "—"}
+                            </p>
+                          </div>
+                          <div>
+                            <p className="text-[11px] text-slate-400">平均回覆</p>
+                            <p className="text-sm font-semibold text-slate-800">
+                              {p.metrics?.avg_reply_minutes != null
+                                ? `${Math.round(Number(p.metrics.avg_reply_minutes))} 分鐘`
+                                : "—"}
+                            </p>
+                          </div>
+                        </div>
+                        {p.supplier.description && (
+                          <p className="text-xs leading-relaxed text-slate-500">{p.supplier.description}</p>
+                        )}
+                        <Link
+                          to="/restaurant/orders"
+                          className="inline-flex text-xs font-medium text-emerald-700 hover:underline"
+                        >
+                          到訂單分頁看完整履歷
+                        </Link>
+                      </div>
                     )}
                   </CardContent>
                 </Card>

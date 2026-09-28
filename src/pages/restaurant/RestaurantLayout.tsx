@@ -1,27 +1,94 @@
-import { useState } from "react";
-import { NavLink, Outlet, useNavigate } from "react-router-dom";
+import { useEffect, useState } from "react";
+import { Link, Navigate, Outlet, useLocation, useNavigate } from "react-router-dom";
 import {
-  LayoutDashboard, UtensilsCrossed, ShoppingCart, PackageCheck,
-  TrendingDown, Store, FlaskConical, Users, Settings, LogOut, Menu, X, Sparkles,
+  LayoutDashboard, Sparkles, PackageCheck, UtensilsCrossed, Settings,
+  LogOut, Menu, X, type LucideIcon,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { useRestaurant, canSeeCost } from "@/components/RestaurantRoute";
 import PortalSwitcher from "@/components/PortalSwitcher";
 import AIAssistantBubble from "@/components/AIAssistantBubble";
+import SectionTabs, { type SectionTabItem } from "@/components/portal/SectionTabs";
 
-const navItems = [
-  { label: "營運總覽", icon: LayoutDashboard, to: "/restaurant", end: true },
-  { label: "AI 菜單分析", icon: Sparkles, to: "/restaurant/analyze" },
-  { label: "我的菜單", icon: UtensilsCrossed, to: "/restaurant/menu", costOnly: true },
-  { label: "智慧採購", icon: ShoppingCart, to: "/restaurant/purchase" },
-  { label: "訂單與收貨", icon: PackageCheck, to: "/restaurant/orders" },
-  { label: "成本與省錢", icon: TrendingDown, to: "/restaurant/costs", costOnly: true },
-  { label: "我的供應商", icon: Store, to: "/restaurant/suppliers" },
-  { label: "菜色實驗室", icon: FlaskConical, to: "/restaurant/lab", costOnly: true },
-  { label: "分店與成員", icon: Users, to: "/restaurant/team" },
-  { label: "店家設定", icon: Settings, to: "/restaurant/settings" },
+// 後台精簡第一期(PROPOSAL.md §2):10 個選單項目收成 5 個分區,分區裡用分頁(深連結到原本的路由)。
+// 路由一條都沒動、也不需要轉址 —— 通知信(/restaurant/orders)、AI 交接(/restaurant/purchase)、
+// AI 泡泡(/restaurant/analyze)、書籤都照舊能開,只是畫面上落在對應的分區與分頁。
+// 這份 sections 是「分區怎麼分」唯一的事實來源:側邊欄、分頁列、成本分區擋路由都從這裡讀。
+interface RestaurantSection {
+  key: string;
+  /** 側邊欄點下去要去哪 */
+  to: string;
+  label: string;
+  icon: LucideIcon;
+  /** 目前路由是否落在這個分區(一個分區可能對應好幾條路由) */
+  match: (pathname: string) => boolean;
+  /** 分區內的分頁;沒有分頁可切的分區留 undefined */
+  tabs?: SectionTabItem[];
+  /** 只給老闆/店長(canSeeCost):採購員的選單看不到,直接打網址也會被導回總覽 */
+  costOnly?: boolean;
+}
+
+const startsWithAny = (bases: string[]) => (pathname: string) =>
+  bases.some((base) => pathname === base || pathname.startsWith(`${base}/`));
+
+const sections: RestaurantSection[] = [
+  {
+    key: "overview",
+    to: "/restaurant",
+    label: "總覽",
+    icon: LayoutDashboard,
+    match: (pathname) => pathname === "/restaurant" || pathname === "/restaurant/",
+  },
+  {
+    // 不動:AI 泡泡與分析頁的簡化是另一條工作線
+    key: "analyze",
+    to: "/restaurant/analyze",
+    label: "AI 菜單分析",
+    icon: Sparkles,
+    match: startsWithAny(["/restaurant/analyze"]),
+  },
+  {
+    // 選單點下去預設「訂單」—— 每封訂單通知信也都連這裡
+    key: "orders",
+    to: "/restaurant/orders",
+    label: "叫貨與訂單",
+    icon: PackageCheck,
+    match: startsWithAny(["/restaurant/purchase", "/restaurant/orders", "/restaurant/suppliers"]),
+    tabs: [
+      { label: "叫貨", path: "/restaurant/purchase" },
+      { label: "訂單", path: "/restaurant/orders" },
+      { label: "供應商", path: "/restaurant/suppliers" },
+    ],
+  },
+  {
+    key: "menu",
+    to: "/restaurant/menu",
+    label: "菜單與成本",
+    icon: UtensilsCrossed,
+    costOnly: true,
+    match: startsWithAny(["/restaurant/menu", "/restaurant/costs", "/restaurant/lab"]),
+    tabs: [
+      { label: "我的菜單", path: "/restaurant/menu" },
+      { label: "食材行情", path: "/restaurant/costs" },
+      { label: "新菜實驗室", path: "/restaurant/lab" },
+    ],
+  },
+  {
+    key: "settings",
+    to: "/restaurant/settings",
+    label: "設定",
+    icon: Settings,
+    match: startsWithAny(["/restaurant/settings", "/restaurant/team"]),
+    tabs: [
+      { label: "店家資料", path: "/restaurant/settings" },
+      { label: "分店與成員", path: "/restaurant/team" },
+    ],
+  },
 ];
+
+/** 分頁列控制的內容區塊 id,給 SectionTabs 的 aria-controls 用 */
+const MAIN_PANEL_ID = "restaurant-main-panel";
 
 const ROLE_LABEL: Record<string, string> = {
   owner: "老闆",
@@ -31,11 +98,21 @@ const ROLE_LABEL: Record<string, string> = {
 
 const RestaurantLayout = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const account = useRestaurant();
   const [mobileOpen, setMobileOpen] = useState(false);
 
-  // 採購員看不到成本相關頁面
-  const items = navItems.filter((i) => !i.costOnly || canSeeCost(account.role));
+  const showCost = canSeeCost(account.role);
+  // 採購員看不到成本相關的分區(整個「菜單與成本」)
+  const visibleSections = sections.filter((s) => !s.costOnly || showCost);
+  const activeSection = sections.find((s) => s.match(location.pathname)) ?? sections[0];
+  // 💰 原本只藏選單、不擋路由:採購員打網址仍進得去,還能編輯菜單。分區殼順便擋掉
+  const blocked = !!activeSection.costOnly && !showCost;
+
+  // 換頁就把抽屜收起來(點分頁列換頁時也一樣)
+  useEffect(() => {
+    setMobileOpen(false);
+  }, [location.pathname]);
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
@@ -52,25 +129,26 @@ const RestaurantLayout = () => {
           {ROLE_LABEL[account.role] ?? account.role} · 餐廳後台
         </span>
       </div>
-      <nav className="flex-1 px-3 py-4 space-y-1 overflow-y-auto">
-        {items.map(({ label, icon: Icon, to, end }) => (
-          <NavLink
-            key={to}
-            to={to}
-            end={end}
-            onClick={() => setMobileOpen(false)}
-            className={({ isActive }) =>
-              `flex items-center gap-3 px-3 py-2 rounded-md text-sm font-medium transition-colors ${
-                isActive
+      <nav className="flex-1 px-3 py-4 space-y-1 overflow-y-auto" aria-label="餐廳後台導覽">
+        {visibleSections.map(({ key, to, label, icon: Icon }) => {
+          const active = activeSection.key === key;
+          return (
+            <Link
+              key={key}
+              to={to}
+              aria-current={active ? "page" : undefined}
+              onClick={() => setMobileOpen(false)}
+              className={`flex items-center gap-3 px-3 py-2 rounded-md text-sm font-medium transition-colors ${
+                active
                   ? "bg-emerald-800 text-white"
                   : "text-emerald-100 hover:bg-emerald-900 hover:text-white"
-              }`
-            }
-          >
-            <Icon className="h-4 w-4 shrink-0" />
-            {label}
-          </NavLink>
-        ))}
+              }`}
+            >
+              <Icon className="h-4 w-4 shrink-0" />
+              {label}
+            </Link>
+          );
+        })}
       </nav>
       <div className="px-4 py-4 border-t border-emerald-800 space-y-2">
         <PortalSwitcher current="restaurant" tone="dark" />
@@ -89,12 +167,12 @@ const RestaurantLayout = () => {
 
   return (
     <div className="flex min-h-screen bg-slate-50">
-      <div className="hidden md:flex md:flex-col md:fixed md:inset-y-0 md:w-64">
+      <div data-testid="restaurant-sidebar-desktop" className="hidden md:flex md:flex-col md:fixed md:inset-y-0 md:w-64">
         <Sidebar />
       </div>
 
       {mobileOpen && (
-        <div className="md:hidden fixed inset-0 z-40 flex">
+        <div data-testid="restaurant-sidebar-mobile" className="md:hidden fixed inset-0 z-40 flex">
           <div className="fixed inset-0 bg-black/40" onClick={() => setMobileOpen(false)} />
           <div className="relative z-50">
             <Sidebar />
@@ -110,19 +188,29 @@ const RestaurantLayout = () => {
             variant="ghost"
             size="icon"
             onClick={() => setMobileOpen((v) => !v)}
+            aria-label={mobileOpen ? "關閉選單" : "開啟選單"}
+            aria-expanded={mobileOpen}
             className="text-white hover:bg-emerald-900"
           >
             {mobileOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
           </Button>
         </header>
+        {activeSection.tabs && !blocked && (
+          <SectionTabs
+            tabs={activeSection.tabs}
+            ariaLabel={`${activeSection.label}分頁`}
+            panelId={MAIN_PANEL_ID}
+            className="bg-white"
+          />
+        )}
         {/* 底部多留 pb-40(160px):右下角的 AI 小助手泡泡(距底 18–88px)與小標籤(距底 100–144px)
             不能蓋住頁尾最後一個按鈕 —— 捲到底時它要停在兩者上方 */}
-        <main className="p-4 pb-40 md:p-8 md:pb-40 max-w-7xl mx-auto">
-          <Outlet />
+        <main id={MAIN_PANEL_ID} className="p-4 pb-40 md:p-8 md:pb-40 max-w-7xl mx-auto">
+          {blocked ? <Navigate to="/restaurant" replace /> : <Outlet />}
         </main>
       </div>
 
-      {/* AI 小助手:每一頁都看得到;對話送出需求後自己導去「AI 菜單分析」頁 */}
+      {/* AI 小助手:每一頁都看得到;對話送出需求後,使用者按下才帶去「AI 菜單分析」頁 */}
       <AIAssistantBubble />
     </div>
   );

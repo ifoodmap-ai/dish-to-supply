@@ -141,7 +141,9 @@ const MainRoutes = () => (
     <Route path="/register/complete" element={<RegisterCompletePage />} />
     <Route path="/suppliers" element={<SuppliersPage />} />
     <Route path="/join" element={<JoinSupplierPage />} />
-    <Route path="/my" element={<BuyerPortalPage />} />
+    {/* 舊版買家入口退場(後台精簡 Q7-A):站內零入口、詢價供應商也收不到 → 轉去餐廳後台。
+        沒登入會再被 RestaurantRoute 帶回登入首頁。BuyerPortalPage 與既有 inquiries 資料都保留 */}
+    <Route path="/my" element={<Navigate to="/restaurant" replace />} />
     <Route path="/price-index" element={<PriceIndexPage />} />
     <Route path="/supplier/:id" element={<SupplierDetail />} />
     <Route path="/architecture" element={<Architecture />} />

@@ -467,3 +467,12 @@ anon 對 `profiles` 沒有任何權限;登入者只讀得到自己、自己已�
 因為是自訂 SMTP,Supabase 預設 SMTP 那個「每小時 2 封」的限制不適用。Resend 帳號本身的方案額度
 (若是免費方案也有每日上限)沒有辦法從這邊確認,要去 Resend 後台看。
 寄信是同步的:函式回 200 代表 Resend 已經收下這封信(實測約 6 秒)。
+
+## 採購單簽核與 order_pipeline 權限(2026-09-29,migration 20260928190000 / 190100 / 190200 / 190300)
+
+- **190000 `restaurant_draft_approval`**:`order_events` 的 BEFORE INSERT trigger `guard_order_submission`。「送出類」事件(目標是 submitted,或把 draft/cancelled 推往其他狀態)只放行平台管理員、系統(service_role 或沒有 JWT)、該店**已接受且啟用中**的老闆/店長;其他人回 42501。`supplier_orders` 的 INSERT policy:直接建 submitted 只限老闆/店長,其他人只能建 draft。
+- **190100 `restaurant_order_update_guard`**:`supplier_orders` 的 BEFORE UPDATE trigger:任何人都不能改 `restaurant_id`(擋「A 店採購員兼 B 店老闆」把單搬來搬去);採購員只能改草稿,也不能自己填 `approved_by` / `approved_at`。
+- **190200 / 190300 `order_pipeline`**:這個 view 原本會繞過 RLS 而且可寫(7 月起未登入者可讀進行中訂單的金額、可經由它寫入)。改成 `security_invoker`,anon 無任何權限,authenticated 只能 SELECT。
+- 兩支 trigger 都只做唯讀查詢、不取列鎖,沒有改變既有的鎖順序。
+- **rollback 一定要照順序**:`190300 → 190200 → 190100 → 190000`(`supabase/rollbacks/*.down.sql`)。順序反了,190000 那支會直接報錯擋下。
+- 驗證:`supabase/tests/database/restaurant_draft_approval.test.sql`(72 項,在正式庫一律包在 BEGIN…ROLLBACK 裡跑)。
