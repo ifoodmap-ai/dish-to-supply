@@ -45,18 +45,19 @@ INSERT INTO public.restaurants (id, name) VALUES
   ('31000000-0000-0000-0000-000000000001'::uuid, 'RLS 餐廳一'),
   ('31000000-0000-0000-0000-000000000002'::uuid, 'RLS 餐廳二');
 
+-- accepted_at 要給值:沒接受的邀請不算成員(migration 20260928170000)
 INSERT INTO public.restaurant_accounts (
-  user_id, restaurant_id, role, is_active
+  user_id, restaurant_id, role, is_active, accepted_at
 ) VALUES
   (
     '21000000-0000-0000-0000-000000000001'::uuid,
     '31000000-0000-0000-0000-000000000001'::uuid,
-    'owner', true
+    'owner', true, now()
   ),
   (
     '21000000-0000-0000-0000-000000000002'::uuid,
     '31000000-0000-0000-0000-000000000002'::uuid,
-    'owner', true
+    'owner', true, now()
   );
 
 INSERT INTO public.suppliers (id, name) VALUES

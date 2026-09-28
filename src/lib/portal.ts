@@ -6,7 +6,8 @@
 // 三種身分的判斷方式各不相同:
 //   admin      → JWT 的 app_metadata.role
 //   supplier   → supplier_accounts 有啟用中的紀錄
-//   restaurant → restaurant_accounts 有啟用中的紀錄
+//   restaurant → restaurant_accounts 有「已接受(accepted_at 不是 null)且啟用中」的紀錄
+//                —— 還沒按「接受」的邀請不是身分(見 src/lib/restaurant-invites.ts)
 
 import { supabase } from "@/integrations/supabase/client";
 
@@ -25,7 +26,8 @@ export interface PortalInfo {
 }
 
 export interface SessionLike {
-  user?: { id?: string; app_metadata?: { role?: string } } | null;
+  // app_metadata 帶索引簽章:supabase-js 的 Session(UserAppMetadata)才指派得進來
+  user?: { id?: string; app_metadata?: { role?: string; [key: string]: unknown } } | null;
 }
 
 /** 管理員站的網址。空字串代表跟目前站台同一個 origin(admin build 自己)。 */
@@ -41,18 +43,35 @@ const PORTAL_META: Record<PortalKey, { label: string; path: string; order: numbe
   restaurant: { label: "餐廳後台", path: "/restaurant", order: 2 },
 };
 
+type AccountsResult<T> = { data: T[] | null; error: { message: string } | null };
+
+/** PostgREST builder 用得到的那一小段(thenable,可以繼續串 .not) */
+interface AccountsQuery<T> extends PromiseLike<AccountsResult<T>> {
+  not: (col: string, op: string, v: null) => PromiseLike<AccountsResult<T>>;
+}
+
 /**
  * 查某張帳號綁定表。
  * PostgREST 的 builder 是 thenable 而不是真正的 Promise(沒有 .catch),
- * 所以這裡自己 await 起來、把錯誤收乾淨,回傳單純的陣列。
+ * 所以這裡自己 await 起來、把錯誤收乾淨,回傳單純的陣列 + 有沒有查詢失敗。
+ * (查詢失敗 ≠ 沒有這個身分:呼叫端要分得出來,不然網路一抖就會被當成「沒有任何身分」)
+ *
+ * requireAccepted:只算「已接受」的列(restaurant_accounts 專用)。伺服器端用
+ * accepted_at=not.is.null 篩,回來的資料再檢查一次 —— RLS 本來就不會回傳自己待接受的列,
+ * 這裡是第二道保險:待接受的邀請絕對不能被當成身分。
  */
-const fetchAccounts = async <T>(table: string, cols: string, userId: string): Promise<T[]> => {
+const fetchAccounts = async <T>(
+  table: string,
+  cols: string,
+  userId: string,
+  opts: { requireAccepted?: boolean } = {},
+): Promise<{ rows: T[]; failed: boolean }> => {
   try {
-    const res = (await (supabase as never as {
+    const base = (supabase as never as {
       from: (t: string) => {
         select: (c: string) => {
           eq: (col: string, v: string) => {
-            eq: (col: string, v: boolean) => PromiseLike<{ data: T[] | null; error: { message: string } | null }>;
+            eq: (col: string, v: boolean) => AccountsQuery<T>;
           };
         };
       };
@@ -60,13 +79,27 @@ const fetchAccounts = async <T>(table: string, cols: string, userId: string): Pr
       .from(table)
       .select(cols)
       .eq("user_id", userId)
-      .eq("is_active", true)) as { data: T[] | null; error: { message: string } | null };
+      .eq("is_active", true);
 
-    return res.error ? [] : res.data ?? [];
+    const res = (await (opts.requireAccepted ? base.not("accepted_at", "is", null) : base)) as AccountsResult<T>;
+    if (res.error) return { rows: [], failed: true };
+    const rows = res.data ?? [];
+    return {
+      rows: opts.requireAccepted
+        ? rows.filter((r) => !!(r as { accepted_at?: string | null }).accepted_at)
+        : rows,
+      failed: false,
+    };
   } catch {
-    return [];
+    return { rows: [], failed: true };
   }
 };
+
+export interface PortalLookup {
+  portals: PortalInfo[];
+  /** 有任何一張綁定表查詢失敗(這時 portals 可能不完整,不能當成「沒有身分」) */
+  failed: boolean;
+}
 
 /**
  * 查出這個 session 能進哪些後台。
@@ -76,9 +109,9 @@ const fetchAccounts = async <T>(table: string, cols: string, userId: string): Pr
  *    supabase-js v2 在 callback 期間持有 auth lock,查 DB 會鎖死。
  *    請在 callback 外(setTimeout 0 之後)呼叫。
  */
-export const getUserPortals = async (session: SessionLike | null): Promise<PortalInfo[]> => {
+export const loadUserPortals = async (session: SessionLike | null): Promise<PortalLookup> => {
   const uid = session?.user?.id;
-  if (!uid) return [];
+  if (!uid) return { portals: [], failed: false };
 
   const portals: PortalInfo[] = [];
 
@@ -93,14 +126,16 @@ export const getUserPortals = async (session: SessionLike | null): Promise<Porta
     });
   }
 
-  const [sup, rest] = await Promise.all([
+  const [supRes, restRes] = await Promise.all([
     fetchAccounts<{ supplier_id: string; suppliers?: { name?: string } | null }>(
       "supplier_accounts", "supplier_id, suppliers(name)", uid
     ),
-    fetchAccounts<{ restaurant_id: string; restaurants?: { name?: string } | null }>(
-      "restaurant_accounts", "restaurant_id, restaurants(name)", uid
+    fetchAccounts<{ restaurant_id: string; accepted_at?: string | null; restaurants?: { name?: string } | null }>(
+      "restaurant_accounts", "restaurant_id, accepted_at, restaurants(name)", uid, { requireAccepted: true }
     ),
   ]);
+  const sup = supRes.rows;
+  const rest = restRes.rows;
 
   if (sup.length) {
     portals.push({
@@ -122,8 +157,15 @@ export const getUserPortals = async (session: SessionLike | null): Promise<Porta
     });
   }
 
-  return portals.sort((a, b) => PORTAL_META[a.key].order - PORTAL_META[b.key].order);
+  return {
+    portals: portals.sort((a, b) => PORTAL_META[a.key].order - PORTAL_META[b.key].order),
+    failed: supRes.failed || restRes.failed,
+  };
 };
+
+/** 同 loadUserPortals,只要清單(查詢失敗的那一張當成沒有;身分切換器之類不在乎失敗的地方用) */
+export const getUserPortals = async (session: SessionLike | null): Promise<PortalInfo[]> =>
+  (await loadUserPortals(session)).portals;
 
 /** 前台站的網址(給 admin 站的切換器連回來用) */
 export const MAIN_SITE_URL =

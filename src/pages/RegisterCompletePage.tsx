@@ -11,6 +11,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import PublicHeader from "@/components/PublicHeader";
 import { supabase } from "@/integrations/supabase/client";
+import { getPendingRestaurantInvites } from "@/lib/restaurant-invites";
 
 type Phase = "working" | "done" | "no-session" | "failed";
 
@@ -44,22 +45,30 @@ const RegisterCompletePage = () => {
       if (cancelled) return;
       if (!session) { setPhase("no-session"); return; }
 
-      // 已經有餐廳身分就直接進後台(重複點確認信會走到這)
+      // 已經有餐廳身分就直接進後台(重複點確認信會走到這)。
+      // 只認「已接受、啟用中」的成員資格 —— 別人寄來、還沒按「接受」的邀請不算,
+      // 不然被搶先邀請的 email 自己來註冊,會直接被帶進邀請者的店。
       const { data: existing } = (await (supabase as never as {
         from: (t: string) => {
           select: (c: string) => {
             eq: (c: string, v: string) => {
-              limit: (n: number) => Promise<{ data: unknown[] | null }>;
+              eq: (c: string, v: boolean) => {
+                not: (c: string, op: string, v: null) => {
+                  limit: (n: number) => Promise<{ data: unknown[] | null }>;
+                };
+              };
             };
           };
         };
       })
         .from("restaurant_accounts")
-        .select("id")
+        .select("id, accepted_at")
         .eq("user_id", session.user.id)
+        .eq("is_active", true)
+        .not("accepted_at", "is", null)
         .limit(1)) as { data: unknown[] | null };
 
-      if (existing?.length) {
+      if ((existing ?? []).some((r) => !!(r as { accepted_at?: string | null } | null)?.accepted_at)) {
         if (!cancelled) { setPhase("done"); setTimeout(() => navigate("/restaurant", { replace: true }), 1200); }
         return;
       }
@@ -68,7 +77,16 @@ const RegisterCompletePage = () => {
       const name = meta.pending_restaurant_name?.trim();
 
       if (!name) {
-        // 沒有暫存資料(例如舊帳號),請他回註冊頁補
+        // 沒有暫存資料。常見原因:這個 email 先被別人邀請過(帳號已存在、還沒確認),
+        // GoTrue 對這種帳號的 signUp 不會更新 user_metadata。有待接受的邀請就回登入首頁,
+        // 讓他自己選「接受」或「拒絕 → 建立自己的餐廳」(在那裡可以輸入餐廳名稱)。
+        const invites = await getPendingRestaurantInvites();
+        if (cancelled) return;
+        if (invites.length > 0) {
+          navigate("/", { replace: true });
+          return;
+        }
+        // 其他情況(例如舊帳號),請他回註冊頁補
         if (!cancelled) {
           setPhase("failed");
           setDetail("找不到註冊時填寫的餐廳資料,請回註冊頁重新填一次(信箱已完成驗證,不會重複建立帳號)。");

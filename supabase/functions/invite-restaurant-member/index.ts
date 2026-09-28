@@ -7,6 +7,7 @@
 // 依賴 migration:
 //   20260928150000_restaurant_member_invites.sql  → restaurant_invite_email_status()
 //   20260928160000_restaurant_invite_guards.sql   → claim_restaurant_invite_slot()
+//   20260928170000_restaurant_member_acceptance.sql → accepted_at(邀請寫成待接受)、member_pending 狀態
 import { createClient } from "npm:@supabase/supabase-js@2";
 import { createInviteHandler, type AdminClient } from "./handler.ts";
 

@@ -178,7 +178,9 @@ Deno.serve(async (req) => {
       : Promise.resolve({ data: null }),
   ]);
 
-  // 餐廳沒有 contact_email 欄位 —— 收件人取該店 owner/manager 的登入信箱
+  // 餐廳沒有 contact_email 欄位 —— 收件人取該店 owner/manager 的登入信箱。
+  // 還沒按「接受」的受邀者(accepted_at = null)不是成員,不能收到這家店的訂單內容
+  // (不然有人可以邀請任意 email 當店長,讓平台替他寄訂單信給陌生人)。
   const restaurantEmails: string[] = [];
   if (order.restaurant_id) {
     const { data: accounts } = await supabase
@@ -186,6 +188,7 @@ Deno.serve(async (req) => {
       .select("user_id, role")
       .eq("restaurant_id", order.restaurant_id)
       .eq("is_active", true)
+      .not("accepted_at", "is", null)
       .in("role", ["owner", "manager"]);
     for (const a of accounts ?? []) {
       const { data: u } = await supabase.auth.admin.getUserById(a.user_id);

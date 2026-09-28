@@ -68,15 +68,24 @@ interface MemberRow {
   branch_id: string | null;
   role: RestaurantRole;
   is_active: boolean | null;
+  /** 受邀者按「接受」的時間;null / 沒有 = 還沒接受(邀請中,不是正式成員) */
+  accepted_at?: string | null;
   created_at: string;
 }
+
+/** 還沒按「接受」的邀請 —— 不是正式成員,不算進「啟用中的老闆」 */
+const isPendingInvite = (m: MemberRow) => !m.accepted_at;
+
+/** 算得上「老闆」的列:已接受、啟用中、角色是老闆 */
+const isActiveOwner = (m: MemberRow) =>
+  m.role === "owner" && m.is_active !== false && !isPendingInvite(m);
 
 interface ProfileRow {
   user_id: string;
   display_name: string | null;
 }
 
-/** restaurant_member_directory() 的一列:邀請狀態;email 只有老闆拿得到 */
+/** restaurant_member_directory() 的一列:email 只有老闆拿得到(「邀請中」改看成員列自己的 accepted_at) */
 interface DirectoryRow {
   user_id: string;
   email: string | null;
@@ -191,8 +200,7 @@ const RestaurantTeamPage = () => {
   const [toggleTarget, setToggleTarget] = useState<MemberRow | null>(null);
   const [busyMemberId, setBusyMemberId] = useState<string | null>(null);
 
-  // 邀請狀態(user_id → 是否還沒點邀請信)與 email(只有老闆拿得到)
-  const [pendingInvites, setPendingInvites] = useState<Record<string, boolean>>({});
+  // 成員 email(只有老闆拿得到,來自 restaurant_member_directory)
   const [memberEmails, setMemberEmails] = useState<Record<string, string>>({});
 
   const [inviteOpen, setInviteOpen] = useState(false);
@@ -272,7 +280,7 @@ const RestaurantTeamPage = () => {
         };
       })
         .from("restaurant_accounts")
-        .select("id, user_id, restaurant_id, branch_id, role, is_active, created_at")
+        .select("id, user_id, restaurant_id, branch_id, role, is_active, accepted_at, created_at")
         .eq("restaurant_id", account.restaurant_id)
         .order("created_at", { ascending: true })) as {
         data: MemberRow[] | null;
@@ -318,7 +326,7 @@ const RestaurantTeamPage = () => {
         setProfiles(map);
       }
 
-      // 邀請狀態讀不到不影響主要功能 —— 只是少了「邀請中」標籤,所以不跳錯誤
+      // email 讀不到不影響主要功能(「邀請中」看的是成員列自己的 accepted_at),所以不跳錯誤
       let dirRows: DirectoryRow[] | null = null;
       try {
         ({ data: dirRows } = (await (supabase as never as {
@@ -335,13 +343,10 @@ const RestaurantTeamPage = () => {
       }
 
       if (cancelled) return;
-      const pendingMap: Record<string, boolean> = {};
       const emailMap: Record<string, string> = {};
       (dirRows ?? []).forEach((d) => {
-        if (d.invite_pending) pendingMap[d.user_id] = true;
         if (d.email) emailMap[d.user_id] = d.email;
       });
-      setPendingInvites(pendingMap);
       setMemberEmails(emailMap);
 
       setLoading(false);
@@ -431,9 +436,9 @@ const RestaurantTeamPage = () => {
       toast.error("不能變更自己的角色", { description: "請由其他老闆帳號操作。" });
       return;
     }
-    // 至少要留一位啟用中的老闆
-    const activeOwners = members.filter((x) => x.role === "owner" && x.is_active !== false);
-    if (m.role === "owner" && activeOwners.length <= 1) {
+    // 至少要留一位啟用中的老闆(還沒接受的「老闆邀請」不算;資料庫也有 trigger 擋)
+    const activeOwners = members.filter(isActiveOwner);
+    if (isActiveOwner(m) && activeOwners.length <= 1) {
       toast.error("至少要保留一位老闆");
       return;
     }
@@ -475,8 +480,8 @@ const RestaurantTeamPage = () => {
         toast.error("不能停用自己的帳號");
         return;
       }
-      const activeOwners = members.filter((x) => x.role === "owner" && x.is_active !== false);
-      if (m.role === "owner" && activeOwners.length <= 1) {
+      const activeOwners = members.filter(isActiveOwner);
+      if (isActiveOwner(m) && activeOwners.length <= 1) {
         toast.error("至少要保留一位啟用中的老闆");
         return;
       }
@@ -591,10 +596,9 @@ const RestaurantTeamPage = () => {
       setMembers((list) => [...list.filter((x) => x.id !== member.id), member]);
       setProfiles((p) => ({ ...p, [member.user_id]: display_name }));
       setMemberEmails((m) => ({ ...m, [member.user_id]: email }));
-      setPendingInvites((p) => ({ ...p, [member.user_id]: true }));
       setInviteOpen(false);
       toast.success(`已寄出邀請信給 ${display_name}`, {
-        description: `請對方到 ${email} 收信,點連結設定密碼後即可登入(連結 1 小時內有效)。`,
+        description: `請對方到 ${email} 收信,點連結設定密碼、登入後按「接受」才會加入(連結 1 小時內有效)。`,
       });
     } finally {
       setInviting(false);
@@ -771,7 +775,7 @@ const RestaurantTeamPage = () => {
                 const active = m.is_active ?? true;
                 const isSelf = m.user_id === myUserId;
                 const busy = busyMemberId === m.id;
-                const invitePending = !!pendingInvites[m.user_id];
+                const invitePending = isPendingInvite(m);
                 const email = isOwner ? memberEmails[m.user_id] : undefined;
                 return (
                   <div
@@ -795,7 +799,7 @@ const RestaurantTeamPage = () => {
                           <Badge
                             variant="outline"
                             className="bg-amber-50 text-amber-700 border-amber-200"
-                            title="已寄出邀請信,對方還沒點信中的連結設定密碼"
+                            title="已寄出邀請,對方登入後按「接受」才會成為成員"
                           >
                             <Mail className="h-3 w-3 mr-1" aria-hidden="true" />
                             邀請中
@@ -819,7 +823,7 @@ const RestaurantTeamPage = () => {
                       </p>
                       {invitePending && isOwner && (
                         <p className="text-xs text-amber-700 mt-1">
-                          對方還沒點邀請信。連結 1 小時內有效,過期請對方到登入頁按「忘記密碼」,用這個 Email 設定密碼。
+                          對方登入後按「接受」才會加入。邀請信連結 1 小時內有效,過期請對方到登入頁按「忘記密碼」,用這個 Email 設定密碼後登入。
                         </p>
                       )}
                     </div>

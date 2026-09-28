@@ -49,24 +49,29 @@ const RestaurantRoute = ({ children }: Props) => {
         return;
       }
 
+      // 只認「已接受、啟用中」的成員資格。還沒按「接受」的邀請(accepted_at = null)不是身分 ——
+      // 伺服器端篩一次(RLS 本來也不會回傳自己待接受的列),回來再檢查一次。
       const { data } = (await (supabase as never as {
         from: (t: string) => {
           select: (c: string) => {
             eq: (col: string, v: string) => {
               eq: (col: string, v: boolean) => {
-                limit: (n: number) => Promise<{ data: unknown[] | null }>;
+                not: (col: string, op: string, v: null) => {
+                  limit: (n: number) => Promise<{ data: unknown[] | null }>;
+                };
               };
             };
           };
         };
       })
         .from("restaurant_accounts")
-        .select("id, restaurant_id, branch_id, role, restaurants(name)")
+        .select("id, restaurant_id, branch_id, role, accepted_at, restaurants(name)")
         .eq("user_id", session.user.id)
         .eq("is_active", true)
+        .not("accepted_at", "is", null)
         .limit(1)) as { data: unknown[] | null };
 
-      const row = data?.[0] as {
+      const row = (data ?? []).find((r) => !!(r as { accepted_at?: string | null } | null)?.accepted_at) as {
         id: string; restaurant_id: string; branch_id: string | null;
         role: RestaurantRole; restaurants?: { name?: string } | null;
       } | undefined;
@@ -103,6 +108,7 @@ const RestaurantRoute = ({ children }: Props) => {
     );
   }
 
+  // 沒有餐廳身分(包含「只有待接受的邀請」)→ 回登入首頁;有邀請的人會在那裡看到接受/拒絕
   if (!account) return <Navigate to="/" replace />;
 
   return (

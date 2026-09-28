@@ -18,14 +18,22 @@ const BRANCH_B1 = "b1b1b1b1-b1b1-4b1b-8b1b-b1b1b1b1b1b1";
 const NEW_USER = "99999999-9999-4999-8999-999999999999";
 const EMAIL = "new.staff+1@example.com";
 
+/** restaurant_accounts 的一列(只放權限查詢會用到的欄位);fake 會照 eq / not 篩選 */
+type AccountRow = {
+  restaurant_id: string;
+  user_id?: string;
+  role?: string;
+  is_active?: boolean;
+  accepted_at: string | null;
+};
+
 interface Config {
   tokenUser: AuthUser | null;
-  ownerRows: { restaurant_id: string }[];
+  ownerRows: AccountRow[];
   restaurants: Record<string, { id: string; is_active: boolean }>;
   branches: { id: string; restaurant_id: string; is_active: boolean }[];
   claim: { data: unknown; error: ApiError };
   emailStatus: { user_id: string; status: string }[];
-  usersById: Record<string, AuthUser>;
   createUser: { data: { user: AuthUser | null } | null; error: ApiError };
   insert: { data: unknown; error: ApiError };
   invite: { data: { user: AuthUser | null } | null; error: ApiError };
@@ -34,7 +42,7 @@ interface Config {
 
 const baseConfig = (): Config => ({
   tokenUser: OWNER,
-  ownerRows: [{ restaurant_id: REST_A }],
+  ownerRows: [{ restaurant_id: REST_A, accepted_at: "2026-09-01T00:00:00Z" }],
   restaurants: {
     [REST_A]: { id: REST_A, is_active: true },
     [REST_B]: { id: REST_B, is_active: true },
@@ -46,7 +54,6 @@ const baseConfig = (): Config => ({
   ],
   claim: { data: true, error: null },
   emailStatus: [],
-  usersById: {},
   createUser: { data: { user: { id: NEW_USER } }, error: null },
   insert: {
     data: {
@@ -56,6 +63,7 @@ const baseConfig = (): Config => ({
       branch_id: BRANCH_A1,
       role: "purchaser",
       is_active: true,
+      accepted_at: null,
       created_at: "2026-09-28T07:00:00Z",
     },
     error: null,
@@ -69,9 +77,22 @@ const makeFake = (cfg: Config) => {
   const record = (name: string, ...args: unknown[]) => calls.push({ name, args });
   const deleteQueue = [...cfg.deleteUser];
 
+  // 模擬 PostgREST 的篩選:eq 比對欄位值(列上沒有該欄位就不篩),not(col, "is", null) = 該欄位不是 null
+  const matches = (row: Record<string, unknown>, filters: Record<string, unknown>) =>
+    Object.entries(filters).every(([key, want]) => {
+      if (key.startsWith("not.")) {
+        const col = key.slice(4);
+        if (want === "is.null") return row[col] !== null && row[col] !== undefined;
+        throw new Error(`fake 不支援 not ${key}=${String(want)}`);
+      }
+      return !(key in row) || row[key] === want;
+    });
+
   const resolveQuery = (table: string, op: string, filters: Record<string, unknown>, values: unknown, mode: string) => {
     record(`from:${table}:${op}:${mode}`, filters, values);
-    if (table === "restaurant_accounts" && op === "select") return { data: cfg.ownerRows, error: null };
+    if (table === "restaurant_accounts" && op === "select") {
+      return { data: cfg.ownerRows.filter((r) => matches(r, filters)), error: null };
+    }
     if (table === "restaurants") return { data: cfg.restaurants[String(filters.id)] ?? null, error: null };
     if (table === "restaurant_branches") {
       const b = cfg.branches.find((x) => x.id === filters.id && x.restaurant_id === filters.restaurant_id);
@@ -89,6 +110,10 @@ const makeFake = (cfg: Config) => {
       select: () => q,
       eq: (col, v) => {
         filters[col] = v;
+        return q;
+      },
+      not: (col, operator, v) => {
+        filters[`not.${col}`] = `${operator}.${String(v)}`;
         return q;
       },
       insert: (v) => {
@@ -119,10 +144,6 @@ const makeFake = (cfg: Config) => {
         inviteUserByEmail: async (email, opts) => {
           record("inviteUserByEmail", email, opts);
           return cfg.invite;
-        },
-        getUserById: async (id) => {
-          record("getUserById", id);
-          return { data: { user: cfg.usersById[id] ?? null }, error: null };
         },
         deleteUser: async (id) => {
           record("deleteUser", id);
@@ -216,14 +237,42 @@ describe("invite-restaurant-member handler — HTTP 與身分", () => {
   });
 });
 
-describe("授權:只有啟用中的老闆", () => {
-  it("不是任何店的老闆 → 403;權限查詢一定帶 user_id / role=owner / is_active=true", async () => {
+describe("授權:只有已接受、啟用中的老闆", () => {
+  it("不是任何店的老闆 → 403;權限查詢一定帶 user_id / role=owner / is_active=true / accepted_at 不是 null", async () => {
     const { res, json, fake } = await run({ ownerRows: [] });
     expect(res.status).toBe(403);
     expect(json?.code).toBe("NOT_OWNER");
     const q = fake.calls.find((c) => c.name === "from:restaurant_accounts:select:many");
-    expect(q?.args[0]).toEqual({ user_id: OWNER.id, role: "owner", is_active: true });
+    expect(q?.args[0]).toEqual({
+      user_id: OWNER.id,
+      role: "owner",
+      is_active: true,
+      "not.accepted_at": "is.null",
+    });
     expect(fake.names()).not.toContain("rpc:claim_restaurant_invite_slot");
+    expectNoSideEffects(fake.names());
+  });
+
+  it("只有一筆「待接受」的老闆邀請(accepted_at = null)→ 403,不能拿還沒接受的身分去邀請別人", async () => {
+    const { res, json, fake } = await run({ ownerRows: [{ restaurant_id: REST_A, accepted_at: null }] });
+    expect(res.status).toBe(403);
+    expect(json?.code).toBe("NOT_OWNER");
+    expect(fake.names()).not.toContain("rpc:claim_restaurant_invite_slot");
+    expectNoSideEffects(fake.names());
+  });
+
+  it("A 店已接受、B 店的老闆邀請還沒接受 → 指定 B 店一樣 403", async () => {
+    const { res, json, fake } = await run(
+      {
+        ownerRows: [
+          { restaurant_id: REST_A, accepted_at: "2026-09-01T00:00:00Z" },
+          { restaurant_id: REST_B, accepted_at: null },
+        ],
+      },
+      { body: { email: EMAIL, name: "甲", role: "purchaser", branch_id: BRANCH_B1, restaurant_id: REST_B } },
+    );
+    expect(res.status).toBe(403);
+    expect(json?.code).toBe("NOT_OWNER");
     expectNoSideEffects(fake.names());
   });
 
@@ -250,7 +299,12 @@ describe("授權:只有啟用中的老闆", () => {
 
   it("是兩家店的老闆卻沒指定哪一家 → 400", async () => {
     const { res, json } = await run(
-      { ownerRows: [{ restaurant_id: REST_A }, { restaurant_id: REST_B }] },
+      {
+        ownerRows: [
+          { restaurant_id: REST_A, accepted_at: "2026-09-01T00:00:00Z" },
+          { restaurant_id: REST_B, accepted_at: "2026-09-01T00:00:00Z" },
+        ],
+      },
       { body: { email: EMAIL, name: "甲", role: "purchaser" } },
     );
     expect(res.status).toBe(400);
@@ -334,12 +388,14 @@ describe("頻率限制(原子化,在查 email 之前)", () => {
 
 describe("既有帳號:一律 409,不綁、不改、不寄信", () => {
   it.each([
-    [[{ user_id: "u-1", status: "member_active" }], { "u-1": { id: "u-1", invited_at: "t", email_confirmed_at: null } }, "INVITE_PENDING"],
-    [[{ user_id: "u-1", status: "member_active" }], { "u-1": { id: "u-1", invited_at: "t", email_confirmed_at: "t2" } }, "ALREADY_MEMBER"],
-    [[{ user_id: "u-1", status: "member_inactive" }], {}, "MEMBER_INACTIVE"],
-    [[{ user_id: "u-1", status: "other_account" }], {}, "EMAIL_TAKEN"],
-  ])("%j → 409 %s", async (emailStatus, usersById, code) => {
-    const { res, json, fake } = await run({ emailStatus, usersById });
+    [[{ user_id: "u-1", status: "member_pending" }], "INVITE_PENDING"],
+    [[{ user_id: "u-1", status: "member_active" }], "ALREADY_MEMBER"],
+    [[{ user_id: "u-1", status: "member_inactive" }], "MEMBER_INACTIVE"],
+    [[{ user_id: "u-1", status: "other_account" }], "EMAIL_TAKEN"],
+    // 不認得的狀態一律當成別人的帳號,不綁
+    [[{ user_id: "u-1", status: "something_new" }], "EMAIL_TAKEN"],
+  ])("%j → 409 %s", async (emailStatus, code) => {
+    const { res, json, fake } = await run({ emailStatus });
     expect(res.status).toBe(409);
     expect(json?.code).toBe(code);
     expect(json?.field).toBe("email");
@@ -427,12 +483,14 @@ describe("成功路徑", () => {
       app_metadata: { role: "restaurant", invited_by: OWNER.id, invited_restaurant_id: REST_A },
     });
     const insert = fake.calls.find((c) => c.name === "from:restaurant_accounts:insert:single")!.args[1];
+    // 🔴 一定寫成「待接受」:對方按「接受」之前不是成員
     expect(insert).toEqual({
       user_id: NEW_USER,
       restaurant_id: REST_A,
       branch_id: BRANCH_A1,
       role: "purchaser",
       is_active: true,
+      accepted_at: null,
     });
     const [email, opts] = fake.calls.find((c) => c.name === "inviteUserByEmail")!.args;
     expect(email).toBe(EMAIL);

@@ -4,13 +4,15 @@
 // index.ts 負責接上 Deno.serve,vitest(handler.test.ts)用假的 client 測每一條分支。
 //
 // 流程:
-//   1. 驗 JWT → 必須是「啟用中的老闆」(一律查 restaurant_accounts,不信前端)
+//   1. 驗 JWT → 必須是「已接受、啟用中的老闆」(一律查 restaurant_accounts,不信前端;
+//      待接受的「老闆邀請」不算 —— 還沒接受的人不能再去邀請別人)
 //   2. 伺服器端驗證輸入(validate.ts)、確認餐廳與分店
 //   3. 佔頻率限制名額(資料庫裡原子化,併發也不會超量;409 也算一次)
 //   4. 這個 email 已經有帳號 → 一律 409,不綁、不改既有帳號
 //   5. createUser 建帳號 —— email 唯一索引保證併發時只有一個請求建得起來,
 //      所以之後的 rollback 只會刪到「這個請求自己建的」帳號
-//   6. 寫 restaurant_accounts(寫失敗就刪帳號,這時還沒寄任何信)
+//   6. 寫 restaurant_accounts,**accepted_at = null(待接受)**:對方登入後在登入頁按「接受」
+//      才會成為成員(migration 20260928170000)。寫失敗就刪帳號,這時還沒寄任何信
 //   7. inviteUserByEmail 寄邀請信(寄失敗就刪帳號,成員資料跟著 cascade 刪掉)
 import { parseInviteInput, type InviteField } from "./validate.ts";
 
@@ -28,6 +30,7 @@ interface AuthUser {
 export interface QueryBuilder<T = unknown> extends PromiseLike<Result<T>> {
   select(columns: string): QueryBuilder<T>;
   eq(column: string, value: unknown): QueryBuilder<T>;
+  not(column: string, operator: string, value: unknown): QueryBuilder<T>;
   insert(values: Record<string, unknown>): QueryBuilder<T>;
   maybeSingle(): PromiseLike<Result<T>>;
   single(): PromiseLike<Result<T>>;
@@ -48,7 +51,6 @@ export interface AdminClient {
         email: string,
         opts: { redirectTo: string; data: Record<string, unknown> },
       ): PromiseLike<Result<{ user: AuthUser | null } | null>>;
-      getUserById(id: string): PromiseLike<Result<{ user: AuthUser | null } | null>>;
       deleteUser(id: string): PromiseLike<{ error: ApiError }>;
     };
   };
@@ -76,7 +78,7 @@ export const CORS = {
   "Access-Control-Allow-Methods": "POST, OPTIONS",
 };
 
-const MEMBER_COLUMNS = "id, user_id, restaurant_id, branch_id, role, is_active, created_at";
+const MEMBER_COLUMNS = "id, user_id, restaurant_id, branch_id, role, is_active, accepted_at, created_at";
 
 const json = (body: unknown, status = 200) =>
   new Response(JSON.stringify(body), {
@@ -113,13 +115,14 @@ export const createInviteHandler = (deps: InviteDeps) => {
     if (authErr || !authData?.user) return fail(401, "UNAUTHENTICATED", "登入已過期,請重新登入");
     const caller = authData.user;
 
-    // --- 授權:必須是某家餐廳「啟用中的老闆」(只信資料庫) ---
+    // --- 授權:必須是某家餐廳「已接受、啟用中的老闆」(只信資料庫) ---
     const { data: ownerRows, error: ownerErr } = await admin
       .from("restaurant_accounts")
       .select("restaurant_id")
       .eq("user_id", caller.id)
       .eq("role", "owner")
-      .eq("is_active", true);
+      .eq("is_active", true)
+      .not("accepted_at", "is", null);
     if (ownerErr) return fail(500, "LOOKUP_FAILED", "查詢權限失敗,請稍後再試");
     const ownedIds = [
       ...new Set(((ownerRows as { restaurant_id: string }[] | null) ?? []).map((r) => r.restaurant_id)),
@@ -186,17 +189,15 @@ export const createInviteHandler = (deps: InviteDeps) => {
     });
     if (statusErr) return fail(500, "LOOKUP_FAILED", "查詢帳號失敗,請稍後再試");
     const existing = (statusRows as { user_id: string; status: string }[] | null)?.[0];
+    if (existing?.status === "member_pending") {
+      return fail(
+        409,
+        "INVITE_PENDING",
+        "已經邀請過這個 Email,對方還沒接受。請對方收信設定密碼、登入後按「接受」;邀請連結 1 小時內有效,過期的話請對方到登入頁按「忘記密碼」,用這個 Email 設定密碼後登入",
+        "email",
+      );
+    }
     if (existing?.status === "member_active") {
-      const { data: found } = await admin.auth.admin.getUserById(existing.user_id);
-      const u = found?.user;
-      if (u?.invited_at && !u.email_confirmed_at) {
-        return fail(
-          409,
-          "INVITE_PENDING",
-          "已經邀請過這個 Email,對方還沒完成設定。邀請連結 1 小時內有效;過期的話,請對方到登入頁按「忘記密碼」,用這個 Email 設定密碼即可登入",
-          "email",
-        );
-      }
       return fail(409, "ALREADY_MEMBER", "這個 Email 已經是本店成員了", "email");
     }
     if (existing?.status === "member_inactive") {
@@ -253,7 +254,9 @@ export const createInviteHandler = (deps: InviteDeps) => {
     const rollbackFailed = () =>
       fail(500, "ROLLBACK_FAILED", "新增失敗,而且留下一個未完成的帳號。請不要重試,聯絡平台客服處理");
 
-    // --- 6) 綁進餐廳(這時還沒寄信;失敗就刪帳號) ---
+    // --- 6) 寫一筆「待接受」的邀請(這時還沒寄信;失敗就刪帳號) ---
+    // accepted_at = null:對方登入後按「接受」(accept_restaurant_invite)才會成為成員。
+    // 資料庫預設值也是 null,這裡寫明是為了不讓任何人誤以為邀請會直接生效。
     const { data: member, error: insErr } = await admin
       .from("restaurant_accounts")
       .insert({
@@ -262,6 +265,7 @@ export const createInviteHandler = (deps: InviteDeps) => {
         branch_id: input.branchId,
         role: input.role,
         is_active: true,
+        accepted_at: null,
       })
       .select(MEMBER_COLUMNS)
       .single();

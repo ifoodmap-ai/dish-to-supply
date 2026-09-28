@@ -3,6 +3,11 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import RestaurantTeamPage from "./RestaurantTeamPage";
 
+// 同時跑很多測試檔時 CPU 會被搶,逐字打字(預設每個字之間讓出一次 event loop)偶爾會超過 5 秒:
+// 打字不延遲,逾時也放寬到 15 秒(單獨跑時整支不到 3 秒)。
+vi.setConfig({ testTimeout: 15_000 });
+const setupUser = () => userEvent.setup({ delay: null });
+
 /* ------------------------------------------------------------------ */
 /* mocks:不打任何真的 Supabase / Edge Function                         */
 /* ------------------------------------------------------------------ */
@@ -85,13 +90,21 @@ Element.prototype.releasePointerCapture = vi.fn();
 /* 測試資料                                                            */
 /* ------------------------------------------------------------------ */
 
-const member = (id: string, user_id: string, role: Role, branch_id: string | null = "br-2") => ({
+/** accepted_at = null 代表「邀請中」(還沒按接受) */
+const member = (
+  id: string,
+  user_id: string,
+  role: Role,
+  branch_id: string | null = "br-2",
+  accepted_at: string | null = "2026-09-01T02:05:00.000Z",
+) => ({
   id,
   user_id,
   restaurant_id: "rest-1",
   branch_id,
   role,
   is_active: true,
+  accepted_at,
   created_at: "2026-09-01T02:00:00.000Z",
 });
 
@@ -125,14 +138,14 @@ beforeEach(() => {
   h.state.members = [
     member("acc-owner", "u-owner", "owner"),
     member("acc-mgr", "u-mgr", "manager"),
-    member("acc-pending", "u-pending", "purchaser", "br-1"),
+    member("acc-pending", "u-pending", "purchaser", "br-1", null),
   ];
   h.state.profiles = [
     { user_id: "u-owner", display_name: "林老闆" },
     { user_id: "u-mgr", display_name: "張店長" },
     { user_id: "u-pending", display_name: "李採購" },
   ];
-  // 老闆拿得到 email;u-pending 還沒點邀請信
+  // 老闆拿得到 email;u-pending 還沒接受邀請
   h.state.directory = [
     { user_id: "u-owner", email: "owner@example.com", invited_at: null, invite_pending: false },
     { user_id: "u-mgr", email: "mgr@example.com", invited_at: "2026-09-01T02:00:00Z", invite_pending: false },
@@ -231,7 +244,7 @@ describe("RestaurantTeamPage — 新增成員", () => {
   });
 
   it("開啟表單:角色預設「採購員」、分店預設老闆自己的分店,停用的分店不出現", async () => {
-    const user = userEvent.setup();
+    const user = setupUser();
     await renderPage();
     const dialog = await openInviteDialog(user);
 
@@ -247,7 +260,7 @@ describe("RestaurantTeamPage — 新增成員", () => {
   });
 
   it("表單驗證:空白送出顯示錯誤,不會呼叫 Edge Function", async () => {
-    const user = userEvent.setup();
+    const user = setupUser();
     await renderPage();
     const dialog = await openInviteDialog(user);
 
@@ -260,12 +273,14 @@ describe("RestaurantTeamPage — 新增成員", () => {
   });
 
   it("表單驗證:Email 格式錯誤、姓名過長都擋在前端", async () => {
-    const user = userEvent.setup();
+    const user = setupUser();
     await renderPage();
     const dialog = await openInviteDialog(user);
 
     await user.type(within(dialog).getByLabelText(/Email/), "not-an-email");
-    await user.type(within(dialog).getByLabelText(/姓名/), "字".repeat(51));
+    // 51 個字用貼上的,不用一個字一個字打
+    await user.click(within(dialog).getByLabelText(/姓名/));
+    await user.paste("字".repeat(51));
     await user.click(within(dialog).getByRole("button", { name: /寄出邀請/ }));
 
     expect(within(dialog).getByText("Email 格式不正確")).toBeInTheDocument();
@@ -289,6 +304,7 @@ describe("RestaurantTeamPage — 新增成員", () => {
             branch_id: "br-2",
             role: "manager",
             is_active: true,
+            accepted_at: null,
             created_at: "2026-09-28T07:00:00.000Z",
           },
           email: "new.staff@example.com",
@@ -297,7 +313,7 @@ describe("RestaurantTeamPage — 新增成員", () => {
         },
       }),
     );
-    const user = userEvent.setup();
+    const user = setupUser();
     await renderPage();
     const dialog = await openInviteDialog(user);
 
@@ -337,14 +353,14 @@ describe("RestaurantTeamPage — 新增成員", () => {
     fetchMock.mockResolvedValue(
       jsonResponse(200, {
         data: {
-          member: { ...member("acc-new", "u-new", "purchaser", null) },
+          member: { ...member("acc-new", "u-new", "purchaser", null, null) },
           email: "a@example.com",
           display_name: "阿明",
           invite_pending: true,
         },
       }),
     );
-    const user = userEvent.setup();
+    const user = setupUser();
     await renderPage();
     const dialog = await openInviteDialog(user);
 
@@ -366,7 +382,7 @@ describe("RestaurantTeamPage — 新增成員", () => {
         field: "email",
       }),
     );
-    const user = userEvent.setup();
+    const user = setupUser();
     await renderPage();
     const dialog = await openInviteDialog(user);
 
@@ -383,7 +399,7 @@ describe("RestaurantTeamPage — 新增成員", () => {
 
   it("伺服器回 403 / 網路失敗:顯示清楚的一般錯誤訊息", async () => {
     fetchMock.mockResolvedValueOnce(jsonResponse(403, { code: "NOT_OWNER", message: "只有老闆可以新增成員" }));
-    const user = userEvent.setup();
+    const user = setupUser();
     await renderPage();
     const dialog = await openInviteDialog(user);
 
@@ -398,7 +414,7 @@ describe("RestaurantTeamPage — 新增成員", () => {
   });
 
   it("登入過期(沒有 session)時不呼叫 Edge Function", async () => {
-    const user = userEvent.setup();
+    const user = setupUser();
     await renderPage();
     const dialog = await openInviteDialog(user);
     h.getSession.mockResolvedValueOnce({ data: { session: null }, error: null });
@@ -414,12 +430,29 @@ describe("RestaurantTeamPage — 新增成員", () => {
   it.each([
     ["回傳 error", () => h.rpc.mockResolvedValue({ data: null, error: { message: "function does not exist" } })],
     ["直接丟例外", () => h.rpc.mockRejectedValue(new Error("network down"))],
-  ])("邀請狀態查詢失敗(%s)時頁面照常運作,只是沒有「邀請中」標籤", async (_label, arrange) => {
+  ])("email 查詢失敗(%s)時頁面照常運作:「邀請中」照樣依 accepted_at 標示,只是沒有 email", async (_label, arrange) => {
     arrange();
     await renderPage();
 
-    expect(screen.getByText("李採購")).toBeInTheDocument();
-    expect(screen.queryByText("邀請中")).not.toBeInTheDocument();
+    const pendingRow = memberRow("李採購");
+    expect(within(pendingRow).getByText("邀請中")).toBeInTheDocument();
+    expect(screen.queryByText("pending@example.com")).not.toBeInTheDocument();
+    expect(within(memberRow("張店長")).queryByText("邀請中")).not.toBeInTheDocument();
     expect(h.toastError).not.toHaveBeenCalled();
+  });
+
+  it("「邀請中」只看成員列的 accepted_at:已接受的人不標、還沒接受的人一定標", async () => {
+    // directory 的舊判斷(有沒有點過信)跟 accepted_at 不一致時,以 accepted_at 為準
+    h.state.directory = [
+      { user_id: "u-owner", email: "owner@example.com", invited_at: null, invite_pending: false },
+      { user_id: "u-mgr", email: "mgr@example.com", invited_at: "2026-09-01T02:00:00Z", invite_pending: true },
+      { user_id: "u-pending", email: "pending@example.com", invited_at: "2026-09-01T02:00:00Z", invite_pending: false },
+    ];
+    await renderPage();
+
+    expect(within(memberRow("張店長")).queryByText("邀請中")).not.toBeInTheDocument();
+    const pendingRow = memberRow("李採購");
+    expect(within(pendingRow).getByText("邀請中")).toBeInTheDocument();
+    expect(within(pendingRow).getByText(/按「接受」才會加入/)).toBeInTheDocument();
   });
 });

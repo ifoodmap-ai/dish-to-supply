@@ -251,13 +251,83 @@ from net._http_response order by id desc limit 5;
 中文標籤的欄位也會顯示(用原始欄位名)。所以之後表單加欄位不會漏資料,
 只是標籤會是英文;要中文標籤再回去 `SPECS` 補。
 
-⚠️ 只有 `partnership_leads` 與 `landing_leads` 在白名單裡,其他 table 一律
-跳過不寄 —— 不要讓這支變成通用寄信機。
+⚠️ 只有 `partnership_leads` 與 `landing_leads` 會照 record 內容寄信;`supplier_applications`
+只寄資料庫裡排好隊的信(見下一節),其他 table 一律跳過不寄 —— 不要讓這支變成通用寄信機。
+
+## 供應商入駐申請的寄信(2026-09-28,migration 20260928180000 / 180100 / 180200)
+
+| 時機 | 誰收到 | 誰寄 | 內容 |
+|---|---|---|---|
+| 送出申請(`/join`) | 業主(`LEAD_NOTIFY_TO`) | `notify-lead`(Resend) | 申請全部欄位 + 「前往審核」連結 + 確認信有沒有寄出 |
+| 送出申請 | 申請者 | `notify-lead`(Resend) | 已收到、約 3 個工作天審核、結果會寄信通知(**不回顯申請者填的任何文字**) |
+| 核准,新帳號 | 申請者 | Supabase Auth 邀請信(SMTP) | 連結 → `/reset-password?type=invite` →「設定密碼以啟用供應商帳號」 |
+| 核准,Email 原本就有帳號 | 申請者 | `approve-supplier`(Resend) | 「申請已通過,請用原本的帳號登入」;**不改該帳號的 role / app_metadata** |
+| 退件 | 申請者 | `approve-supplier`(Resend,`action: "reject"`) | 只有「給申請者的說明」(`applicant_message`);`admin_notes` 是內部備註,不會寄出 |
+
+```
+瀏覽器 --(anon INSERT)--> supplier_applications
+  --(AFTER INSERT trigger:advisory lock 內做頻率判斷、記 queued)--> supplier_application_mails
+  --(pg_net,只帶申請 id)--> notify-lead --(把 queued 搶成 sending 才寄)--> Resend
+```
+
+**防濫用**(申請表是匿名的,自動回信等於任何人都能叫我們寄信給任意信箱):
+
+| 規則 | 在哪裡 |
+|---|---|
+| 同一個 email 只能有一筆待審申請 | 部分唯一索引 `supplier_applications_one_pending_per_email`,前端收到 23505 會說「已經有一筆申請在審核中」 |
+| 同一個 email 24 小時內最多一封確認信(先去 +tag、gmail 去點) | trigger `supplier_application_queue_mails()` |
+| 全站每小時確認信上限(預設 20) | 同上;`app_config.supplier_application_confirm_hourly_cap` 可改,不用部署 |
+| 全站每小時業主通知上限(預設 30) | 同上;`app_config.supplier_application_owner_hourly_cap` |
+| 匿名只能送 pending、不能帶管理員欄位、欄位有長度上限 | `anon submit application` policy |
+| email 只收一般格式(英數與 `._%+'-` 的帳號、正常網域、英文或 punycode `xn--` 頂級網域);`文字<信箱>`、`x@gmail.com.` 一律擋 | 同一條 policy(20260928180100 嚴格化、180200 放行撇號與 punycode);前端 `JoinSupplierPage`、寄信端 `isDeliverableEmail()` 再各擋一次(三處規則要一起改) |
+| honeypot 欄位 `website` | `JoinSupplierPage.tsx`(填了就假裝成功、不寫資料庫) |
+
+頻率判斷一定要在資料庫裡做(同一把 advisory lock、同一個交易):放在 Edge Function 裡「先數再寄」,
+併發請求每個數到的都是同一個數字。被略過的信也會記一筆 `status='skipped'` + `skip_reason`
+(`email_24h` / `hourly_cap` / `owner_hourly_cap` / `invalid_email`)。
+email 格式要嚴格是因為「同一個 email」是拿字串比的:寬鬆格式下 `a<victim@…>`、`b<victim@…>` 都算不同 email,
+兩條頻率限制都擋不住;寄信服務還可能把 `文字<信箱>` 當成「顯示名稱 + 地址」,等於讓人在收件人名稱塞廣告。
+
+**核准只接受待審(pending)的申請**:已退件的申請者已經收到退件信,不能再收到一封邀請信;
+兩位管理員同時處理同一筆時,後到的那個會 409 並收回自己建的資料(復原失敗會據實回報還留著什麼)。
+
+**寄件人**:寄給申請者的信用 `NOTIFY_FROM`(與 `notify` 共用,現值 `iFoodmap 食材地圖 <noreply@gathertaiwan.com>`),
+業主通知用 `LEAD_NOTIFY_FROM`;申請者按「回覆」會寄到 `SUPPLIER_MAIL_REPLY_TO`(沒設就是 `LEAD_NOTIFY_TO` 的第一個)。
+之後換成 ifoodmap.ai:在 Resend 驗證網域後改 `NOTIFY_FROM` 這個 secret 即可,不用改程式。
+
+**確認有沒有寄出**:每封信都記在 `supplier_application_mails`(`status` / `resend_id` / `error`;寄給申請者的信另存 `body_text`)。
+
+```sql
+select application_id, kind, status, skip_reason, resend_id, error, created_at
+from public.supplier_application_mails order by id desc limit 10;
+```
+
+**部署**(兩支都指定單一名稱;`verify_jwt` 見 `supabase/config.toml`):
+
+```bash
+SUPABASE_ACCESS_TOKEN=sbp_... supabase functions deploy notify-lead --project-ref cwvpehqcvbfuynabpqop --no-verify-jwt --use-api
+SUPABASE_ACCESS_TOKEN=sbp_... supabase functions deploy approve-supplier --project-ref cwvpehqcvbfuynabpqop --use-api
+```
+
+共用程式在 `supabase/functions/_shared/`(`supplier-mail.ts` 信件內容與 Resend、`db.ts` 介面),
+`--use-api` 會一起上傳。邏輯都有 vitest:`approve-supplier/handler.test.ts`、`notify-lead/supplier-application.test.ts`、
+`_shared/supplier-mail.test.ts`;資料庫規則用本機 Postgres 實跑(`supabase/tests/supplier_application_mail.test.ts`,
+含「交易互相重疊的併發」與「拿掉 advisory lock 就會超量」的對照組;沒有 Postgres 的環境自動 skip 並印出原因)。
+
+**還原**:依序跑 `supabase/rollbacks/` 的 `20260928180200_*` → `20260928180100_*` → `20260928180000_*.down.sql`
+(還原 180000 前要先把 `approve-supplier` 換回舊版並重新部署,檔頭有寫)。
+
+**Auth 邀請信模板**(餐廳成員邀請與供應商開通共用):主旨「設定密碼以啟用你的 iFoodmap 帳號」,
+內文寫明「連結 1 小時內有效、只能用一次、失效可在連結頁重寄或用忘記密碼」。2026-09-28 用 Management API
+`PATCH config/auth` 改(只動 `mailer_subjects_invite` / `mailer_templates_invite_content`)。
+全站連結效期 `mailer_otp_exp` 維持 3600 秒不動;連結過期時 `/reset-password` 會顯示「連結已失效」並提供
+「重新寄送設定密碼連結」(`resetPasswordForEmail`,邀請流程帶回 `?type=invite`)。
 
 ## 餐廳新增成員(invite-restaurant-member)
 
 餐廳後台「分店與成員」頁(`src/pages/restaurant/RestaurantTeamPage.tsx`)的「新增成員」按鈕
-(只有老闆看得到)會呼叫這支 Edge Function:建帳號 → 寫 `restaurant_accounts` → 寄邀請信。
+(只有老闆看得到)會呼叫這支 Edge Function:建帳號 → 寫一筆**待接受**的 `restaurant_accounts`
+(`accepted_at = null`)→ 寄邀請信。**對方登入後按「接受」才會成為成員**(見下方「邀請要對方接受才生效」)。
 寄信沿用 `approve-supplier` 的做法(`inviteUserByEmail`,同一個 Auth 邀請信模板),
 但帳號改成**先用 `createUser` 建**(帶好 `app_metadata`):email 唯一索引保證同一個 email
 同時被邀兩次時只有一個請求建得起來,失敗時的 rollback 只會刪到自己建的帳號。
@@ -269,9 +339,18 @@ from net._http_response order by id desc limit 5;
 | Edge Function | `supabase/functions/invite-restaurant-member/index.ts`(只接 Deno);邏輯在 `handler.ts`、輸入驗證在 `validate.ts`,兩支都有 vitest(`handler.test.ts` 用假 client 測每條分支) |
 | SQL(唯讀函式) | `supabase/migrations/20260928150000_restaurant_member_invites.sql` |
 | SQL(頻率限制) | `supabase/migrations/20260928160000_restaurant_invite_guards.sql`(`restaurant_invite_attempts` 表 + `claim_restaurant_invite_slot()`) |
-| 前端 | `RestaurantTeamPage.tsx`(測試 `RestaurantTeamPage.test.tsx`) |
+| SQL(接受制 + 權限收緊) | `supabase/migrations/20260928170000_restaurant_member_acceptance.sql`(rollback:`supabase/rollbacks/20260928170000_restaurant_member_acceptance.down.sql`) |
+| SQL(profiles 不再公開) | `supabase/migrations/20260928170100_profiles_read_scope.sql`(rollback:`supabase/rollbacks/20260928170100_profiles_read_scope.down.sql`) |
+| 前端(老闆) | `RestaurantTeamPage.tsx`(測試 `RestaurantTeamPage.test.tsx`) |
+| 前端(受邀者) | `src/lib/restaurant-invites.ts` + `src/components/RestaurantInvitePanel.tsx`,掛在登入首頁 `LoginPortal.tsx` |
 
-兩個 migration 2026-09-28 已用 Management API 套上線並補 ledger。
+上表四個 migration 2026-09-28 都已用 Management API 套上線並補 ledger。
+`supabase/rollbacks/*.down.sql` 不是 migration(不要搬進 `migrations/`),要還原時整段執行;
+兩支都要還原的話先跑 profiles 那支。🔴 **還原順序**:① 先單獨跑 rollback 檔的「第 0 步」(停用所有待接受的邀請,
+新程式下無害)→ ② 把前端與 `invite-restaurant-member`(v3 起)、`notify`(v5 起)退回舊版 → ③ 再整段跑 rollback。
+程式都會查 `accepted_at`,沒先退版就拿掉欄位,PostgREST 會回 400:所有餐廳使用者會被當成沒有身分、邀請全失敗、訂單信不寄給餐廳;
+第 0 步放最前面,則是為了退版期間舊版 notify 不會把訂單信寄給還沒接受的人。
+資料庫層的測試:`supabase/tests/database/restaurant_member_acceptance.test.sql`(pgTAP,58 項;不用 dblink,可以整支包在 BEGIN … ROLLBACK 裡跑)。「兩個人同時各降一位老闆」要兩條連線,pgTAP 單一交易測不到 ——2026-09-28 在正式庫用兩個並行交易實測過:後到的那個會等鎖、拿到 23514,最後剩一位老闆。
 
 ### 🔴 部署用預設的 JWT 驗證(不要加 `--no-verify-jwt`)
 
@@ -279,6 +358,8 @@ from net._http_response order by id desc limit 5;
 SUPABASE_ACCESS_TOKEN=sbp_... supabase functions deploy invite-restaurant-member \
   --project-ref cwvpehqcvbfuynabpqop --use-api
 ```
+
+(2026-09-28 部署 v3「邀請寫成待接受」後,`GET /v1/projects/cwvpehqcvbfuynabpqop/functions` 確認 `verify_jwt: true`。)
 
 跟 `ai` / `notify-lead` **相反**:這支一定是已登入的老闆從瀏覽器呼叫(帶 `Authorization: Bearer <使用者 JWT>`
 + `apikey`),所以讓 gateway 先擋掉沒登入的請求。`--use-api` 是因為本機沒有 Docker。
@@ -288,7 +369,8 @@ SUPABASE_ACCESS_TOKEN=sbp_... supabase functions deploy invite-restaurant-member
 ### 授權邏輯(全部在伺服器端,不信前端)
 
 1. `auth.getUser(JWT)` 失敗 → **401**
-2. 呼叫者在 `restaurant_accounts` 沒有任何 `role='owner' AND is_active` 的列 → **403**
+2. 呼叫者在 `restaurant_accounts` 沒有任何 `role='owner' AND is_active AND accepted_at IS NOT NULL` 的列 → **403**
+   (還沒接受的「老闆邀請」不能拿來邀請別人)
 3. 輸入驗證(email 格式、姓名 1–50 字、角色只能是 `owner` / `manager` / `purchaser`、分店/餐廳要是 UUID)→ **400**
 4. 前端帶的 `restaurant_id` 只用來「指定哪一家」,必須在呼叫者當老闆的店裡,否則 **403**
    (沒帶且只當一家店的老闆 → 就是那家;是多家店的老闆又沒帶 → 400)
@@ -297,12 +379,12 @@ SUPABASE_ACCESS_TOKEN=sbp_... supabase functions deploy invite-restaurant-member
    在同一個交易),同時灌一堆請求也不會超量(2026-09-28 實測 8 個併發、上限 3 → 剛好 3 個過)。
    **排在查 email 之前**,所以回 409 的嘗試也算 —— 不然有人可以不限次數地探測誰有註冊
 7. 這個 email 已經有帳號 → **409**,**一律不綁、不改**(`restaurant_invite_email_status()` 查,只開給 service_role):
-   - 已是本店成員、還沒點邀請信 → `INVITE_PENDING`(訊息會教對方用「忘記密碼」設定密碼)
+   - 已邀請、對方還沒按「接受」(`member_pending`)→ `INVITE_PENDING`(訊息會教對方用「忘記密碼」設定密碼後登入按接受)
    - 已是本店啟用中成員 → `ALREADY_MEMBER`
    - 曾是本店成員、目前停用 → `MEMBER_INACTIVE`(請在列表按「啟用」,不用重新邀請)
    - 其他任何帳號(供應商、別家餐廳、平台管理員、註冊到一半的)→ `EMAIL_TAKEN`,訊息刻意不透露是哪種身分
 8. `createUser`(`email_confirm: false`、`app_metadata = { role: "restaurant", invited_by, invited_restaurant_id }`,
-   不會寄信)→ 寫 `restaurant_accounts` → `inviteUserByEmail` 寄信。
+   不會寄信)→ 寫 `restaurant_accounts`(**`accepted_at: null`**)→ `inviteUserByEmail` 寄信。
    後兩步失敗就刪掉剛建的 auth user(成員資料 cascade 刪掉);刪除失敗重試一次,
    還是失敗回 `ROLLBACK_FAILED`(請聯絡客服,不要重試)。log 只記 id 與錯誤 code,不記 email
 
@@ -313,9 +395,44 @@ SUPABASE_ACCESS_TOKEN=sbp_... supabase functions deploy invite-restaurant-member
 
 ### 「邀請中」怎麼判斷
 
-`restaurant_member_directory(p_restaurant)`:`invited_at IS NOT NULL AND email_confirmed_at IS NULL`,
-也就是**還沒點信裡的連結**。只有該店成員查得到;email 只回給老闆(與平台管理員),店長/採購員拿到 null。
-不能用「有沒有密碼」判斷 —— GoTrue 在受邀者點連結的當下就會替他設一組隨機臨時密碼。
+`restaurant_accounts.accepted_at IS NULL` —— 還沒按「接受」(不論有沒有點過邀請信)。成員頁直接看成員列的
+`accepted_at`;`restaurant_member_directory(p_restaurant)` 的 `invite_pending` 也改成同一個判斷,它現在只用來拿 email
+(只有該店已生效的成員查得到;email 只回給老闆與平台管理員,店長/採購員拿到 null)。
+
+### 邀請要對方接受才生效(2026-09-28,migration 20260928170000)
+
+- **是成員 = `is_active AND accepted_at IS NOT NULL`**。`current_restaurant_ids()`、`restaurant_role()`、
+  `create_restaurant_onboarding()`、`restaurant_member_directory()` 都改成這個判斷,所以所有掛在這兩支輔助函式上的 RLS
+  (訂單、菜單、分店、餐廳…)都不把待接受算進去;前端 `src/lib/portal.ts`、`RestaurantRoute`、`RegisterCompletePage`
+  也只認已接受的列,`notify` 寄訂單信也只寄給已接受的老闆/店長。`accepted_at` 預設 NULL:任何寫入路徑忘了設都是「不生效」。
+  (`notify` 2026-09-28 重新部署為 v5。它由 DB trigger 用共享密鑰呼叫,**部署要帶 `--no-verify-jwt`**:
+  `supabase functions deploy notify --project-ref cwvpehqcvbfuynabpqop --use-api --no-verify-jwt`,部署後確認 `verify_jwt: false`。)
+- **受邀者的畫面**:登入首頁(`LoginPortal`)登入後先查 `my_pending_restaurant_invites()`,有邀請就顯示
+  「『X 餐廳』邀請你以『採購員』加入」+ 接受/拒絕(`RestaurantInvitePanel`),不會直接導進任何後台。
+  從邀請信設定完密碼(`/reset-password` 會導回 `/`)、或 email 被搶先邀請後自己去註冊(`/register/complete`
+  沒有註冊暫存資料時會導回 `/`)都走這裡。拒絕後沒有其他身分 → 同一個畫面直接輸入餐廳名稱建立自己的店
+  (呼叫 `create_restaurant_onboarding()`,不依賴 user_metadata —— GoTrue 對「已存在未確認」的帳號 signUp 不會更新 metadata)。
+- **RPC**(SECURITY DEFINER、`search_path = ''`、只處理 `auth.uid()` 自己那一筆待接受的列;anon 不能呼叫):
+  `my_pending_restaurant_invites()`、`accept_restaurant_invite(id)`(回餐廳 id)、`decline_restaurant_invite(id)`(刪掉那筆邀請)。
+  找不到(被取消/已處理/不是你的)一律 `P0001` + hint `invite_not_found`(HTTP 400)。
+- **拒絕 = 刪掉那一筆邀請**。受邀者的帳號留著:前台登入首頁對「已登入、但沒有任何身分」的人一律顯示「建立自己的餐廳」
+  (不再直接登出),所以拒絕後就算沒當場建店、之後回來也還走得下去;老闆把邀請停用的人也一樣。
+  但同一個 email 之後再邀請會是 409 `EMAIL_TAKEN`(既有帳號一律不綁)—— 要讓既有帳號也能收邀請,得另外設計。
+- **`restaurant_accounts` 的寫入權限**:anon 什麼都沒有;authenticated 只有 SELECT + `UPDATE (role, is_active, branch_id)`
+  (欄位層級 GRANT —— 改不了 `user_id`/`restaurant_id`/`accepted_at`),UPDATE 的 policy 只給該店已生效的老闆與平台管理員。
+  **沒有 INSERT/DELETE**:新增只能走 `create_restaurant_onboarding()` 或 Edge Function(service role);移除成員請「停用」。
+  待接受的受邀者連自己那一列都讀不到。
+- **trigger**:
+  - `restaurant_accounts_keep_an_owner`:任何 UPDATE/DELETE 做完後,只要某家(還存在的)店沒有「已接受、啟用中的老闆」
+    就整筆拒絕(`23514`「每家餐廳至少要保留一位啟用中的老闆」)。⚠️ 連 service role / Dashboard 也擋:
+    **要刪某家店唯一老闆的 auth 帳號,得先刪掉那家餐廳**(cascade 不擋),否則 GoTrue 會回 Database error。
+  - `restaurant_accounts_branch_matches`:成員綁的分店必須是同一家店的(`23503`)。
+
+### profiles 不再公開(2026-09-28,migration 20260928170100)
+
+anon 對 `profiles` 沒有任何權限;登入者只讀得到自己、自己已生效的店裡所有成員(含邀請中的人)、平台管理員讀全部
+(`restaurant_teammate_user_ids()`)。app 裡讀 profiles 的只有 `RestaurantTeamPage`(用成員 user_id 查 display_name);
+新帳號的 profile 由 `handle_new_user()`(SECURITY DEFINER trigger)建立,不受影響。
 
 ### 邀請信連結會落在哪
 
@@ -328,13 +445,11 @@ SUPABASE_ACCESS_TOKEN=sbp_... supabase functions deploy invite-restaurant-member
 ⚠️ `approve-supplier` 的邀請連結目前**沒有**帶 `?type=recovery`:受邀的供應商點信後其實已登入,
 但畫面停在「忘記密碼」。治本是讓 `ResetPasswordPage` 也認 `type=invite`。
 
-### 已知風險(還沒處理)
+### Email 預先佔用(2026-09-28 已處理)
 
-**Email 預先佔用**:任何人都能自助註冊成老闆,再邀請一個「還沒註冊」的 email。如果對方沒理邀請信、
-之後自己去註冊餐廳,GoTrue 對「已存在但未確認」的帳號只會重寄確認信,對方點完回到
-`/register/complete` 時,那一頁看到已有 `restaurant_accounts` 就直接導進 `/restaurant` ——
-等於落進邀請者的店。治本要改 `RegisterCompletePage`:帳號帶有 `app_metadata.invited_restaurant_id`
-時不要自動完成,讓使用者選「加入這家店」或「建立自己的餐廳」。
+原本:任何人都能自助註冊成老闆,再邀請一個「還沒註冊」的 email;對方之後自己去註冊、點完確認信回到
+`/register/complete`,那一頁看到已有 `restaurant_accounts` 就直接導進 `/restaurant` —— 落進邀請者的店。
+現在邀請是「待接受」,`/register/complete` 只認已接受的列,受邀者一定會先看到接受/拒絕畫面(見上一節)。
 
 ### 寄信用哪個 SMTP、頻率限制
 

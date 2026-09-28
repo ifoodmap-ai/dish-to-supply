@@ -2,8 +2,16 @@
 //
 // 使用者登出後看到的第一個畫面:先選身分(餐廳 / 供應商),再登入。
 // 管理員不在這裡 —— 平台營運後台是獨立網域。
+//
+// 登入後如果有「待接受的餐廳邀請」,先顯示接受/拒絕畫面(RestaurantInvitePanel),
+// 不直接導進任何後台 —— 還沒接受的邀請不是身分(見 src/lib/restaurant-invites.ts)。
+// 受邀者從邀請信 → 設定密碼(/reset-password)→ 會被帶回這一頁,也是走這條路。
+// 前台站上「已登入、但沒有任何身分」的人(例如拒絕了邀請、還沒建店就離開)也顯示同一個面板
+// (沒有邀請時就是「建立自己的餐廳」),不再直接登出 —— 否則這種帳號會永遠卡在登入頁。
+// 但「查詢失敗」不等於「沒有身分」:讀不到資料時只顯示「請重試」,不給建店表單
+// (不然網路一抖,供應商就可能被引導去替自己的帳號建一家餐廳)。
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -18,9 +26,35 @@ import {
   UtensilsCrossed, Truck, Shield, Eye, EyeOff, Loader2, ArrowLeft, Check, Globe,
 } from "lucide-react";
 import {
-  getUserPortals, defaultPortal, hasPortal, portalHref,
-  ADMIN_SITE_URL, IS_ADMIN_BUILD, PORTAL_LABEL, type PortalKey,
+  loadUserPortals, defaultPortal, hasPortal, portalHref,
+  ADMIN_SITE_URL, IS_ADMIN_BUILD, PORTAL_LABEL, type PortalInfo, type PortalKey, type SessionLike,
 } from "@/lib/portal";
+import { loadPendingRestaurantInvites, type PendingRestaurantInvite } from "@/lib/restaurant-invites";
+import RestaurantInvitePanel from "@/components/RestaurantInvitePanel";
+
+interface InviteState {
+  invites: PendingRestaurantInvite[];
+  portals: PortalInfo[];
+  displayName: string | null;
+}
+
+/** 註冊/邀請時寫在 user_metadata 的名字(預填「建立自己的餐廳」的聯絡人) */
+const displayNameOf = (session: SessionLike | null): string | null => {
+  const meta = (session?.user as { user_metadata?: Record<string, unknown> | null } | null | undefined)?.user_metadata;
+  const name = meta?.display_name;
+  return typeof name === "string" && name.trim() ? name.trim() : null;
+};
+
+/** 身分 + 待接受邀請一起查(管理員站不處理餐廳邀請)。failed = 任何一個查詢失敗 */
+const loadPortalsAndInvites = async (session: SessionLike | null) => {
+  const [p, i] = await Promise.all([
+    loadUserPortals(session),
+    IS_ADMIN_BUILD
+      ? Promise.resolve({ invites: [] as PendingRestaurantInvite[], failed: false })
+      : loadPendingRestaurantInvites(),
+  ]);
+  return { portals: p.portals, invites: i.invites, failed: p.failed || i.failed, displayName: displayNameOf(session) };
+};
 
 interface RoleCard {
   key: PortalKey;
@@ -92,18 +126,51 @@ const LoginPortal = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [checking, setChecking] = useState(true);
+  // 有待接受的餐廳邀請 → 顯示接受/拒絕畫面(優先於導進後台)
+  const [inviteState, setInviteState] = useState<InviteState | null>(null);
+  // 邀請畫面開著的時候,auth 事件(例如 token 更新)不要把人導走或重設畫面
+  const inviteOpenRef = useRef(false);
+  // 已登入、但身分或邀請讀取失敗(而且手上什麼身分都沒有)→ 顯示「請重試」
+  const [lookupFailed, setLookupFailed] = useState(false);
 
-  // 已登入就直接送進他的後台(登出後回到這頁才會停留)
+  const showInvites = (state: InviteState) => {
+    inviteOpenRef.current = true;
+    setInviteState(state);
+  };
+
+  const handleInviteSignOut = async () => {
+    inviteOpenRef.current = false;
+    setInviteState(null);
+    setLookupFailed(false);
+    await supabase.auth.signOut();
+  };
+
+  // 已登入就直接送進他的後台(登出後回到這頁才會停留);有待接受的邀請就先顯示邀請
   useEffect(() => {
     let cancelled = false;
 
-    const route = async (session: Parameters<typeof getUserPortals>[0]) => {
+    const route = async (session: SessionLike | null) => {
+      if (inviteOpenRef.current) return;
       if (!session) { if (!cancelled) setChecking(false); return; }
-      const portals = await getUserPortals(session);
+      const { portals, invites, failed, displayName } = await loadPortalsAndInvites(session);
+      if (cancelled || inviteOpenRef.current) return;
+      // 有邀請 → 先接受/拒絕
+      if (invites.length > 0) {
+        showInvites({ invites, portals, displayName });
+        setChecking(false);
+        return;
+      }
       const dest = defaultPortal(portals);
-      if (cancelled) return;
-      if (dest && !dest.external) navigate(dest.path, { replace: true });
-      else setChecking(false);
+      if (dest && !dest.external) {
+        navigate(dest.path, { replace: true });
+        return;
+      }
+      // 前台站上沒有任何身分:讀取失敗 → 請重試;真的沒有 → 建立自己的餐廳
+      if (!IS_ADMIN_BUILD && portals.length === 0) {
+        if (failed) setLookupFailed(true);
+        else showInvites({ invites, portals, displayName });
+      }
+      setChecking(false);
     };
 
     supabase.auth.getSession().then(({ data: { session } }) => route(session));
@@ -130,8 +197,22 @@ const LoginPortal = () => {
         else localStorage.removeItem(REMEMBERED_EMAIL_KEY);
       } catch { /* 無痕模式寫不進去,不影響登入 */ }
 
-      const portals = await getUserPortals(data.session);
+      const { portals, invites, failed, displayName } = await loadPortalsAndInvites(data.session);
 
+      // 有待接受的餐廳邀請:先讓他決定接受或拒絕(不管選的是哪張身分卡)
+      if (invites.length > 0) {
+        showInvites({ invites, portals, displayName });
+        return;
+      }
+
+      // 前台站上沒有任何身分:讀取失敗 → 請重試(不登出、不給建店表單);真的沒有 → 讓他建立自己的餐廳
+      if (!IS_ADMIN_BUILD && portals.length === 0) {
+        if (failed) setLookupFailed(true);
+        else showInvites({ invites, portals, displayName });
+        return;
+      }
+
+      // (管理員站)沒有任何身分
       if (portals.length === 0) {
         await supabase.auth.signOut();
         toast.error("這個帳號還沒有開通任何後台", {
@@ -171,6 +252,44 @@ const LoginPortal = () => {
   }
 
   const active = CARDS.find((c) => c.key === selected) ?? null;
+
+  if (lookupFailed) {
+    return (
+      <div className="min-h-screen bg-gradient-to-b from-slate-50 to-white flex flex-col">
+        <PublicHeader className="px-4 pt-3 sm:px-6" />
+        <main className="flex-1 flex flex-col items-center justify-center px-4 py-12">
+          <Card className="p-6 w-full max-w-md text-center" role="alert">
+            <h1 className="text-lg font-semibold text-slate-900">暫時讀不到你的帳號資料</h1>
+            <p className="text-sm text-slate-500 mt-2">可能是網路不穩,請稍後再試一次。</p>
+            <div className="mt-5 flex flex-col-reverse gap-2 sm:flex-row sm:justify-center">
+              <Button variant="outline" className="min-h-11" onClick={handleInviteSignOut}>
+                登出
+              </Button>
+              <Button className="min-h-11" onClick={() => window.location.reload()}>
+                重試
+              </Button>
+            </div>
+          </Card>
+        </main>
+      </div>
+    );
+  }
+
+  if (inviteState) {
+    return (
+      <div className="min-h-screen bg-gradient-to-b from-slate-50 to-white flex flex-col">
+        <PublicHeader className="px-4 pt-3 sm:px-6" />
+        <main className="flex-1 flex flex-col items-center justify-center px-4 py-12">
+          <RestaurantInvitePanel
+            invites={inviteState.invites}
+            portals={inviteState.portals}
+            displayName={inviteState.displayName}
+            onSignOut={handleInviteSignOut}
+          />
+        </main>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-slate-50 to-white flex flex-col">
