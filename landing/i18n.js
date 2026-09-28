@@ -57,6 +57,13 @@
         "flowTitleHighlight": "一條龍",
         "flowCta": "立即填寫食材需求",
         "categoriesTitle": "食材分類",
+        "pfTitlePre": "找食材，你也",
+        "pfTitleHl": "遇過這些問題嗎？",
+        "pfSolPre": "現在，找食材",
+        "pfSolHl": "可以更有效率！",
+        "pfLeadA": "告訴食材地圖你的採購需求，",
+        "pfLeadB": "快速媒合合適的產地、加工廠與各級供應商。",
+        "pfTypesAria": "可以媒合的供應商類型",
         "categoriesSub": "從產地、工廠、大盤到小盤商",
         "problemTitleA": "過去找食材，",
         "problemTitleB": "永遠是那幾家",
@@ -114,6 +121,18 @@
             "筆",
             "家",
             "項"
+          ],
+          "pfProblems": [
+            "找供應商多半靠同行介紹，上網搜尋總是那幾家",
+            "商品資訊不完整，還得打電話逐一詢價、確認配送範圍",
+            "留下聯絡資料後，等了好幾天仍收不到回覆"
+          ],
+          "pfTypes": [
+            "產地供應商",
+            "加工廠",
+            "大盤商",
+            "中盤商",
+            "小盤商"
           ],
           "audiences": [
             {
@@ -707,6 +726,13 @@
         "flowTitleHighlight": "end to end",
         "flowCta": "Post Your Request",
         "categoriesTitle": "Ingredient Categories",
+        "pfTitlePre": "Sourcing ingredients — ",
+        "pfTitleHl": "sound familiar?",
+        "pfSolPre": "Now, sourcing ingredients ",
+        "pfSolHl": "can be far more efficient!",
+        "pfLeadA": "Tell iFoodmap what you need to buy,",
+        "pfLeadB": "and we'll quickly match you with the right farms, processors and suppliers at every tier.",
+        "pfTypesAria": "Types of suppliers we match you with",
         "categoriesSub": "From farms and factories to wholesalers and local distributors",
         "problemTitleA": "Sourcing used to mean",
         "problemTitleB": "the same few suppliers",
@@ -764,6 +790,18 @@
             "",
             "",
             ""
+          ],
+          "pfProblems": [
+            "Finding suppliers mostly depends on word of mouth, and online searches keep turning up the same few names",
+            "Product details are incomplete, so you still have to call around for prices and delivery coverage",
+            "You leave your contact details, then wait days without hearing back"
+          ],
+          "pfTypes": [
+            "Farms & growers",
+            "Processors",
+            "Large wholesalers",
+            "Mid‑size wholesalers",
+            "Small wholesalers"
           ],
           "audiences": [
             {

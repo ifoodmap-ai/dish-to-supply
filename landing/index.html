@@ -818,6 +818,50 @@
       </div>
     </section>
 
+    <!-- ============ 找食材的問題 → 解法(業主 2026-09-28)============
+         上半:三個痛點。下半:「現在，找食材可以更有效率！」+ 五種供應商。
+         痛點 01、02 沿用 /restaurants 的 rest-pain-1、rest-pain-2(語意相同、同一套畫風)。
+         插圖一律不含文字(中英雙語);供應商名稱用 HTML 標。
+         下半的五個圓形插圖跟黃色標籤列是同一份清單,插圖那組 aria-hidden,螢幕閱讀器不會唸兩次。
+         版面全部走 class(<style id="pf">),不寫行內 grid —— support.js 的 tag() 會把行內多欄 grid
+         在手機上強制改成單欄。 -->
+    <section class="ifm-v2 pf" aria-labelledby="pf-title">
+      <div class="pf-wrap">
+        <h2 id="pf-title" class="pf-title">{{ L.home.pfTitlePre }}<span class="pf-hl">{{ L.home.pfTitleHl }}</span></h2>
+        <div class="pf-top">
+          <img class="pf-thinking" src="/assets/pf-thinking.svg" alt="" width="200" height="240" loading="lazy" decoding="async">
+          <ol class="pf-problems">
+            <sc-for list="{{ pfProblems }}" as="q" hint-placeholder-count="3">
+              <li class="pf-problem">
+                <span class="pf-no" aria-hidden="true">{{ q.no }}</span>
+                <img class="pf-icon" src="{{ q.icon }}" alt="" width="120" height="120" loading="lazy" decoding="async">
+                <p class="pf-text">{{ q.text }}</p>
+              </li>
+            </sc-for>
+          </ol>
+        </div>
+        <div class="pf-arrow" aria-hidden="true"></div>
+        <div class="pf-bottom">
+          <div class="pf-copy">
+            <h3 class="pf-sol">{{ L.home.pfSolPre }}<mark>{{ L.home.pfSolHl }}</mark></h3>
+            <p class="pf-lead">{{ L.home.pfLeadA }}<br>{{ L.home.pfLeadB }}</p>
+            <ul class="pf-typelist" aria-label="{{ L.home.pfTypesAria }}">
+              <sc-for list="{{ pfTypes }}" as="ty" hint-placeholder-count="5"><li>{{ ty.label }}</li></sc-for>
+            </ul>
+          </div>
+          <div class="pf-network" aria-hidden="true">
+            <img class="pf-match" src="/assets/pf-match.svg" alt="" width="360" height="280" loading="lazy" decoding="async">
+            <sc-for list="{{ pfTypes }}" as="ty" hint-placeholder-count="5">
+              <figure class="pf-node pf-node--{{ ty.key }}">
+                <figcaption>{{ ty.label }}</figcaption>
+                <img src="{{ ty.img }}" alt="" width="160" height="160" loading="lazy" decoding="async">
+              </figure>
+            </sc-for>
+          </div>
+        </div>
+      </div>
+    </section>
+
     <section class="ifm-v2" style="background:#F7F9F8;border-bottom:1px solid #E6EAE7">
       <div class="mc-sec" style="max-width:1240px;margin:0 auto;padding:clamp(52px,8vw,88px) 20px">
         <div style="max-width:560px">
@@ -2756,6 +2800,16 @@ class Component extends DCLogic {
         unit: list('statsUnits')[i] || '',
         num: Math.round(s.target * p).toLocaleString('en-US') + s.suffix,
       })),
+      // 找食材的問題 → 解法。文字在字典(home.data.pfProblems / pfTypes),圖與順序在這裡,靠 index 對齊。
+      pfProblems: list('pfProblems').map((text, i) => ({
+        no: ['01', '02', '03'][i],
+        icon: ['/assets/rest-pain-1.svg', '/assets/rest-pain-2.svg', '/assets/pf-problem-3.svg'][i],
+        text,
+      })),
+      pfTypes: list('pfTypes').map((label, i) => {
+        const key = ['origin', 'processor', 'large', 'mid', 'small'][i];
+        return { key, label, img: '/assets/pf-type-' + key + '.svg' };
+      }),
       audiences: list('audiences').map((a, i) => ({
         no: NO_LABELS[i], title: a.title, desc: a.desc,
         icon: `/assets/home-aud-${i + 1}.svg`,
@@ -3078,6 +3132,88 @@ class Component extends DCLogic {
   .about-value-card { padding: 18px !important; }
   .contact-role-grid { margin-bottom: 20px !important; }
   .ifm-news-hero { gap: 18px !important; }
+  }
+</style>
+<style id="pf">
+  /* 找食材的問題 → 解法(首頁,統計數字之下)。業主要求「版型像參考圖,但字不要那麼擠」——
+     所以列與列之間、段落之間都拉開,內文 18px、行高 1.7 以上。 */
+  .pf { background:linear-gradient(180deg,#F3FAF6 0%,#FFFFFF 78%); border-bottom:1px solid #E6EAE7; }
+  .pf-wrap { max-width:1180px; margin:0 auto; padding:clamp(56px,8vw,96px) 26px; }
+  .pf-title { text-align:center; font-size:clamp(26px,3.4vw,40px); line-height:1.4; margin:0 0 clamp(32px,4vw,52px); color:#0E1A14; }
+  .pf-hl { background:linear-gradient(transparent 62%, rgba(195,213,67,.55) 62%); padding:0 .08em; }
+
+  .pf-top { display:grid; grid-template-columns:200px minmax(0,1fr); gap:36px; align-items:center; }
+  .pf-thinking { width:100%; height:auto; }
+  .pf-problems { list-style:none; margin:0; padding:0; display:grid; gap:18px; }
+  .pf-problem { display:flex; align-items:center; gap:20px; background:#fff; border:1px solid #DCE7E0;
+                border-radius:999px; padding:12px 32px 12px 12px; box-shadow:0 6px 20px rgba(15,43,26,.05); }
+  .pf-no { flex:0 0 auto; width:48px; height:48px; border-radius:50%; background:#0B6B40; color:#fff;
+           display:grid; place-items:center; font-family:'Space Grotesk',sans-serif; font-weight:700; font-size:18px; }
+  .pf-icon { flex:0 0 auto; width:64px; height:64px; box-sizing:border-box; padding:8px;
+             background:#F3FAF6; border-radius:16px; }   /* 同餐廳頁 .ifm-art--pad 的淡綠底 */
+  .pf-text { margin:0; font-size:18px; line-height:1.7; font-weight:500; color:#0E1A14; }
+
+  .pf-arrow { width:0; height:0; margin:clamp(28px,4vw,40px) auto;
+              border-left:30px solid transparent; border-right:30px solid transparent; border-top:28px solid #0B6B40; }
+
+  .pf-bottom { display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1.05fr); gap:clamp(28px,4vw,56px); align-items:center;
+               background:#fff; border:1px solid #DCE7E0; border-radius:32px; padding:clamp(28px,4vw,52px);
+               box-shadow:0 18px 44px rgba(15,43,26,.07); }
+  .pf-sol { display:inline-block; margin:0; background:#0E1A14; color:#fff; border-radius:18px;
+            padding:16px 26px; font-size:clamp(24px,2.4vw,30px); line-height:1.4; font-weight:800; text-wrap:balance; }
+  .pf-sol mark { background:none; color:#C3D543; }
+  /* 中文要斷行時只斷在前後兩段之間(「現在，找食材／可以更有效率！」),不要把「效率」拆開 */
+  .pf-sol mark:lang(zh), .pf-hl:lang(zh) { white-space:nowrap; }
+  .pf-sol:lang(zh) { text-wrap:wrap; }   /* balance 會為了等長把「找食材」拆開,中文改回一般斷行 */
+  /* 說明文字只在標點後斷行(「…產地、／加工廠與各級供應商。」),不把「供應商」拆兩半;太長時仍可強制斷 */
+  .pf-lead:lang(zh) { word-break:keep-all; overflow-wrap:break-word; }
+  .pf-lead { margin:26px 0 28px; font-size:18px; line-height:1.9; color:#2F3D35; text-wrap:pretty; }
+  /* 分隔線畫在每一項的左邊並往左推 1px,由 overflow:hidden 裁掉每一列開頭那條,
+     換行後第二列開頭才不會多一條懸空的線 */
+  .pf-typelist { list-style:none; margin:0; padding:12px 0; display:flex; flex-wrap:wrap; row-gap:6px; overflow:hidden;
+                 background:#F7FBEF; border:1px solid #DDE9CE; border-radius:18px; }
+  .pf-typelist li { padding:2px 16px; margin-left:-1px; border-left:1px solid #C9D9B0;
+                    font-size:17px; font-weight:700; color:#0E1A14; line-height:1.6; }
+
+  /* 五種供應商繞著中間的「用筆電媒合」:虛線圈暗示連結 */
+  /* 中間欄放 pf-match 主圖,給它 1.5 倍寬;兩側至少 118px,窄桌機時先縮中間,圓不會被擠到重疊 */
+  .pf-network { position:relative; display:grid; grid-template-columns:minmax(118px,1fr) minmax(0,1.5fr) minmax(118px,1fr);
+                grid-template-areas:"processor origin large" "mid match small"; gap:6px 8px; align-items:end; justify-items:center; }
+  .pf-network::before { content:""; position:absolute; inset:18% 14% 10%; border:2px dashed #B7D3C2; border-radius:50%; z-index:0; }
+  .pf-match { grid-area:match; position:relative; z-index:1; width:100%; max-width:260px; height:auto; }
+  .pf-node { position:relative; z-index:1; margin:0; max-width:100%; display:flex; flex-direction:column; align-items:center; }
+  .pf-node img { width:118px; height:118px; }
+  /* 標籤可以換行:英文的 "Mid-size wholesalers" 不換行會超出欄寬、壓到隔壁 */
+  .pf-node figcaption { position:relative; z-index:2; max-width:100%; box-sizing:border-box; margin-bottom:-12px;
+                        background:#0B6B40; color:#fff; font-size:14px; font-weight:700; line-height:1.3; text-align:center;
+                        padding:5px 12px; border-radius:14px; text-wrap:balance; -webkit-hyphens:auto; hyphens:auto; }
+  .pf-node--origin { grid-area:origin; align-self:start; }
+  .pf-node--processor { grid-area:processor; }
+  .pf-node--large { grid-area:large; }
+  .pf-node--mid { grid-area:mid; }
+  .pf-node--small { grid-area:small; }
+
+  @media (max-width: 880px) {
+    .pf-top { grid-template-columns:1fr; }
+    .pf-thinking { display:none; }                /* 裝飾,手機上不佔高度 */
+    .pf-problem { border-radius:20px; padding:14px 18px 14px 14px; gap:14px; align-items:flex-start; }
+    .pf-no { width:38px; height:38px; font-size:15px; margin-top:2px; }
+    .pf-icon { width:48px; height:48px; padding:6px; border-radius:12px; }
+    .pf-text { font-size:16px; line-height:1.7; }
+    .pf-arrow { border-left-width:22px; border-right-width:22px; border-top-width:20px; }
+    .pf-bottom { grid-template-columns:1fr; border-radius:24px; padding:24px 14px; }
+    .pf-lead { font-size:16px; margin:20px 0 22px; }
+    .pf-typelist li { font-size:16px; padding:2px 12px; }
+    .pf-match { display:none; }                   /* 手機只留五個圓形,不再撐長 */
+    .pf-network { grid-template-columns:repeat(6,minmax(0,1fr)); grid-template-areas:none; gap:18px 4px; }
+    .pf-network::before { display:none; }
+    /* 六欄格線排成上 3 下 2。grid-area 必須連 span 一起寫在 !important 裡:
+       只寫 grid-area:auto !important 會把 span 2 也蓋掉,五個圓全擠成一排疊在一起 */
+    .pf-node { grid-area:auto / span 2 !important; align-self:end; }   /* 標籤行數不同時,圓仍對齊同一條底線 */
+    .pf-node--mid { grid-column:2 / span 2 !important; }
+    .pf-node--small { grid-column:4 / span 2 !important; }
+    .pf-node img { width:84px; height:84px; }
+    .pf-node figcaption { font-size:12px; padding:4px 8px; margin-bottom:-10px; border-radius:12px; }
   }
 </style>
 
