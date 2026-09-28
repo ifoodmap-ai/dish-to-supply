@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 160">
+
+<path d="M80 18 L84.2 30.2 L97.1 30.4 L86.9 38.2 L90.6 50.6 L80 43.2 L69.4 50.6 L73.1 38.2 L62.9 30.4 L75.8 30.2 Z" fill="#E9A83A"/>
+<path d="M44 40 L46.4 46.8 L53.5 46.9 L47.8 51.2 L49.9 58.1 L44 54 L38.1 58.1 L40.2 51.2 L34.5 46.9 L41.7 46.8 Z" fill="#7ECBA5"/>
+<path d="M116 40 L118.4 46.8 L125.5 46.9 L119.8 51.2 L121.9 58.1 L116 54 L110.1 58.1 L112.2 51.2 L106.5 46.9 L113.7 46.8 Z" fill="#CFE6DA"/>
+
+<path d="M58 78 q24 -16 48 0" fill="none" stroke="#128A54" stroke-width="3" stroke-linecap="round"/>
+<path d="M110.2 80.8 L101.8 80.6 L106.8 73.2 Z" fill="#128A54"/>
+<path d="M106 94 q-24 16 -48 0" fill="none" stroke="#7ECBA5" stroke-width="3" stroke-linecap="round"/>
+<path d="M53.8 91.3 L62.1 91.4 L57.2 98.8 Z" fill="#7ECBA5"/>
+
+<circle cx="30" cy="86" r="14" fill="#128A54"/>
+<path d="M8 124 a22 24 0 0 1 44 0 z" fill="#128A54"/>
+
+<circle cx="130" cy="86" r="14" fill="#7ECBA5"/>
+<path d="M108 124 a22 24 0 0 1 44 0 z" fill="#7ECBA5"/>
+
+<line x1="34" y1="138" x2="126" y2="138" stroke="#CFE6DA" stroke-width="3" stroke-linecap="round"/>
+
+</svg>

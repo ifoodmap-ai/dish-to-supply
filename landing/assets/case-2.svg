@@ -1,0 +1,58 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 480 300">
+
+<circle cx="240" cy="120" r="94" fill="#E9F5EE"/>
+<circle cx="66" cy="246" r="32" fill="#E9F5EE"/>
+
+<g fill="none" stroke="#7ECBA5" stroke-width="2" stroke-dasharray="6 7" stroke-linecap="round">
+<line x1="54" y1="82" x2="240" y2="156"/>
+<line x1="146" y1="68" x2="240" y2="156"/>
+<line x1="238" y1="60" x2="240" y2="156"/>
+<line x1="330" y1="68" x2="240" y2="156"/>
+<line x1="422" y1="82" x2="240" y2="156"/>
+</g>
+
+<rect x="26" y="40" width="56" height="42" rx="7" fill="#FFFFFF" stroke="#7ECBA5" stroke-width="2"/>
+<rect x="36" y="54" width="36" height="7" rx="3.5" fill="#CFE6DA"/>
+<circle cx="44" cy="71" r="5" fill="#128A54"/>
+<rect x="56" y="68" width="16" height="6" rx="3" fill="#CFE6DA"/>
+
+<rect x="118" y="26" width="56" height="42" rx="7" fill="#FFFFFF" stroke="#7ECBA5" stroke-width="2"/>
+<rect x="128" y="40" width="36" height="7" rx="3.5" fill="#CFE6DA"/>
+<circle cx="136" cy="57" r="5" fill="#128A54"/>
+<rect x="148" y="54" width="16" height="6" rx="3" fill="#CFE6DA"/>
+
+<rect x="210" y="18" width="56" height="42" rx="7" fill="#FFFFFF" stroke="#7ECBA5" stroke-width="2"/>
+<rect x="220" y="32" width="36" height="7" rx="3.5" fill="#CFE6DA"/>
+<circle cx="228" cy="49" r="5" fill="#128A54"/>
+<rect x="240" y="46" width="16" height="6" rx="3" fill="#CFE6DA"/>
+
+<rect x="302" y="26" width="56" height="42" rx="7" fill="#FFFFFF" stroke="#7ECBA5" stroke-width="2"/>
+<rect x="312" y="40" width="36" height="7" rx="3.5" fill="#CFE6DA"/>
+<circle cx="320" cy="57" r="5" fill="#128A54"/>
+<rect x="332" y="54" width="16" height="6" rx="3" fill="#CFE6DA"/>
+
+<rect x="394" y="40" width="56" height="42" rx="7" fill="#FFFFFF" stroke="#E9A83A" stroke-width="2.5" stroke-dasharray="7 7"/>
+<rect x="404" y="54" width="36" height="7" rx="3.5" fill="#CFE6DA"/>
+<circle cx="412" cy="71" r="5" fill="#E9A83A"/>
+<rect x="424" y="68" width="16" height="6" rx="3" fill="#CFE6DA"/>
+
+<g fill="none" stroke="#7ECBA5" stroke-width="2" stroke-dasharray="5 6" stroke-linecap="round">
+<line x1="222" y1="178" x2="116" y2="198"/>
+<line x1="240" y1="184" x2="240" y2="198"/>
+<line x1="258" y1="178" x2="364" y2="198"/>
+</g>
+
+<rect x="64" y="200" width="104" height="48" rx="9" fill="#FFFFFF" stroke="#128A54" stroke-width="2.5"/>
+<rect x="76" y="212" width="80" height="26" rx="5" fill="#CFE6DA"/>
+<rect x="188" y="200" width="104" height="48" rx="9" fill="#FFFFFF" stroke="#128A54" stroke-width="2.5"/>
+<rect x="200" y="212" width="80" height="26" rx="5" fill="#E9F5EE"/>
+<rect x="312" y="200" width="104" height="48" rx="9" fill="#FFFFFF" stroke="#128A54" stroke-width="2.5"/>
+<rect x="324" y="212" width="80" height="26" rx="5" fill="#CFE6DA"/>
+
+<rect x="40" y="248" width="400" height="14" rx="7" fill="#7ECBA5"/>
+<rect x="64" y="262" width="352" height="8" rx="4" fill="#CFE6DA"/>
+
+<circle cx="240" cy="156" r="28" fill="#128A54" stroke="#FFFFFF" stroke-width="5"/>
+<path d="M229 156 l7 7 14 -15" stroke="#FFFFFF" stroke-width="4" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+
+</svg>

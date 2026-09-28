@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200">
+  <rect width="200" height="200" rx="22" fill="#e6f3ee"/>
+  <!-- fish -->
+  <g transform="translate(60 44)">
+    <path d="M30 22 q34 -14 70 8 q-16 16 0 32 q-36 22 -70 8 q-20 -10 -22 -24 q2 -14 22 -24 Z" fill="#7fa7b8"/>
+    <path d="M30 22 q18 -8 40 -4 q-26 6 -36 24 q-8 -2 -12 -4 q2 -10 8 -16 Z" fill="#9cbecd" opacity="0.7"/>
+    <path d="M8 46 q-14 -8 -22 -22 q2 16 -2 30 q12 -2 24 -8 Z" fill="#6f97a8"/>
+    <path d="M58 18 q4 -10 14 -12 q-4 8 -2 16 Z" fill="#90b6c5"/>
+    <circle cx="86" cy="36" r="5" fill="#15231b"/>
+    <circle cx="88" cy="34" r="1.6" fill="#fff"/>
+    <path d="M56 38 q8 6 0 12" stroke="#5d8696" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+    <path d="M70 36 q8 6 0 12" stroke="#5d8696" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+  </g>
+  <!-- shrimp -->
+  <g transform="translate(44 120)">
+    <path d="M6 6 q24 -14 46 -2 q14 8 8 24 q-4 10 -16 10 q-10 0 -10 -8 q6 2 10 -2 q4 -6 -2 -12 q-16 -12 -38 -4 q-8 -8 -6 -6 Z" fill="#ef8b6a"/>
+    <path d="M52 4 q14 -10 22 -8 q-10 4 -14 14 Z" fill="#f0a487"/>
+    <circle cx="14" cy="10" r="3" fill="#15231b"/>
+    <path d="M10 8 q-10 -6 -16 -2 M12 12 q-12 -2 -16 4" stroke="#ef8b6a" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+  </g>
+</svg>

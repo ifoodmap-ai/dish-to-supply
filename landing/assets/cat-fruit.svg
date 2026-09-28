@@ -1,0 +1,29 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200">
+  <rect width="200" height="200" rx="22" fill="#eaf6e4"/>
+  <!-- apple -->
+  <g transform="translate(82 50)">
+    <path d="M32 22 q14 -6 24 6 q12 16 0 40 q-8 16 -22 14 q-6 -2 -10 -2 q-4 0 -10 2 q-14 2 -22 -14 q-12 -24 0 -40 q10 -12 24 -6 q4 2 8 2 q4 0 8 -2 Z" fill="#e2563b"/>
+    <path d="M24 24 q-12 -2 -20 8 q-10 14 -2 34 q5 12 14 16 q-12 -6 -16 -22 q-6 -22 4 -34 q8 -6 20 -2 Z" fill="#ee6f55" opacity="0.6"/>
+    <path d="M28 22 q-1 -10 4 -16 q4 5 2 16 Z" fill="#7a4a2a"/>
+    <path d="M33 14 q10 -10 22 -8 q-6 10 -20 12 q-2 -2 -2 -4 Z" fill="#3DAE2B"/>
+  </g>
+  <!-- grapes -->
+  <g transform="translate(48 96)">
+    <circle cx="0" cy="0" r="9" fill="#7c5bb0"/>
+    <circle cx="16" cy="-2" r="9" fill="#8d6cc0"/>
+    <circle cx="8" cy="12" r="9" fill="#7c5bb0"/>
+    <circle cx="24" cy="12" r="9" fill="#6f4fa6"/>
+    <circle cx="16" cy="24" r="9" fill="#8d6cc0"/>
+    <path d="M14 -12 q2 -8 8 -10" stroke="#1f9e4e" stroke-width="3" fill="none" stroke-linecap="round"/>
+    <path d="M20 -14 q8 -2 12 4" fill="#46c138"/>
+  </g>
+  <!-- coconut -->
+  <g transform="translate(140 132)">
+    <circle cx="0" cy="0" r="24" fill="#8a5a34"/>
+    <path d="M0 -24 a24 24 0 0 1 0 48 a17 24 0 0 0 0 -48 Z" fill="#6b421f" opacity="0.45"/>
+    <path d="M-24 0 a24 24 0 0 1 17 -23 a19 23 0 0 0 0 46 a24 24 0 0 1 -17 -23 Z" fill="#a4703f" opacity="0.5"/>
+    <ellipse cx="-7" cy="-6" rx="3.4" ry="4" fill="#5e3a20" opacity="0.75"/>
+    <ellipse cx="4" cy="-8" rx="3.4" ry="4" fill="#5e3a20" opacity="0.75"/>
+    <ellipse cx="-1" cy="2" rx="3.4" ry="4" fill="#5e3a20" opacity="0.75"/>
+  </g>
+</svg>

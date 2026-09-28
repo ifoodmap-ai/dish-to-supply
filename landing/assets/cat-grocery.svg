@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200">
+  <rect width="200" height="200" rx="22" fill="#eef4ea"/>
+  <!-- can -->
+  <g transform="translate(58 56)">
+    <ellipse cx="26" cy="8" rx="26" ry="9" fill="#bcc7be"/>
+    <path d="M0 8 v60 a26 9 0 0 0 52 0 v-60" fill="#aab7ad"/>
+    <ellipse cx="26" cy="8" rx="26" ry="9" fill="#c9d3cb"/>
+    <rect x="2" y="22" width="48" height="32" rx="3" fill="#f3eddc"/>
+    <rect x="2" y="32" width="48" height="12" fill="#3DAE2B"/>
+    <circle cx="26" cy="38" r="4.5" fill="#f3eddc"/>
+  </g>
+  <!-- bottle/jar -->
+  <g transform="translate(118 44)">
+    <rect x="12" y="0" width="14" height="14" rx="3" fill="#1f9e4e"/>
+    <path d="M10 16 h18 q6 8 6 18 v48 q0 8 -8 8 h-14 q-8 0 -8 -8 v-48 q0 -10 6 -18 Z" fill="#cfe0d4"/>
+    <rect x="6" y="44" width="30" height="26" rx="3" fill="#f3eddc"/>
+    <line x1="11" y1="52" x2="31" y2="52" stroke="#aab7ad" stroke-width="2"/>
+    <line x1="11" y1="60" x2="26" y2="60" stroke="#aab7ad" stroke-width="2"/>
+  </g>
+</svg>

@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200">
+  <rect width="200" height="200" rx="22" fill="#f4f0e6"/>
+  <!-- pouch -->
+  <g transform="translate(48 50)">
+    <path d="M6 4 h30 v8 h-30 Z" fill="#cdbf96"/>
+    <path d="M2 12 h38 q4 0 4 6 v66 q0 6 -6 6 h-34 q-6 0 -6 -6 v-66 q0 -6 4 -6 Z" fill="#f1ead9"/>
+    <rect x="0" y="38" width="44" height="18" fill="#1f9e4e"/>
+    <rect x="0" y="38" width="44" height="5" fill="#46c138"/>
+    <circle cx="22" cy="24" r="9" fill="#e3b24a"/>
+    <path d="M8 70 h28 M8 78 h20" stroke="#cdbf96" stroke-width="2.5" stroke-linecap="round"/>
+  </g>
+  <!-- box -->
+  <g transform="translate(112 60)">
+    <path d="M0 14 l20 -10 l20 10 v44 l-20 10 l-20 -10 Z" fill="#ede4cf"/>
+    <path d="M0 14 l20 10 v44 l-20 -10 Z" fill="#e0d4ba"/>
+    <path d="M20 24 l20 -10 v44 l-20 10 Z" fill="#f1ead9"/>
+    <path d="M20 24 l20 -10 v14 l-20 10 Z" fill="#3DAE2B"/>
+    <path d="M20 24 v14 l-20 -10 v-14 Z" fill="#1f9e4e"/>
+  </g>
+</svg>

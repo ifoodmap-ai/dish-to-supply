@@ -1,0 +1,119 @@
+{
+  "cleanUrls": true,
+  "trailingSlash": false,
+  "rewrites": [
+    {
+      "source": "/restaurants",
+      "destination": "/"
+    },
+    {
+      "source": "/suppliers",
+      "destination": "/"
+    },
+    {
+      "source": "/cases",
+      "destination": "/"
+    },
+    {
+      "source": "/about",
+      "destination": "/"
+    },
+    {
+      "source": "/contact",
+      "destination": "/"
+    },
+    {
+      "source": "/news",
+      "destination": "/"
+    },
+    {
+      "source": "/news/:slug",
+      "destination": "/"
+    },
+    {
+      "source": "/qa",
+      "destination": "/"
+    },
+    {
+      "source": "/legal",
+      "destination": "/"
+    },
+    {
+      "source": "/legal/:slug",
+      "destination": "/"
+    },
+    {
+      "source": "/en",
+      "destination": "/"
+    },
+    {
+      "source": "/en/restaurants",
+      "destination": "/"
+    },
+    {
+      "source": "/en/suppliers",
+      "destination": "/"
+    },
+    {
+      "source": "/en/cases",
+      "destination": "/"
+    },
+    {
+      "source": "/en/about",
+      "destination": "/"
+    },
+    {
+      "source": "/en/contact",
+      "destination": "/"
+    },
+    {
+      "source": "/en/news",
+      "destination": "/"
+    },
+    {
+      "source": "/en/news/:slug",
+      "destination": "/"
+    },
+    {
+      "source": "/en/qa",
+      "destination": "/"
+    },
+    {
+      "source": "/en/legal",
+      "destination": "/"
+    },
+    {
+      "source": "/en/legal/:slug",
+      "destination": "/"
+    }
+  ],
+  "headers": [
+    {
+      "source": "/support.js",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=3600"
+        }
+      ]
+    },
+    {
+      "source": "/dc-template.js",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=3600"
+        }
+      ]
+    },
+    {
+      "source": "/llms.txt",
+      "headers": [
+        {
+          "key": "X-Robots-Tag",
+          "value": "noindex"
+        }
+      ]
+    }
+  ]
+}

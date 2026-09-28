@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200">
+  <rect width="200" height="200" rx="22" fill="#e9f4ee"/>
+  <!-- bottle -->
+  <g transform="translate(96 36)">
+    <rect x="20" y="0" width="10" height="16" rx="2" fill="#16623a"/>
+    <path d="M18 16 h14 v10 q10 6 10 20 v62 q0 8 -8 8 h-22 q-8 0 -8 -8 v-62 q0 -14 10 -20 Z" fill="#2f8f5a"/>
+    <path d="M22 22 q-6 6 -6 18 v60 q0 4 4 6 q-10 0 -10 -8 v-60 q0 -12 8 -16 Z" fill="#52a877" opacity="0.7"/>
+    <rect x="14" y="58" width="30" height="30" rx="3" fill="#f1ead9"/>
+    <circle cx="29" cy="73" r="8" fill="#1f9e4e"/>
+  </g>
+  <!-- glass -->
+  <g transform="translate(50 92)">
+    <path d="M2 6 h40 l-5 56 q-1 8 -9 8 h-12 q-8 0 -9 -8 Z" fill="#dceee5"/>
+    <path d="M5 30 h34 l-4 32 q-1 8 -9 8 h-12 q-8 0 -9 -8 Z" fill="#e3b24a"/>
+    <path d="M5 30 h34 l-1 8 h-32 Z" fill="#edc56a"/>
+    <path d="M8 12 l3 30" stroke="#fff" stroke-width="2.5" fill="none" stroke-linecap="round" opacity="0.6"/>
+  </g>
+</svg>

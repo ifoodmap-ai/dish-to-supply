@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 160">
+
+<rect x="8" y="54" width="36" height="52" rx="8" fill="#FFFFFF" stroke="#128A54" stroke-width="3"/>
+<rect x="17" y="66" width="18" height="5" rx="2.5" fill="#CFE6DA"/>
+<rect x="17" y="78" width="12" height="5" rx="2.5" fill="#CFE6DA"/>
+<rect x="17" y="90" width="18" height="5" rx="2.5" fill="#CFE6DA"/>
+
+<rect x="116" y="54" width="36" height="52" rx="8" fill="#FFFFFF" stroke="#128A54" stroke-width="3"/>
+<rect x="125" y="66" width="18" height="5" rx="2.5" fill="#CFE6DA"/>
+<rect x="125" y="78" width="12" height="5" rx="2.5" fill="#CFE6DA"/>
+<rect x="125" y="90" width="18" height="5" rx="2.5" fill="#CFE6DA"/>
+
+<g stroke="#7ECBA5" stroke-width="3" stroke-dasharray="5 6" stroke-linecap="round">
+<line x1="44" y1="80" x2="62" y2="80"/>
+<line x1="98" y1="80" x2="116" y2="80"/>
+</g>
+
+<circle cx="80" cy="80" r="19" fill="#128A54"/>
+<path d="M72 80 l5.5 5.5 11 -12" stroke="#FFFFFF" stroke-width="3.4" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+
+<path d="M110 32 q3 10 13 13 q-10 3 -13 13 q-3 -10 -13 -13 q10 -3 13 -13 z" fill="#E9A83A"/>
+<path d="M54 36 q2 6 8 8 q-6 2 -8 8 q-2 -6 -8 -8 q6 -2 8 -8 z" fill="#7ECBA5"/>
+<path d="M80 124 q2 6 8 8 q-6 2 -8 8 q-2 -6 -8 -8 q6 -2 8 -8 z" fill="#CFE6DA"/>
+
+</svg>
