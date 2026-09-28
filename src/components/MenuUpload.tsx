@@ -14,9 +14,14 @@ export interface AnalysisMeta {
 
 interface MenuUploadProps {
   onAnalysisComplete: (ingredients: string[], meta: AnalysisMeta) => void;
+  /**
+   * 精簡版(餐廳後台「AI 菜單分析」用):拿掉行銷頁的大標題與大留白,只剩一張上傳卡,
+   * 文案一律繁中。不傳 = 原本訪客首頁的樣子,完全不變。
+   */
+  compact?: boolean;
 }
 
-const MenuUpload = ({ onAnalysisComplete }: MenuUploadProps) => {
+const MenuUpload = ({ onAnalysisComplete, compact = false }: MenuUploadProps) => {
   const { t } = useLanguage();
   const [isUploading, setIsUploading] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
@@ -26,25 +31,31 @@ const MenuUpload = ({ onAnalysisComplete }: MenuUploadProps) => {
     const file = event.target.files?.[0];
     if (file) {
       if (file.size > 10 * 1024 * 1024) {
-        toast.error("File size cannot exceed 10MB");
+        toast.error(compact ? "照片不能超過 10MB" : "File size cannot exceed 10MB");
         return;
       }
       
       if (!file.type.startsWith("image/")) {
-        toast.error("Please upload an image file");
+        toast.error(compact ? "請選擇圖片檔(JPG、PNG)" : "Please upload an image file");
         return;
       }
 
       setSelectedFile(file);
       const url = URL.createObjectURL(file);
       setPreviewUrl(url);
-      toast.success("File selected");
+      // 精簡版:預覽圖本身就是回饋,不再多跳一個提示
+      if (!compact) toast.success("File selected");
     }
+  };
+
+  const clearSelection = () => {
+    setSelectedFile(null);
+    setPreviewUrl("");
   };
 
   const handleAnalyze = async () => {
     if (!selectedFile) {
-      toast.error("Please select a menu image first");
+      toast.error(compact ? "請先選一張菜單照片" : "Please select a menu image first");
       return;
     }
 
@@ -72,6 +83,58 @@ const MenuUpload = ({ onAnalysisComplete }: MenuUploadProps) => {
       setIsUploading(false);
     }
   };
+
+  if (compact) {
+    return (
+      <Card className="p-4 sm:p-6">
+        {!previewUrl ? (
+          <>
+            {/* sr-only 而不是 hidden:鍵盤 Tab 得到,按空白鍵一樣能開選檔 */}
+            <input
+              id="menu-upload"
+              type="file"
+              accept="image/*"
+              onChange={handleFileSelect}
+              className="peer sr-only"
+            />
+            <label
+              htmlFor="menu-upload"
+              className="flex cursor-pointer flex-col items-center gap-3 rounded-xl border-2 border-dashed border-primary/30 px-4 py-10 text-center transition-colors hover:border-primary/60 hover:bg-accent/40 peer-focus-visible:ring-2 peer-focus-visible:ring-ring sm:py-14"
+            >
+              <span className="flex h-14 w-14 items-center justify-center rounded-full bg-primary/10">
+                <Upload className="h-7 w-7 text-primary" />
+              </span>
+              <span className="text-lg font-semibold">上傳菜單照片</span>
+              <span className="text-sm text-muted-foreground">AI 會列出要採購的食材</span>
+            </label>
+          </>
+        ) : (
+          <div className="space-y-4">
+            <img
+              src={previewUrl}
+              alt="菜單預覽"
+              className="max-h-72 w-full rounded-lg bg-muted object-contain sm:max-h-96"
+            />
+            <div className="flex gap-2">
+              <Button variant="outline" size="lg" className="px-4" onClick={clearSelection} disabled={isUploading}>
+                換一張
+              </Button>
+              <Button size="lg" className="flex-1" onClick={handleAnalyze} disabled={isUploading}>
+                {isUploading ? (
+                  <>
+                    <Loader2 className="animate-spin" />
+                    AI 辨識中…
+                  </>
+                ) : (
+                  "開始分析"
+                )}
+              </Button>
+            </div>
+          </div>
+        )}
+      </Card>
+    );
+  }
 
   return (
     <section id="upload-section" className="py-24">

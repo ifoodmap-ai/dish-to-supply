@@ -11,11 +11,22 @@ import { track } from "@/lib/analytics";
 interface SupplierMatchProps {
   show: boolean;
   names: string[];
+  /**
+   * 精簡版(餐廳後台「AI 菜單分析」用):拿掉行銷頁的大標題與大留白,卡片只留
+   * 名稱、服務區、符合幾項、品項價格與詢價按鈕。不傳 = 原本訪客首頁的樣子,完全不變。
+   */
+  compact?: boolean;
 }
 
 const formatItemChip = (item: MatchedItem): string => {
   const priceInfo = item.price != null ? ` $${item.price}${item.unit ? `/${item.unit}` : ""}` : "";
   return `${item.ingredient} → ${item.name}${priceInfo}`;
+};
+
+/** 精簡版只列供應商的品名與價格(「洋蔥 → 洋蔥」這種重複就省掉) */
+const formatCompactChip = (item: MatchedItem): string => {
+  const priceInfo = item.price != null ? ` $${item.price}${item.unit ? `/${item.unit}` : ""}` : "";
+  return `${item.name}${priceInfo}`;
 };
 
 const ScoreRing = ({ score }: { score: number }) => {
@@ -55,7 +66,7 @@ const ScoreRing = ({ score }: { score: number }) => {
   );
 };
 
-const SupplierMatch = ({ show, names }: SupplierMatchProps) => {
+const SupplierMatch = ({ show, names, compact = false }: SupplierMatchProps) => {
   const navigate = useNavigate();
   const [isLoading, setIsLoading] = useState(false);
   const [suppliers, setSuppliers] = useState<MatchedSupplier[]>([]);
@@ -97,6 +108,82 @@ const SupplierMatch = ({ show, names }: SupplierMatchProps) => {
   }, [show, names]);
 
   if (!show) return null;
+
+  if (compact) {
+    return (
+      <section className="space-y-3">
+        <h2 className="text-lg font-semibold">媒合的供應商</h2>
+
+        {isLoading && (
+          <div className="grid gap-3 sm:grid-cols-2">
+            {[0, 1].map((i) => (
+              <Card key={i} className="space-y-3 p-4">
+                <Skeleton className="h-5 w-2/3" />
+                <Skeleton className="h-4 w-1/2" />
+                <Skeleton className="h-10 w-full" />
+              </Card>
+            ))}
+          </div>
+        )}
+
+        {!isLoading && loaded && suppliers.length === 0 && (
+          <Card className="flex items-start gap-3 p-4">
+            <PackageSearch className="h-5 w-5 shrink-0 text-primary" />
+            <p className="text-sm text-muted-foreground">
+              平台上暫時沒有完全符合的供應商。帶到智慧採購送出需求,ifoodmap 會幫你找。
+            </p>
+          </Card>
+        )}
+
+        {!isLoading && suppliers.length > 0 && (
+          <div className="grid gap-3 sm:grid-cols-2">
+            {suppliers.map(({ supplier, matchedCount, items }) => (
+              <Card key={supplier.id} className="flex flex-col gap-3 p-4">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <h3 className="font-semibold">{supplier.name}</h3>
+                    {supplier.service_areas && supplier.service_areas.length > 0 && (
+                      <p className="mt-0.5 flex items-center gap-1 text-xs text-muted-foreground">
+                        <MapPin className="h-3 w-3 shrink-0" />
+                        {supplier.service_areas.join("、")}
+                      </p>
+                    )}
+                  </div>
+                  <Badge variant="secondary" className="shrink-0 bg-primary/10 text-primary hover:bg-primary/10">
+                    符合 {matchedCount} 項
+                  </Badge>
+                </div>
+
+                {items.length > 0 && (
+                  <div className="flex flex-wrap gap-1.5">
+                    {items.slice(0, 4).map((item, index) => (
+                      <Badge key={index} variant="outline" className="font-normal">
+                        {formatCompactChip(item)}
+                      </Badge>
+                    ))}
+                    {items.length > 4 && (
+                      <Badge variant="outline" className="font-normal">
+                        +{items.length - 4} 項
+                      </Badge>
+                    )}
+                  </div>
+                )}
+
+                <Button
+                  variant="outline"
+                  className="mt-auto w-full"
+                  onClick={() => navigate(`/supplier/${supplier.id}`)}
+                >
+                  查看並詢價
+                  <ArrowRight />
+                </Button>
+              </Card>
+            ))}
+          </div>
+        )}
+      </section>
+    );
+  }
 
   return (
     <section className="py-16 bg-muted/30">
