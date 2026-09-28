@@ -9,6 +9,9 @@
 
 管理員後台**刻意不出現在客戶看得到的網域上** —— 主站的 `/admin` 會顯示 404。
 
+形象站 https://ifoodmap-landing.vercel.app 的原始碼也在這個 repo(`landing/`),但它是另一個 Vercel 專案、另一條 workflow,
+見下面的「形象站(landing/)」。
+
 ## 環境變數
 
 | 變數 | 前台站 | 管理員站 |
@@ -50,6 +53,36 @@ VERCEL_ORG_ID=team_VJzPZOwBqciuXnPC0XltX4MW \
 VERCEL_PROJECT_ID=prj_cf9IKsaZJd5AwOr9Jg3TRGmRZUrU \
   npx vercel deploy --prod --yes --token <ifoodmap-team-token>
 ```
+
+## 形象站(landing/)
+
+https://ifoodmap-landing.vercel.app 的原始碼在 `landing/`:純靜態頁 + `landing/api/` 三支 Vercel Function(代理 Edge Function `ai`),
+沒有任何相依套件。2026-09-28 從 `ifoodmap-ai/ifoodmap-landing` 連同完整歷史併進來,`git log -- landing/index.html` 看得到全部歷史。
+**舊 repo 已凍結,不要再 push 過去** —— 它的部署 workflow 在業主停用前仍然開著,推上去會用舊內容蓋掉正式站。
+
+本機測試:`cd landing && npm test`(node:test,不需要 npm install)。
+
+### 形象站怎麼部署
+
+`.github/workflows/landing-deploy.yml`,push main 自動跑:`npm test` → `vercel pull` → `node scripts/prerender.mjs --in-place`
+→ `vercel build --prod` → `vercel deploy --prebuilt --prod`,全部在 `landing/` 裡執行。PR 只跑測試、不部署。
+
+- **路徑過濾**:只有 `landing/**` 或 `landing-deploy.yml` 本身有變動才會觸發。反過來,`deploy-vercel.yml` 與 `product-ci.yml`
+  用 `paths-ignore` 排除這兩者;Vercel Git 整合那一路由根目錄 `vercel.json` 的 `ignoreCommand` 擋
+  (上次成功部署到這次之間,只動到 `landing/` 或 `.github/` 就跳過建置)。
+  所以**只改 `landing/` 的 push,兩個產品站都不會重建**;同一個 push 兩邊都有改,就兩邊各自部署。
+  注意:只改 `.github/` 底下其他檔案(例如 `product-ci.yml`)時,Git 整合會跳過,但 `deploy-vercel.yml` 仍會照常用 CLI 部署兩站。
+- **專案 ID**:`VERCEL_PROJECT_ID` 直接寫在 workflow 裡(形象站專案 `ifoodmap-landing`,不是機密);
+  token 與 team 沿用本 repo 的 `VERCEL_TOKEN`、`VERCEL_ORG_ID`(三個專案同一個 team)。
+  🔴 **不要改成 `secrets.VERCEL_PROJECT_ID`** —— 本 repo 那個 secret 是已經不用的舊 "ifoodmap" 專案,改了會把形象站部署到錯的專案。
+  `landing/tests/deploy-workflow.test.cjs` 有擋。
+- **12/31 排程**:cron `5 16 31 12 *`(UTC)= 台北每年 1/1 00:05 自動重建一次,只重跑預渲染、不 commit ——
+  頁尾年份是程式算的,但不跑 JavaScript 的爬蟲讀的是預渲染時烤進 HTML 的年份。排程只在 main 上跑,`paths` 對排程無效。
+  手動重建:`gh workflow run landing-deploy.yml -R ifoodmap-ai/dish-to-supply`。
+- 🔴 **Vercel 上 `ifoodmap-landing` 專案的 Root Directory 必須保持空白**:workflow 已經在 `landing/` 裡跑 `vercel build`,
+  改成 `landing` 的話 CLI 會去找 `landing/landing`,建置直接失敗。
+- 預渲染用到全域 `WebSocket`,Node 必須 ≥ 22;workflow 固定 24(= Vercel 專案的 function runtime)。
+- 回退:Vercel → `ifoodmap-landing` → Deployments → 選上一個 → Instant Rollback;或 `git revert` 之後 push。
 
 ## 跨站 session
 
@@ -116,7 +149,7 @@ SUPABASE_ACCESS_TOKEN=sbp_... supabase functions deploy ai --project-ref cwvpehq
 `en` 會讓回覆、菜單分析的品名與摘要全部改用英文(見 `withLang()` / `EN_DIRECTIVE`)。
 沒帶或帶別的值就是原本的繁體中文行為,所以這個改動對舊 client 是相容的。
 
-**一定要帶 `--no-verify-jwt`。** 主站前端(`src/lib/api.ts`)與形象站的代理(`ifoodmap-landing/api/ai-chat.js`)
+**一定要帶 `--no-verify-jwt`。** 主站前端(`src/lib/api.ts`)與形象站的代理(`landing/api/ai-chat.js`)
 呼叫這支時都只送 `apikey`、沒有 `Authorization` header;少了這個旗標會把 JWT 驗證打開,
 兩邊立刻全部 401(`UNAUTHORIZED_NO_AUTH_HEADER`)。2026-09-22 踩過一次,形象站 AI 助手斷了幾分鐘。
 
