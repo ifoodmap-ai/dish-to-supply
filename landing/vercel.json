@@ -1,6 +1,19 @@
 {
   "cleanUrls": true,
   "trailingSlash": false,
+  "redirects": [
+    {
+      "source": "/:path*",
+      "has": [
+        {
+          "type": "host",
+          "value": "^ifoodmap-landing\\.vercel\\.app$"
+        }
+      ],
+      "destination": "https://ifoodmap.ai/:path*",
+      "permanent": true
+    }
+  ],
   "rewrites": [
     {
       "source": "/restaurants",

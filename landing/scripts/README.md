@@ -27,7 +27,7 @@ node scripts/smoke-i18n.mjs http://127.0.0.1:4322
 中文網址(**包括裸網址 `/`**)若被誤轉語系會立刻露餡(那是 SEO 的紅線,見 `docs/I18N.md`);
 `/` 必須留在中文、而且多出一條英文的語系提示條,其他 21 條一律沒有提示條。
 
-上線後可以直接對正式站跑同一支:`node scripts/smoke-i18n.mjs https://ifoodmap-landing.vercel.app`。
+上線後可以直接對正式站跑同一支:`node scripts/smoke-i18n.mjs https://ifoodmap.ai`。
 
 > `npx serve` 不適合拿來驗:它不讀 `vercel.json`,`-s` 又會把**任何** 404 都導到
 > index.html,反而看不出 rewrite 少寫了哪一條。

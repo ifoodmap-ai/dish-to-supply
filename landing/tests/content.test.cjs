@@ -1217,7 +1217,9 @@ test('metadata consistently describes the approved two-sided platform', () => {
   assert.match(source, new RegExp(`<meta property="og:description" content="${description}">`));
   assert.match(source, new RegExp(`<meta name="twitter:title" content="${title}">`));
   assert.match(source, new RegExp(`<meta name="twitter:description" content="${description}">`));
-  assert.match(source, /<link rel="canonical" href="https:\/\/ifoodmap-landing\.vercel\.app\/">/);
+  // 網域由 tests/public-domain.test.cjs 釘住;這裡只要求 canonical 跟 routing.js 的 publicBaseUrl 同一個來源
+  const { publicBaseUrl } = require('../routing.js');
+  assert.ok(source.includes(`<link rel="canonical" href="${publicBaseUrl}/">`));
 });
 
 test('small contact and footer copy meets deterministic WCAG AA contrast', () => {

@@ -13,10 +13,12 @@ const {
   pathToLang,
   pathToPage,
   pathToRoute,
+  publicBaseUrl,
 } = require('../routing.js');
 const projectRoot = path.resolve(__dirname, '..');
 
-const BASE = 'https://ifoodmap-landing.vercel.app';
+// 這支驗的是路徑規則(語系前綴、結尾斜線、slug);網域本身由 tests/public-domain.test.cjs 釘住。
+const BASE = publicBaseUrl;
 const PAGES = ['home', 'restaurants', 'suppliers', 'cases', 'about', 'contact', 'news', 'qa', 'legal'];
 
 function createFakeWindow(pathname = '/') {

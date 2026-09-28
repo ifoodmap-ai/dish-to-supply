@@ -9,7 +9,11 @@
     root.IfmRouting = routing;
   }
 })(typeof window !== 'undefined' ? window : null, function () {
-  var publicBaseUrl = 'https://ifoodmap-landing.vercel.app';
+  // 形象站的正式網址 —— 全站絕對網址的唯一來源:canonical / og:url / og:image / hreflang / JSON-LD /
+  // sitemap.xml / robots.txt / llms.txt 都由它算(scripts/prerender.mjs 會拒絕產出別的網域)。
+  // 2026-09-29 換成業主網域;舊的 vercel.app 網址由 vercel.json 的 host 轉址 308 到這裡。
+  // index.html 靜態 <head> 的預設值與 vercel.json 轉址的目的地,都由 tests/public-domain.test.cjs 釘在這個值上。
+  var publicBaseUrl = 'https://ifoodmap.ai';
 
   // 語系走網址前綴:中文是 /xxx(不帶前綴,維持既有網址不變),英文是 /en/xxx。
   // 前綴是「哪個語系被渲染」的唯一真相 —— 連結才分享得出去、Google 才索引得到英文版。
