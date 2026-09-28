@@ -85,53 +85,59 @@ const MenuUpload = ({ onAnalysisComplete, compact = false }: MenuUploadProps) =>
   };
 
   if (compact) {
-    return (
-      <Card className="p-4 sm:p-6">
-        {!previewUrl ? (
-          <>
-            {/* sr-only 而不是 hidden:鍵盤 Tab 得到,按空白鍵一樣能開選檔 */}
-            <input
-              id="menu-upload"
-              type="file"
-              accept="image/*"
-              onChange={handleFileSelect}
-              className="peer sr-only"
-            />
-            <label
-              htmlFor="menu-upload"
-              className="flex cursor-pointer flex-col items-center gap-3 rounded-xl border-2 border-dashed border-primary/30 px-4 py-10 text-center transition-colors hover:border-primary/60 hover:bg-accent/40 peer-focus-visible:ring-2 peer-focus-visible:ring-ring sm:py-14"
-            >
+    if (!previewUrl) {
+      return (
+        <>
+          {/* sr-only 而不是 hidden:鍵盤 Tab 得到,按 Enter／空白鍵一樣能開選檔 */}
+          <input
+            id="menu-upload"
+            type="file"
+            accept="image/*"
+            onChange={handleFileSelect}
+            className="peer sr-only"
+          />
+          {/* label 本身就是卡片(外框、底色、陰影、內距跟 <Card> 一樣),外框和內距那一圈也點得到 ——
+              不要再包一層 <Card>,那圈內距會變成點了沒反應的死區 */}
+          <label
+            htmlFor="menu-upload"
+            className="group block cursor-pointer rounded-lg border bg-card p-4 text-card-foreground shadow-sm peer-focus-visible:ring-2 peer-focus-visible:ring-ring sm:p-6"
+          >
+            <span className="flex flex-col items-center gap-3 rounded-xl border-2 border-dashed border-primary/30 px-4 py-10 text-center transition-colors group-hover:border-primary/60 group-hover:bg-accent/40 sm:py-14">
               <span className="flex h-14 w-14 items-center justify-center rounded-full bg-primary/10">
                 <Upload className="h-7 w-7 text-primary" />
               </span>
               <span className="text-lg font-semibold">上傳菜單照片</span>
               <span className="text-sm text-muted-foreground">AI 會列出要採購的食材</span>
-            </label>
-          </>
-        ) : (
-          <div className="space-y-4">
-            <img
-              src={previewUrl}
-              alt="菜單預覽"
-              className="max-h-72 w-full rounded-lg bg-muted object-contain sm:max-h-96"
-            />
-            <div className="flex gap-2">
-              <Button variant="outline" size="lg" className="px-4" onClick={clearSelection} disabled={isUploading}>
-                換一張
-              </Button>
-              <Button size="lg" className="flex-1" onClick={handleAnalyze} disabled={isUploading}>
-                {isUploading ? (
-                  <>
-                    <Loader2 className="animate-spin" />
-                    AI 辨識中…
-                  </>
-                ) : (
-                  "開始分析"
-                )}
-              </Button>
-            </div>
+            </span>
+          </label>
+        </>
+      );
+    }
+
+    return (
+      <Card className="p-4 sm:p-6">
+        <div className="space-y-4">
+          <img
+            src={previewUrl}
+            alt="菜單預覽"
+            className="max-h-72 w-full rounded-lg bg-muted object-contain sm:max-h-96"
+          />
+          <div className="flex gap-2">
+            <Button variant="outline" size="lg" className="px-4" onClick={clearSelection} disabled={isUploading}>
+              換一張
+            </Button>
+            <Button size="lg" className="flex-1" onClick={handleAnalyze} disabled={isUploading}>
+              {isUploading ? (
+                <>
+                  <Loader2 className="animate-spin" />
+                  AI 辨識中…
+                </>
+              ) : (
+                "開始分析"
+              )}
+            </Button>
           </div>
-        )}
+        </div>
       </Card>
     );
   }
