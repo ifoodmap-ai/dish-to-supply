@@ -12,6 +12,10 @@ on:
     paths-ignore:
       - "api/**"
       - ".github/workflows/deploy-railway.yml"
+      # 形象站在 landing/,由 landing-deploy.yml 自己部署;只改形象站時不要重建這兩個產品站。
+      # Vercel 的 Git 整合那一路由根目錄 vercel.json 的 ignoreCommand 擋。
+      - "landing/**"
+      - ".github/workflows/landing-deploy.yml"
   workflow_dispatch:
 
 concurrency:

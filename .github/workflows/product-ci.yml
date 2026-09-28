@@ -1,0 +1,86 @@
+name: Product CI
+
+# 產品端(根目錄的 Vite + React,dish-to-supply 與 ifoodmap-admin 共用)的測試與建置檢查。
+# 只檢查、不部署:部署仍由 deploy-vercel.yml 與 Vercel 的 Git 整合負責,這條紅了也不會擋部署。
+# 形象站在 landing/,由 landing-deploy.yml 自己測、自己部署,這裡刻意排除。
+on:
+  push:
+    branches: [main]
+    paths-ignore:
+      - "landing/**"
+      - ".github/workflows/landing-deploy.yml"
+  pull_request:
+    paths-ignore:
+      - "landing/**"
+      - ".github/workflows/landing-deploy.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: product-ci-${{ github.ref }}
+  cancel-in-progress: true
+
+# CI 不連任何正式服務;本機是靠 .env.local。
+env:
+  VITE_SUPABASE_URL: https://ci-placeholder.supabase.co
+  VITE_SUPABASE_PUBLISHABLE_KEY: ci-placeholder-key
+
+jobs:
+  test:
+    name: vitest
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm test
+
+  build:
+    name: build (${{ matrix.portal }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        portal: [main, admin]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run build
+        env:
+          # IS_ADMIN_BUILD = (VITE_PORTAL === "admin");main 給空字串 = 等同不設
+          VITE_PORTAL: ${{ matrix.portal == 'admin' && 'admin' || '' }}
+
+  # tsc / eslint 的舊錯誤先只報告、不擋:數字寫進 job summary,超過基準才出 warning。
+  # 基準(2026-09-28 實測):tsc 125、eslint 12。錯誤歸零後再改成必過,並設為 required check。
+  debt-report:
+    name: tsc / eslint(只報告)
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: tsc(tsconfig.app.json)
+        run: |
+          npx tsc --noEmit -p tsconfig.app.json > tsc.log 2>&1 || true
+          n=$(grep -c 'error TS' tsc.log || true)
+          echo "tsc: $n 個錯誤(基準 125)" | tee -a "$GITHUB_STEP_SUMMARY"
+          [ "$n" -le 125 ] || echo "::warning title=tsc::$n 個錯誤,超過基準 125"
+      - name: eslint
+        run: |
+          npx eslint . -f json -o eslint.json || true
+          n=$(node -p 'require("./eslint.json").reduce((a, f) => a + f.errorCount, 0)')
+          echo "eslint: $n 個錯誤(基準 12)" | tee -a "$GITHUB_STEP_SUMMARY"
+          [ "$n" -le 12 ] || echo "::warning title=eslint::$n 個錯誤,超過基準 12"

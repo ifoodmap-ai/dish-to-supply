@@ -1,4 +1,4 @@
-import { defineConfig } from "vitest/config";
+import { configDefaults, defineConfig } from "vitest/config";
 import react from "@vitejs/plugin-react-swc";
 import path from "path";
 import { componentTagger } from "lovable-tagger";
@@ -22,6 +22,8 @@ export default defineConfig(({ mode }) => ({
     environment: "jsdom",
     setupFiles: ["./src/test/setup.ts"],
     clearMocks: true,
+    // landing/ 是形象站:測試是 node:test 格式的 *.test.cjs,在 landing/ 裡用 npm test 跑,不歸 vitest 管。
+    exclude: [...configDefaults.exclude, "landing/**"],
   },
   resolve: {
     alias: {
