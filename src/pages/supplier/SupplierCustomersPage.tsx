@@ -15,6 +15,19 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
+import { isCountedOrder, orderAmount } from '@/lib/metrics';
+
+/* 這幾張表還沒進 types.ts,沿用專案既有的 cast 慣例,只描述這頁用得到的那一小段 builder */
+type QueryResult<T> = { data: T | null; error: { message: string } | null };
+interface Query<T> extends PromiseLike<QueryResult<T[]>> {
+  select(columns: string): Query<T>;
+  eq(column: string, value: unknown): Query<T>;
+  in(column: string, values: readonly unknown[]): Query<T>;
+  order(column: string, options: { ascending: boolean }): Query<T>;
+  maybeSingle(): PromiseLike<QueryResult<T>>;
+}
+const db = <T,>(table: string): Query<T> =>
+  (supabase as never as { from: (t: string) => Query<T> }).from(table);
 
 interface OrderRow {
   id: string;
@@ -51,8 +64,8 @@ interface Customer {
   atRisk: boolean;
 }
 
-/** 不列入合作紀錄的狀態 */
-const EXCLUDED_STATUSES = new Set<string>(['draft', 'cancelled', 'rejected', 'expired']);
+// 合作紀錄(合作單數、累計訂單金額、最後下單)用全站共用的訂單定義(src/lib/metrics.ts,業主拍板 Q5-A):
+// 不含草稿、取消、拒單、逾時。這是「訂單金額」,包含還沒收貨的單 —— 不是成交(成交要等餐廳確認收貨)。
 
 const DAY_MS = 86_400_000;
 
@@ -87,22 +100,20 @@ export default function SupplierCustomersPage() {
         const { data: { session } } = await supabase.auth.getSession();
         if (!session) { if (!cancelled) setLoading(false); return; }
 
-        const { data: acct } = (await (supabase as never)
-          .from('supplier_accounts')
+        const { data: acct } = await db<{ supplier_id: string }>('supplier_accounts')
           .select('supplier_id')
           .eq('user_id', session.user.id)
           .eq('is_active', true)
-          .maybeSingle()) as { data: { supplier_id: string } | null };
+          .maybeSingle();
 
         const sid = acct?.supplier_id ?? null;
         if (!sid) { if (!cancelled) setLoading(false); return; }
         if (!cancelled) setSupplierId(sid);
 
-        const { data: orderRows } = (await (supabase as never)
-          .from('supplier_orders')
+        const { data: orderRows } = await db<OrderRow>('supplier_orders')
           .select('id, restaurant_id, total_amount, created_at, status')
           .eq('supplier_id', sid)
-          .order('created_at', { ascending: false })) as { data: OrderRow[] | null };
+          .order('created_at', { ascending: false });
         const rows = orderRows ?? [];
 
         const restaurantIds = Array.from(
@@ -110,10 +121,9 @@ export default function SupplierCustomersPage() {
         );
         const map: Record<string, RestaurantRow> = {};
         if (restaurantIds.length > 0) {
-          const { data: rs } = (await (supabase as never)
-            .from('restaurants')
+          const { data: rs } = await db<RestaurantRow>('restaurants')
             .select('id, name, city, cuisine_type, contact_name, contact_phone, contact_line')
-            .in('id', restaurantIds)) as { data: RestaurantRow[] | null };
+            .in('id', restaurantIds);
           (rs ?? []).forEach((r) => { map[r.id] = r; });
         }
 
@@ -121,7 +131,7 @@ export default function SupplierCustomersPage() {
         setOrders(rows);
         setRestaurants(map);
         setUnlinkedCount(
-          rows.filter((o) => !o.restaurant_id && !EXCLUDED_STATUSES.has(o.status ?? '')).length,
+          rows.filter((o) => !o.restaurant_id && isCountedOrder(o.status)).length,
         );
       } catch (e) {
         if (!cancelled) toast.error('載入客戶資料失敗', { description: (e as { message?: string })?.message });
@@ -138,12 +148,12 @@ export default function SupplierCustomersPage() {
 
     orders.forEach((o) => {
       if (!o.restaurant_id) return;
-      if (EXCLUDED_STATUSES.has(o.status ?? '')) return;
+      if (!isCountedOrder(o.status)) return;
       const ts = new Date(o.created_at).getTime();
       if (!Number.isFinite(ts)) return;
       const cur = grouped.get(o.restaurant_id) ?? { times: [], amount: 0 };
       cur.times.push(ts);
-      cur.amount += Number(o.total_amount ?? 0) || 0;
+      cur.amount += orderAmount(o);
       grouped.set(o.restaurant_id, cur);
     });
 
@@ -248,7 +258,7 @@ export default function SupplierCustomersPage() {
               <DollarSign className="h-4 w-4 text-emerald-600" />
             </div>
             <div className="text-2xl font-bold text-emerald-600 tabular-nums">{money(totalRevenue)}</div>
-            <div className="text-xs text-slate-500 mt-0.5">累計成交金額</div>
+            <div className="text-xs text-slate-500 mt-0.5">累計訂單金額</div>
           </CardContent>
         </Card>
         <Card className={riskCount > 0 ? 'border-red-200' : 'border-slate-200'}>
@@ -270,7 +280,7 @@ export default function SupplierCustomersPage() {
             <Store size={40} className="mx-auto mb-3 text-slate-300" />
             <p className="text-slate-600 font-medium mb-1">還沒有合作過的餐廳</p>
             <p className="text-sm text-slate-400 max-w-md mx-auto">
-              完成第一筆訂單後,這裡會自動整理每家餐廳的下單頻率、累計金額與回購狀況。
+              完成第一筆訂單後,這裡會自動整理每家餐廳的下單頻率、累計訂單金額與回購狀況。
             </p>
           </CardContent>
         </Card>
@@ -330,7 +340,7 @@ export default function SupplierCustomersPage() {
                         <p className="text-base font-semibold text-slate-800 tabular-nums">{c.orderCount}</p>
                       </div>
                       <div className="rounded-lg bg-white border border-slate-100 px-3 py-2">
-                        <p className="text-[11px] text-slate-400">累計金額</p>
+                        <p className="text-[11px] text-slate-400">累計訂單金額</p>
                         <p className="text-base font-semibold text-emerald-600 tabular-nums">
                           {money(c.totalAmount)}
                         </p>

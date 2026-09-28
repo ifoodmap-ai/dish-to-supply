@@ -43,6 +43,7 @@ import {
 } from '@/components/ui/table';
 import { supabase } from '@/integrations/supabase/client';
 import { ORDER_STATUS, formatStageAge, isStuck, type OrderStatus } from '@/lib/orders';
+import { countDeals, countOrders, isCountedOrder } from '@/lib/metrics';
 
 /* ---------------------------------------------------------------
  * 新資料表尚未進 types.ts,沿用專案既有的 cast 慣例
@@ -137,11 +138,13 @@ const RANGE_OPTIONS = [
   { value: '180', label: '近 180 天' },
 ];
 
-/** 媒合了但沒成交的狀態(sent 為既有資料的舊「已派發」) */
+/** 派發後供應商沒接單的狀態:待接單、舊資料的已派發、拒單、逾時未回應 */
 const LOST_STATUSES: OrderStatus[] = ['dispatched', 'sent', 'rejected', 'expired'];
 
-/** 視為成交的狀態(completed 為既有資料的舊「已完成」) */
-const WON_STATUSES: OrderStatus[] = ['received', 'reviewed', 'closed', 'completed'];
+// 「已成交」「訂單數」「成交率」用全站共用的定義(src/lib/metrics.ts,業主拍板 Q5-A):
+//   成交 = 餐廳確認收貨之後;訂單 = 不含草稿、取消、拒單、逾時;成交率 = 成交單數 ÷ 訂單數。
+// 上面這組只是「供應商沒接」,不是「沒成交」的全部(還在報價、出貨、待收貨的也都還沒成交),所以標籤叫「未接單」。
+// 未接單裡的拒單、逾時不算訂單,所以「未接單比例」的分母 = 訂單數 + 這些拒單 / 逾時的單(不會超過 100%)。
 
 const CONF_BUCKETS: { key: string; min: number; max: number }[] = [
   { key: '0–50%', min: 0, max: 0.5 },
@@ -351,7 +354,11 @@ export default function AdminMatchQualityPage() {
     toast.success(`已匯出 ${gapAnalysis.gaps.length} 個缺口品項`);
   };
 
-  /* ---------------- 區塊 2:媒合了但沒成交 ---------------- */
+  /* 成交單數 / 訂單數:區塊 2 與區塊 3 共用同一次計算(只有一個呼叫點,改定義時不會漏改其中一格) */
+  const dealCount = useMemo(() => countDeals(orders), [orders]);
+  const orderCount = useMemo(() => countOrders(orders), [orders]);
+
+  /* ---------------- 區塊 2:媒合了但供應商沒接單 ---------------- */
   const lostAnalysis = useMemo(() => {
     const lost = orders
       .filter((o) => LOST_STATUSES.includes(o.status))
@@ -364,19 +371,20 @@ export default function AdminMatchQualityPage() {
     const byStatus = new Map<OrderStatus, number>();
     lost.forEach((o) => byStatus.set(o.status, (byStatus.get(o.status) ?? 0) + 1));
 
-    const won = orders.filter((o) => WON_STATUSES.includes(o.status)).length;
     const stuck = lost.filter((o) => isStuck(o.status, o.current_stage_since)).length;
+    const lostBase = orderCount + lost.filter((o) => !isCountedOrder(o.status)).length;
 
     return {
       lost,
       stuck,
-      won,
-      total: orders.length,
+      won: dealCount,
+      orderCount,
+      lostBase,
       byStatus: [...byStatus.entries()]
         .map(([status, count]) => ({ status, count }))
         .sort((a, b) => b.count - a.count),
     };
-  }, [orders]);
+  }, [orders, dealCount, orderCount]);
 
   /* ---------------- 區塊 3:信心分數校準 ---------------- */
   const calibration = useMemo(() => {
@@ -443,9 +451,10 @@ export default function AdminMatchQualityPage() {
       mode: 'orders' as const,
       dist,
       total: orders.length,
-      won: orders.filter((o) => WON_STATUSES.includes(o.status)).length,
+      won: dealCount,
+      orderCount,
     };
-  }, [matchResults, orders]);
+  }, [matchResults, orders, dealCount, orderCount]);
 
   const coverage = pct(gapAnalysis.coveredItems, gapAnalysis.totalItems);
 
@@ -475,9 +484,9 @@ export default function AdminMatchQualityPage() {
       bg: gapAnalysis.gaps.length > 0 ? 'bg-red-50' : 'bg-emerald-50',
     },
     {
-      title: '派發後未成交',
+      title: '派發後未接單',
       value: lostAnalysis.lost.length,
-      hint: `全部 ${lostAnalysis.total} 筆訂單中`,
+      hint: `訂單 ${lostAnalysis.orderCount} 筆;另有拒單 / 逾時 ${lostAnalysis.lostBase - lostAnalysis.orderCount} 筆`,
       accent: lostAnalysis.lost.length > 0 ? 'text-amber-600' : 'text-slate-800',
       icon: TrendingDown,
       bg: 'bg-amber-50',
@@ -489,7 +498,7 @@ export default function AdminMatchQualityPage() {
     return (
       <div>
         <h1 className="text-2xl font-bold text-slate-800 mb-1">媒合品質監控 (Match Quality)</h1>
-        <p className="text-sm text-slate-500 mb-6">需求接不住的地方在哪、媒合為什麼沒成交</p>
+        <p className="text-sm text-slate-500 mb-6">需求接不住的地方在哪、派發後為什麼沒接單</p>
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-6">
           {Array.from({ length: 4 }).map((_, i) => (
             <Card key={i} className="border-slate-200">
@@ -539,7 +548,7 @@ export default function AdminMatchQualityPage() {
         </div>
       </div>
       <p className="text-sm text-slate-500 mb-6">
-        需求接不住的地方在哪、媒合為什麼沒成交、信心分數準不準
+        需求接不住的地方在哪、派發後為什麼沒接單、信心分數準不準
         {fetchedAt && (
           <span className="text-slate-400"> · 更新於 {fetchedAt.toLocaleTimeString('zh-TW')}</span>
         )}
@@ -701,10 +710,10 @@ export default function AdminMatchQualityPage() {
           </CardContent>
         </Card>
 
-        {/* ---------------- 區塊 2:媒合了但沒成交 ---------------- */}
+        {/* ---------------- 區塊 2:媒合了但供應商沒接單 ---------------- */}
         <Card className="border-slate-200">
           <CardHeader className="pb-3">
-            <CardTitle className="text-base text-slate-700">媒合了但沒成交</CardTitle>
+            <CardTitle className="text-base text-slate-700">媒合了但供應商沒接單</CardTitle>
             <p className="text-xs text-slate-500 mt-1">
               已經派發給供應商、卻停在待接單／被拒單／逾時未回應的訂單 —— 媒合做了,錢沒進來
             </p>
@@ -717,21 +726,24 @@ export default function AdminMatchQualityPage() {
               </div>
             ) : lostAnalysis.lost.length === 0 ? (
               <div className="rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-8 text-center text-sm text-emerald-800">
-                目前沒有卡在派發階段的訂單,{lostAnalysis.total} 筆訂單都有往下走
+                目前沒有卡在派發階段的訂單,{lostAnalysis.orderCount} 筆訂單都有往下走
               </div>
             ) : (
               <>
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-4">
                   <div className="rounded-lg border border-slate-200 bg-white px-4 py-3">
-                    <p className="text-xs text-slate-500">未成交筆數</p>
+                    <p className="text-xs text-slate-500">未接單筆數</p>
                     <p className="text-xl font-bold text-amber-600 tabular-nums">
                       {lostAnalysis.lost.length}
                     </p>
                   </div>
-                  <div className="rounded-lg border border-slate-200 bg-white px-4 py-3">
-                    <p className="text-xs text-slate-500">佔全部訂單</p>
+                  <div
+                    className="rounded-lg border border-slate-200 bg-white px-4 py-3"
+                    title="未接單 ÷(訂單數 + 拒單、逾時的單)"
+                  >
+                    <p className="text-xs text-slate-500">未接單比例</p>
                     <p className="text-xl font-bold text-slate-800 tabular-nums">
-                      {pct(lostAnalysis.lost.length, lostAnalysis.total)}%
+                      {pct(lostAnalysis.lost.length, lostAnalysis.lostBase)}%
                     </p>
                   </div>
                   <div className="rounded-lg border border-slate-200 bg-white px-4 py-3">
@@ -917,8 +929,9 @@ export default function AdminMatchQualityPage() {
             ) : (
               <>
                 <div className="mb-4 rounded-lg border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-600">
-                  目前沒有 match_results 信心分數可校準,以下用 {calibration.total} 筆訂單的狀態分布替代
-                  —— 成交率 {pct(calibration.won, calibration.total)}%
+                  目前沒有 match_results 信心分數可校準,以下用全部 {calibration.total}{' '}
+                  筆單據(含草稿、取消、拒單、逾時)的狀態分布替代 —— 成交率{' '}
+                  {pct(calibration.won, calibration.orderCount)}%(成交單數 ÷ 訂單數)
                 </div>
                 <div className="space-y-2.5">
                   {calibration.dist.map((d) => (

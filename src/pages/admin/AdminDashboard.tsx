@@ -6,6 +6,8 @@
 //     漏斗下方原本的「供應商申請」事件數一起搬到成長分頁的漏斗卡。
 //   - KPI「待審核」→ 跟今日待辦的「待審分析」是同一個數字,只留今日待辦那一個(而且那邊是精確筆數,
 //     這裡的 analysis_records 一次最多讀回 1000 筆)。
+//
+// 「總訂單」用全站共用的訂單定義(src/lib/metrics.ts,業主拍板 Q5-A):不含草稿、取消、拒單、逾時。
 import { useEffect, useMemo, useState } from 'react';
 import { ClipboardList, CheckCircle, Package, Boxes, TrendingUp } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -24,6 +26,7 @@ import {
   Bar,
 } from 'recharts';
 import { supabase } from '@/integrations/supabase/client';
+import { ORDER_STATUSES } from '@/lib/metrics';
 import TodayTodos from './TodayTodos';
 
 interface AnalysisRow {
@@ -41,12 +44,19 @@ const PIE_COLORS = ['#10b981', '#f59e0b', '#3b82f6', '#8b5cf6'];
 type CountRes = { count: number | null; error: { message: string } | null };
 type RowsRes<T> = { data: T[] | null; error: { message: string } | null };
 
+interface CountQuery extends PromiseLike<CountRes> {
+  in(col: string, values: readonly string[]): PromiseLike<CountRes>;
+}
+
 const headCount = (table: string) =>
   (supabase as never as {
-    from: (t: string) => { select: (c: string, o: { count: 'exact'; head: true }) => PromiseLike<CountRes> };
+    from: (t: string) => { select: (c: string, o: { count: 'exact'; head: true }) => CountQuery };
   })
     .from(table)
     .select('id', { count: 'exact', head: true });
+
+/** 總訂單:共用定義的訂單數(不含草稿、取消、拒單、逾時) */
+const orderCount = () => headCount('supplier_orders').in('status', ORDER_STATUSES);
 
 const analysisRows = () =>
   (supabase as never as {
@@ -70,7 +80,7 @@ const AdminDashboard = () => {
     (async () => {
       const [aRes, oRes, suRes] = await Promise.all([
         analysisRows(),
-        headCount('supplier_orders'),
+        orderCount(),
         headCount('supplies'),
       ]);
       setRows(aRes.data ?? []);

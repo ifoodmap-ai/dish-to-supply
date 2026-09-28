@@ -43,6 +43,7 @@ import {
 } from 'recharts';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
+import { isCountedOrder, orderAmount } from '@/lib/metrics';
 
 /**
  * restaurants / restaurant_accounts 尚未進 types.ts,
@@ -133,8 +134,9 @@ const emptyForm: FormState = {
   is_active: true,
 };
 
-/** 不計入累計金額的狀態(取消／過期／被拒) */
-const VOID_STATUSES = ['cancelled', 'expired', 'rejected'];
+// 累計訂單、累計採購金額用全站共用的訂單定義(src/lib/metrics.ts,業主拍板 Q5-A):不含草稿、取消、拒單、逾時。
+// 「最後下單」與活躍度沿用原本的口徑(任何一張單都算,含草稿)—— 這是活躍度、不是金額指標;
+// 要不要也改成只看有效訂單(連同「分眾名單」的沉睡 / 流失一起改)待業主決定。
 
 type Activity = 'active' | 'dormant' | 'churned';
 
@@ -244,9 +246,10 @@ const AdminRestaurantsPage = () => {
     (orderRes.data ?? []).forEach((o) => {
       if (!o.restaurant_id) return;
       const s = ensure(o.restaurant_id);
-      s.orders += 1;
-      if (!VOID_STATUSES.includes(o.status)) s.amount += Number(o.total_amount ?? 0);
       if (!s.lastOrderAt || o.created_at > s.lastOrderAt) s.lastOrderAt = o.created_at;
+      if (!isCountedOrder(o.status)) return;
+      s.orders += 1;
+      s.amount += orderAmount(o);
     });
 
     setRows(restRes.data ?? []);
@@ -481,8 +484,18 @@ const AdminRestaurantsPage = () => {
               <TableHead className="text-slate-600">城市</TableHead>
               <TableHead className="text-slate-600 text-right">成員</TableHead>
               <TableHead className="text-slate-600 text-right">累計訂單</TableHead>
-              <TableHead className="text-slate-600 text-right">累計金額</TableHead>
-              <TableHead className="text-slate-600">最後下單</TableHead>
+              <TableHead
+                className="text-slate-600 text-right"
+                title="採購金額:不含草稿、取消、拒單、逾時(含還沒收貨的單,不是 GMV)"
+              >
+                累計採購金額
+              </TableHead>
+              <TableHead
+                className="text-slate-600"
+                title="任何一張單都算(含草稿、取消、拒單、逾時);活躍度跟著這欄,口徑待業主決定"
+              >
+                最後下單
+              </TableHead>
               <TableHead className="text-slate-600">活躍度</TableHead>
               <TableHead className="text-slate-600 text-center">啟用</TableHead>
               <TableHead className="text-slate-600 text-right">操作</TableHead>

@@ -35,6 +35,7 @@ import {
 } from 'recharts';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
+import { isCountedOrder, isDeal } from '@/lib/metrics';
 
 /**
  * supplier_metrics / supplier_orders 尚未進 types.ts,
@@ -119,8 +120,8 @@ const emptyForm: FormState = {
   is_active: true,
 };
 
-/** 視為「成交」的訂單狀態(已送達之後的階段) */
-const DEAL_STATUSES = ['delivered', 'received', 'reviewed', 'closed', 'completed'];
+// 「成交單數 / 訂單數」用全站共用的定義(src/lib/metrics.ts,業主拍板 Q5-A):
+//   成交 = 餐廳確認收貨之後(delivered 待收貨還不算);訂單 = 不含草稿、取消、拒單、逾時
 
 const startOfWeek = (d: Date) => {
   const x = new Date(d);
@@ -218,10 +219,10 @@ const AdminSuppliersPage = () => {
     });
 
     (orderRes.data ?? []).forEach((o) => {
-      if (!o.supplier_id) return;
+      if (!o.supplier_id || !isCountedOrder(o.status)) return;
       const a = ensure(o.supplier_id);
       a.orders += 1;
-      if (DEAL_STATUSES.includes(o.status)) a.dealOrders += 1;
+      if (isDeal(o.status)) a.dealOrders += 1;
     });
 
     const metricMap: Record<string, MetricRow> = {};
@@ -449,7 +450,12 @@ const AdminSuppliersPage = () => {
               <TableHead className="text-slate-600">供應商</TableHead>
               <TableHead className="text-slate-600">服務區</TableHead>
               <TableHead className="text-slate-600 text-right">上架品項</TableHead>
-              <TableHead className="text-slate-600 text-right">成交單數</TableHead>
+              <TableHead
+                className="text-slate-600 text-right"
+                title="成交 = 餐廳確認收貨之後;訂單不含草稿、取消、拒單、逾時"
+              >
+                成交單數 / 訂單數
+              </TableHead>
               <TableHead className="text-slate-600 text-right">準時率</TableHead>
               <TableHead className="text-slate-600 text-right">評分</TableHead>
               <TableHead className="text-slate-600 text-center">上架</TableHead>

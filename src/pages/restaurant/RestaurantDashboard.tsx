@@ -34,6 +34,7 @@ import {
   formatStageAge,
   type OrderStatus,
 } from "@/lib/orders";
+import { countedOrders, orderAmount } from "@/lib/metrics";
 
 interface OrderRow {
   id: string;
@@ -49,8 +50,8 @@ interface SupplierRow {
   name: string;
 }
 
-/** 不計入採購金額 / 合作供應商的狀態 */
-const VOID_STATUS: OrderStatus[] = ["cancelled", "rejected", "expired", "draft"];
+// 採購金額、採購單數、合作供應商、每日趨勢都用全站共用的訂單定義(src/lib/metrics.ts,業主拍板 Q5-A):
+// 不含草稿、取消、拒單、逾時;還沒收貨的單也算採購(採購金額 ≠ 成交)。
 
 const TWD = (n: number) => `NT$ ${Math.round(n).toLocaleString("zh-TW")}`;
 
@@ -164,7 +165,7 @@ const RestaurantDashboard = () => {
   }, [account.restaurant_id]);
 
   const stats = useMemo(() => {
-    const valid = orders.filter((o) => !VOID_STATUS.includes(o.status));
+    const valid = countedOrders(orders);
 
     const now = new Date();
     const thisMonthStart = new Date(now.getFullYear(), now.getMonth(), 1).getTime();
@@ -177,7 +178,7 @@ const RestaurantDashboard = () => {
 
     valid.forEach((o) => {
       const t = new Date(o.created_at).getTime();
-      const amount = Number(o.total_amount ?? 0);
+      const amount = orderAmount(o);
       if (t >= thisMonthStart) {
         thisMonth += amount;
         thisMonthCount += 1;
@@ -212,7 +213,7 @@ const RestaurantDashboard = () => {
       const key = dayKey(new Date(o.created_at));
       const b = buckets.get(key);
       if (b) {
-        b.amount += Number(o.total_amount ?? 0);
+        b.amount += orderAmount(o);
         b.count += 1;
       }
     });

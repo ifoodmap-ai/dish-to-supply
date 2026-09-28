@@ -10,6 +10,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { supabase } from "@/integrations/supabase/client";
 import { useRestaurant, canSeeCost } from "@/components/RestaurantRoute";
 import { ORDER_STATUS, type OrderStatus } from "@/lib/orders";
+import { countedOrders, orderAmount } from "@/lib/metrics";
 
 /* ── 新資料表不在 types.ts,沿用專案的 loose cast 慣例 ─────────────── */
 type Result<T> = { data: T[] | null; error: { message: string } | null };
@@ -67,6 +68,10 @@ interface Partner {
 /** 展開績效時列出的近期訂單張數 */
 const RECENT_LIMIT = 5;
 
+// 「合作」= 全站共用的訂單定義(src/lib/metrics.ts,業主拍板 Q5-A):不含草稿、取消、拒單、逾時。
+// 合作供應商、累計訂單、累計採購金額、最近合作、近期合作清單都只看這些單,
+// 跟營運總覽的「合作供應商」「本月採購金額」同一個口徑;供應商端「客戶管理」看到的累計訂單金額也是同一組單。
+
 const statusLabel = (status: string) => ORDER_STATUS[status as OrderStatus]?.label ?? status;
 
 /** 比率可能存 0–1 或 0–100,統一換算成百分比 */
@@ -101,11 +106,11 @@ const RestaurantSuppliersPage = () => {
         .limit(500);
 
       const grouped = new Map<string, { orders: number; amount: number; lastAt: string | null; recent: RecentOrder[] }>();
-      (orders ?? []).forEach((o) => {
+      countedOrders(orders ?? []).forEach((o) => {
         if (!o.supplier_id) return;
         const cur = grouped.get(o.supplier_id) ?? { orders: 0, amount: 0, lastAt: null, recent: [] };
         cur.orders += 1;
-        cur.amount += o.total_amount != null ? Number(o.total_amount) : 0;
+        cur.amount += orderAmount(o);
         if (!cur.lastAt || new Date(o.created_at) > new Date(cur.lastAt)) cur.lastAt = o.created_at;
         cur.recent.push({ id: o.id, status: o.status, created_at: o.created_at });
         grouped.set(o.supplier_id, cur);
@@ -218,7 +223,7 @@ const RestaurantSuppliersPage = () => {
             {showCost && (
               <Card>
                 <CardContent className="pt-6">
-                  <p className="text-xs text-slate-500">累計金額</p>
+                  <p className="text-xs text-slate-500">累計採購金額</p>
                   <p className="text-2xl font-bold text-slate-800 mt-1">
                     {totals.amount > 0 ? money(totals.amount) : "—"}
                   </p>
@@ -279,7 +284,7 @@ const RestaurantSuppliersPage = () => {
                       </div>
                       {showCost && (
                         <div>
-                          <p className="text-[11px] text-slate-400">累計金額</p>
+                          <p className="text-[11px] text-slate-400">累計採購金額</p>
                           <p className="text-sm font-semibold text-slate-800">
                             {p.amount > 0 ? money(p.amount) : "—"}
                           </p>

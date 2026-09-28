@@ -29,6 +29,18 @@ import {
   Legend,
 } from 'recharts';
 import { supabase } from '@/integrations/supabase/client';
+import {
+  GMV_STATUSES,
+  averageDealAmount,
+  countedOrders,
+  dealOrders,
+  dealRecognizedAt,
+  firstDealEventAt,
+  localMonthKey,
+  orderAmount,
+  pricedDeals,
+  sumGmv,
+} from '@/lib/metrics';
 
 /* ---------------------------------------------------------------
  * 新資料表尚未進 types.ts,沿用專案既有的 cast 慣例
@@ -64,6 +76,7 @@ interface OrderRow {
 
 interface EventRow {
   order_id: string;
+  to_status: string;
   created_at: string;
 }
 
@@ -93,10 +106,8 @@ const MIN_NPS = 10;
 /** PostgREST 單次查詢的預設上限;達到就代表資料可能被截斷,數字不可信 */
 const ROW_CAP = 1000;
 
-/** 不算「有下單」的狀態 */
-const NOT_PLACED = new Set(['draft', 'cancelled']);
-/** 視為已收貨(含收貨之後的階段)的狀態 —— GMV 只認這些 */
-const RECEIVED_STATUSES = new Set(['received', 'reviewed', 'closed', 'completed']);
+// 「有下單」與「成交 / GMV」都用全站共用的定義(src/lib/metrics.ts,業主拍板 Q5-A):
+//   有下單 = 訂單(不含草稿、取消、拒單、逾時);成交 = 餐廳確認收貨之後(received / reviewed / closed / completed)
 
 const FUNNEL_APP_STAGES: { event: string; label: string }[] = [
   { event: 'analysis_started', label: '開始分析' },
@@ -109,13 +120,8 @@ const FUNNEL_APP_STAGES: { event: string; label: string }[] = [
 /* ------------------------------ 小工具 ------------------------------ */
 const pad2 = (n: number) => String(n).padStart(2, '0');
 
-/** ISO 字串 → 當地時區的 'YYYY-MM' */
-const monthKeyOf = (iso: string | null | undefined): string | null => {
-  if (!iso) return null;
-  const d = new Date(iso);
-  if (Number.isNaN(d.getTime())) return null;
-  return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}`;
-};
+/** ISO 字串 → 當地時區的 'YYYY-MM'(跟營收頁同一個函式) */
+const monthKeyOf = localMonthKey;
 
 const monthIndexOf = (key: string) => Number(key.slice(0, 4)) * 12 + (Number(key.slice(5, 7)) - 1);
 const keyOfIndex = (idx: number) => `${Math.floor(idx / 12)}-${pad2((idx % 12) + 1)}`;
@@ -216,7 +222,7 @@ export default function AdminGrowthPage() {
   const [restaurants, setRestaurants] = useState<EntityRow[]>([]);
   const [suppliers, setSuppliers] = useState<EntityRow[]>([]);
   const [orders, setOrders] = useState<OrderRow[]>([]);
-  const [receivedEvents, setReceivedEvents] = useState<EventRow[]>([]);
+  const [dealEvents, setDealEvents] = useState<EventRow[]>([]);
   const [npsRows, setNpsRows] = useState<NpsRow[]>([]);
   const [appEvents, setAppEvents] = useState<AppEventRow[]>([]);
   const [warnings, setWarnings] = useState<string[]>([]);
@@ -234,7 +240,8 @@ export default function AdminGrowthPage() {
       table<EntityRow>('restaurants').select('id, created_at'),
       table<EntityRow>('suppliers').select('id, created_at'),
       table<OrderRow>('supplier_orders').select('id, restaurant_id, status, total_amount, created_at'),
-      table<EventRow>('order_events').select('order_id, created_at').eq('to_status', 'received'),
+      // 成交歸月用「第一次進入成交狀態」的時間(通常是餐廳按下收貨)
+      table<EventRow>('order_events').select('order_id, to_status, created_at').in('to_status', GMV_STATUSES),
       table<NpsRow>('nps_responses').select('score, audience, created_at'),
       table<AppEventRow>('app_events').select('event'),
     ]);
@@ -271,7 +278,7 @@ export default function AdminGrowthPage() {
     setRestaurants(restRes.data ?? []);
     setSuppliers(supRes.data ?? []);
     setOrders(orderRes.data ?? []);
-    setReceivedEvents(evRes.data ?? []);
+    setDealEvents(evRes.data ?? []);
     setNpsRows(npsRes.data ?? []);
     setAppEvents(appRes.data ?? []);
     setWarnings(warn);
@@ -307,25 +314,17 @@ export default function AdminGrowthPage() {
       return d != null && d <= 30;
     }).length;
 
-    /* 2) GMV —— 只認「餐廳按下收貨」的訂單 */
-    const receivedAt = new Map<string, string>();
-    receivedEvents.forEach((e) => {
-      const prev = receivedAt.get(e.order_id);
-      if (!prev || e.created_at < prev) receivedAt.set(e.order_id, e.created_at);
-    });
-
-    const receivedOrders = orders.filter(
-      (o) => receivedAt.has(o.id) || RECEIVED_STATUSES.has(o.status),
-    );
-    const amountOf = (o: OrderRow) => Number(o.total_amount) || 0;
-    const gmvMonthOf = (o: OrderRow) => monthKeyOf(receivedAt.get(o.id) ?? o.created_at);
+    /* 2) GMV —— 只認成交(餐廳確認收貨之後)的訂單,歸到第一次進入成交狀態的月份 */
+    const firstDealAt = firstDealEventAt(dealEvents);
+    const deals = dealOrders(orders);
+    const recognizedAtOf = (o: OrderRow) => dealRecognizedAt(o, firstDealAt);
 
     const gmvByMonth = new Map<string, { gmv: number; count: number }>();
-    receivedOrders.forEach((o) => {
-      const k = gmvMonthOf(o);
+    deals.forEach((o) => {
+      const k = monthKeyOf(recognizedAtOf(o));
       if (!k) return;
       const cur = gmvByMonth.get(k) ?? { gmv: 0, count: 0 };
-      cur.gmv += amountOf(o);
+      cur.gmv += orderAmount(o);
       cur.count += 1;
       gmvByMonth.set(k, cur);
     });
@@ -335,18 +334,18 @@ export default function AdminGrowthPage() {
       count: gmvByMonth.get(k)?.count ?? 0,
     }));
 
-    const gmvTotal = receivedOrders.reduce((s, o) => s + amountOf(o), 0);
-    const gmv30 = receivedOrders
-      .filter((o) => {
-        const d = daysSince(receivedAt.get(o.id) ?? o.created_at);
+    const gmvTotal = sumGmv(orders);
+    const gmv30 = sumGmv(
+      deals.filter((o) => {
+        const d = daysSince(recognizedAtOf(o));
         return d != null && d <= 30;
-      })
-      .reduce((s, o) => s + amountOf(o), 0);
-    const pricedOrders = receivedOrders.filter((o) => amountOf(o) > 0);
-    const aov = pricedOrders.length > 0 ? gmvTotal / pricedOrders.length : 0;
+      }),
+    );
+    const pricedCount = pricedDeals(orders).length;
+    const aov = averageDealAmount(orders);
 
     /* 3) 複購率 + 下單次數分布 */
-    const placed = orders.filter((o) => !NOT_PLACED.has(o.status));
+    const placed = countedOrders(orders);
     const placedWithRestaurant = placed.filter((o) => !!o.restaurant_id);
     const orphanOrders = placed.length - placedWithRestaurant.length;
 
@@ -455,7 +454,7 @@ export default function AdminGrowthPage() {
       {
         key: 'order_received',
         label: '完成收貨',
-        count: receivedOrders.length,
+        count: deals.length,
         source: 'supplier_orders',
       },
     ];
@@ -475,8 +474,8 @@ export default function AdminGrowthPage() {
       gmvTotal,
       gmv30,
       aov,
-      receivedCount: receivedOrders.length,
-      pricedCount: pricedOrders.length,
+      dealCount: deals.length,
+      pricedCount,
       placedCount: placed.length,
       orphanOrders,
       buyers,
@@ -494,7 +493,7 @@ export default function AdminGrowthPage() {
       funnelBase,
       supplierApplied,
     };
-  }, [restaurants, suppliers, orders, receivedEvents, npsRows, appEvents]);
+  }, [restaurants, suppliers, orders, dealEvents, npsRows, appEvents]);
 
   /* --------------------------- 指標卡 --------------------------- */
   const metrics = [
@@ -527,19 +526,20 @@ export default function AdminGrowthPage() {
       accent: 'text-emerald-600',
       bg: 'bg-emerald-50',
       value: money(derived.gmvTotal),
-      sub: `近 30 天 ${money(derived.gmv30)} · ${derived.receivedCount} 筆已收貨`,
-      formula: 'Σ 已收貨訂單 total_amount(以餐廳按下「收貨」的時間歸月,未報價金額以 0 計)',
-      insufficient: derived.receivedCount === 0,
+      sub: `近 30 天 ${money(derived.gmv30)} · ${derived.dealCount} 筆成交`,
+      formula:
+        'Σ 成交訂單 total_amount(成交 = 餐廳確認收貨之後;以第一次進入成交狀態的時間歸月,未報價金額以 0 計)',
+      insufficient: derived.dealCount === 0,
     },
     {
       key: 'aov',
-      title: '平均訂單金額 (AOV)',
+      title: '平均成交金額 (AOV)',
       icon: Receipt,
       accent: 'text-slate-700',
       bg: 'bg-slate-100',
       value: money(derived.aov),
-      sub: `樣本 ${derived.pricedCount} 筆有金額的已收貨訂單`,
-      formula: '累計 GMV ÷ 有金額(>0)的已收貨訂單數',
+      sub: `樣本 ${derived.pricedCount} 筆有金額的成交訂單`,
+      formula: '累計 GMV ÷ 有金額(>0)的成交訂單數',
       insufficient: derived.pricedCount === 0,
     },
     {
@@ -550,7 +550,7 @@ export default function AdminGrowthPage() {
       bg: 'bg-purple-50',
       value: derived.repeatRate == null ? '—' : pct1(derived.repeatRate),
       sub: `${derived.repeaters} / ${derived.buyers} 家下過單的餐廳`,
-      formula: `下過 ≥2 單的餐廳 ÷ 下過 ≥1 單的餐廳(排除草稿與取消單);樣本需 ≥${MIN_BUYERS} 家`,
+      formula: `下過 ≥2 單的餐廳 ÷ 下過 ≥1 單的餐廳(排除草稿、取消、拒單、逾時);樣本需 ≥${MIN_BUYERS} 家`,
       insufficient: derived.buyers < MIN_BUYERS,
     },
     {
@@ -780,18 +780,18 @@ export default function AdminGrowthPage() {
         {/* GMV 趨勢 */}
         <Card className="border-slate-200 lg:col-span-2">
           <CardHeader className="pb-2">
-            <CardTitle className="text-base text-slate-700">GMV 月趨勢 · 已收貨訂單</CardTitle>
+            <CardTitle className="text-base text-slate-700">GMV 月趨勢 · 成交訂單</CardTitle>
             <FormulaNote>
-              只認餐廳按下「收貨」的訂單(order_events.to_status = received;舊資料以訂單狀態
-              received/reviewed/closed/completed 認列),金額取
+              成交 = 餐廳確認收貨之後(訂單狀態 received/reviewed/closed/completed,全站同一個定義);
+              歸到第一次進入成交狀態的月份(order_events,舊資料沒有事件就用建立時間),金額取
               supplier_orders.total_amount
             </FormulaNote>
           </CardHeader>
           <CardContent>
             {loading ? (
               <Skeleton className="h-[260px] w-full" />
-            ) : derived.receivedCount === 0 ? (
-              <EmptyHint>尚無已收貨的訂單,GMV 還沒有可信的樣本</EmptyHint>
+            ) : derived.dealCount === 0 ? (
+              <EmptyHint>尚無成交(餐廳確認收貨)的訂單,GMV 還沒有可信的樣本</EmptyHint>
             ) : (
               <>
                 <ResponsiveContainer width="100%" height={260}>
@@ -826,7 +826,7 @@ export default function AdminGrowthPage() {
                       yAxisId="right"
                       type="monotone"
                       dataKey="count"
-                      name="已收貨訂單數"
+                      name="成交單數"
                       stroke="#f59e0b"
                       strokeWidth={2}
                       dot={{ r: 2 }}
@@ -835,7 +835,7 @@ export default function AdminGrowthPage() {
                 </ResponsiveContainer>
                 {derived.gmvTotal === 0 && (
                   <p className="mt-2 text-xs text-amber-600">
-                    已收貨 {derived.receivedCount} 筆,但這些訂單都還沒有金額(total_amount
+                    成交 {derived.dealCount} 筆,但這些訂單都還沒有金額(total_amount
                     為空),GMV 目前無法認列
                   </p>
                 )}
@@ -849,7 +849,7 @@ export default function AdminGrowthPage() {
           <CardHeader className="pb-2">
             <CardTitle className="text-base text-slate-700">下單次數分布</CardTitle>
             <FormulaNote>
-              以餐廳為單位統計下單筆數(排除 draft / cancelled);複購率 = 2 單以上的餐廳佔比
+              以餐廳為單位統計下單筆數(只算訂單:排除草稿、取消、拒單、逾時);複購率 = 2 單以上的餐廳佔比
             </FormulaNote>
           </CardHeader>
           <CardContent>
@@ -992,8 +992,8 @@ export default function AdminGrowthPage() {
             </CardTitle>
             <FormulaNote>
               前 5 段來自前台埋點 app_events(以「開始分析」為分母);後 2
-              段來自 supplier_orders 實際單數(成立訂單 = 排除草稿與取消;完成收貨 =
-              餐廳按下收貨)。兩段資料來源不同,轉換率僅供趨勢參考
+              段來自 supplier_orders 實際單數(成立訂單 = 排除草稿、取消、拒單、逾時;完成收貨 =
+              成交,餐廳確認收貨之後)。兩段資料來源不同,轉換率僅供趨勢參考
             </FormulaNote>
           </CardHeader>
           <CardContent>

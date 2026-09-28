@@ -138,7 +138,13 @@ describe("RestaurantSuppliersPage —「查看」改成就地展開績效", () =
     renderPage();
 
     const card = await cardOf("鮮綠農產");
+    // 標籤已改名為「累計採購金額」(全站共用定義);兩個都查,改名後這條才不會變成永遠通過
+    expect(within(card).queryByText("累計採購金額")).toBeNull();
     expect(within(card).queryByText("累計金額")).toBeNull();
+    expect(within(card).queryByText(/^\$/)).toBeNull(); // 卡片上不出現任何金額
+    // 頁首彙總卡也不能出現金額
+    expect(screen.queryByText("累計採購金額")).toBeNull();
+    expect(screen.queryByText(/^\$/)).toBeNull();
     await user.click(within(card).getByRole("button", { name: "查看績效" }));
     expect(screen.getByRole("region", { name: "鮮綠農產 的績效明細" })).toBeInTheDocument();
   });

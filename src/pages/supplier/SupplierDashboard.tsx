@@ -33,6 +33,25 @@ import {
   isStuck,
   type OrderStatus,
 } from '@/lib/orders';
+import {
+  dealRecognizedAt,
+  firstDealEventAt,
+  isCountedOrder,
+  isDeal,
+  orderAmount,
+} from '@/lib/metrics';
+
+/* 這幾張表還沒進 types.ts,沿用專案既有的 cast 慣例,只描述這頁用得到的那一小段 builder */
+type QueryResult<T> = { data: T | null; error: { message: string } | null; count?: number | null };
+interface Query<T> extends PromiseLike<QueryResult<T[]>> {
+  select(columns: string, options?: { count: 'exact'; head: true }): Query<T>;
+  eq(column: string, value: unknown): Query<T>;
+  in(column: string, values: readonly unknown[]): Query<T>;
+  order(column: string, options: { ascending: boolean }): Query<T>;
+  maybeSingle(): PromiseLike<QueryResult<T>>;
+}
+const db = <T,>(table: string): Query<T> =>
+  (supabase as never as { from: (t: string) => Query<T> }).from(table);
 
 interface OrderRow {
   id: string;
@@ -60,14 +79,14 @@ interface PipelineRow {
   created_at: string;
 }
 
-/** 已成交(餐廳確認報價之後)的狀態 */
-const DEAL_STATUSES = new Set<string>([
-  'confirmed', 'shipped', 'in_transit', 'delivered', 'received', 'reviewed', 'closed', 'completed',
-]);
+// 「本月成交額」與成交趨勢用全站共用的成交定義(src/lib/metrics.ts,業主拍板 Q5-A):
+// 餐廳確認收貨之後才算(received / reviewed / closed / completed),算在第一次進入成交狀態的那一天。
+// 餐廳確認報價(confirmed)、出貨、待收貨都還不是成交。
 
-/** 代表供應商已回覆過的狀態 */
+/** 代表供應商已回覆過的狀態(接單 / 報價 / 拒單,以及之後的所有階段) */
 const RESPONDED_STATUSES = new Set<string>([
-  'accepted', 'quoted', 'rejected', ...DEAL_STATUSES,
+  'accepted', 'quoted', 'rejected',
+  'confirmed', 'shipped', 'in_transit', 'delivered', 'received', 'reviewed', 'closed', 'completed',
 ]);
 
 /** 代表這張單已經派到供應商手上 */
@@ -112,47 +131,42 @@ export default function SupplierDashboard() {
         const { data: { session } } = await supabase.auth.getSession();
         if (!session) { if (!cancelled) setLoading(false); return; }
 
-        const { data: acct } = (await (supabase as never)
-          .from('supplier_accounts')
+        const { data: acct } = await db<{ supplier_id: string }>('supplier_accounts')
           .select('supplier_id')
           .eq('user_id', session.user.id)
           .eq('is_active', true)
-          .maybeSingle()) as { data: { supplier_id: string } | null };
+          .maybeSingle();
 
         const sid = acct?.supplier_id ?? null;
         if (!sid) { if (!cancelled) setLoading(false); return; }
         if (!cancelled) setSupplierId(sid);
 
         const [orderRes, pipeRes, leadRes] = await Promise.all([
-          (supabase as never)
-            .from('supplier_orders')
+          db<OrderRow>('supplier_orders')
             .select('id, status, total_amount, created_at, restaurant_id, current_stage_since')
             .eq('supplier_id', sid)
             .order('created_at', { ascending: false }),
-          (supabase as never)
-            .from('order_pipeline')
+          db<PipelineRow>('order_pipeline')
             .select('id, status, restaurant_id, total_amount, current_stage_since, hours_in_stage, sla_hours, created_at')
             .eq('supplier_id', sid),
-          (supabase as never)
-            .from('supplier_leads')
+          db<{ id: string }>('supplier_leads')
             .select('id', { count: 'exact', head: true })
             .eq('supplier_id', sid)
             .eq('status', 'new'),
         ]);
 
-        const orderRows = ((orderRes as { data: OrderRow[] | null }).data) ?? [];
-        const pipeRows = ((pipeRes as { data: PipelineRow[] | null }).data) ?? [];
-        const leadCount = (leadRes as { count: number | null }).count ?? 0;
+        const orderRows = orderRes.data ?? [];
+        const pipeRows = pipeRes.data ?? [];
+        const leadCount = leadRes.count ?? 0;
 
         // 訂單事件(算回覆時間 / 成交時間點用)
         let eventRows: EventRow[] = [];
         const orderIds = orderRows.map((o) => o.id);
         if (orderIds.length > 0) {
-          const { data: ev } = (await (supabase as never)
-            .from('order_events')
+          const { data: ev } = await db<EventRow>('order_events')
             .select('order_id, to_status, created_at')
             .in('order_id', orderIds)
-            .order('created_at', { ascending: true })) as { data: EventRow[] | null };
+            .order('created_at', { ascending: true });
           eventRows = ev ?? [];
         }
 
@@ -162,10 +176,9 @@ export default function SupplierDashboard() {
         );
         const nameMap: Record<string, string> = {};
         if (restaurantIds.length > 0) {
-          const { data: rs } = (await (supabase as never)
-            .from('restaurants')
+          const { data: rs } = await db<{ id: string; name: string }>('restaurants')
             .select('id, name')
-            .in('id', restaurantIds)) as { data: { id: string; name: string }[] | null };
+            .in('id', restaurantIds);
           (rs ?? []).forEach((r) => { nameMap[r.id] = r.name; });
         }
 
@@ -203,15 +216,14 @@ export default function SupplierDashboard() {
       return hits.length > 0 ? Math.min(...hits) : null;
     };
 
-    // ── 成交(含金額與時間) ─────────────────────────────
+    // ── 成交(含金額與時間):餐廳確認收貨之後才算,算在第一次進入成交狀態的時間 ──
+    const firstDealAt = firstDealEventAt(events);
     const deals: { at: number; amount: number }[] = [];
     orders.forEach((o) => {
-      const evDealAt = earliestOf(o.id, [...DEAL_STATUSES]);
-      const isDeal = evDealAt != null || DEAL_STATUSES.has(o.status ?? '');
-      if (!isDeal) return;
-      const at = evDealAt ?? new Date(o.created_at).getTime();
+      if (!isDeal(o.status)) return;
+      const at = Date.parse(dealRecognizedAt(o, firstDealAt));
       if (!Number.isFinite(at)) return;
-      deals.push({ at, amount: Number(o.total_amount ?? 0) || 0 });
+      deals.push({ at, amount: orderAmount(o) });
     });
 
     const now = new Date();
@@ -248,7 +260,7 @@ export default function SupplierDashboard() {
     const byRestaurant = new Map<string, number[]>();
     orders.forEach((o) => {
       if (!o.restaurant_id) return;
-      if (['draft', 'cancelled', 'rejected', 'expired'].includes(o.status ?? '')) return;
+      if (!isCountedOrder(o.status)) return;
       const ts = new Date(o.created_at).getTime();
       if (!Number.isFinite(ts)) return;
       const list = byRestaurant.get(o.restaurant_id) ?? [];
@@ -444,7 +456,7 @@ export default function SupplierDashboard() {
               <div className="h-[240px] flex flex-col items-center justify-center text-slate-400 text-sm">
                 <Inbox size={36} className="mb-3 opacity-30" />
                 <p>近 30 天還沒有成交紀錄</p>
-                <p className="text-xs mt-1">完成報價並由餐廳確認後,金額會顯示在這裡</p>
+                <p className="text-xs mt-1">餐廳確認收貨之後,這筆金額才算成交、顯示在這裡</p>
               </div>
             ) : (
               <ResponsiveContainer width="100%" height={240}>
@@ -578,7 +590,7 @@ export default function SupplierDashboard() {
       </div>
 
       <p className="text-[11px] text-slate-400 text-right mt-4">
-        成交額與回覆時間皆以訂單事件履歷 (order_events) 計算
+        成交額只算餐廳確認收貨的訂單,並算在確認收貨的那一天;成交額與回覆時間皆以訂單事件履歷 (order_events) 計算
       </p>
     </div>
   );

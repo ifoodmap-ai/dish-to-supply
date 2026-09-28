@@ -37,6 +37,19 @@ import {
 } from '@/components/ui/table';
 import { supabase } from '@/integrations/supabase/client';
 import { ORDER_STATUS, type OrderStatus } from '@/lib/orders';
+import {
+  GMV_STATUSES,
+  averageDealAmount,
+  dealOrders,
+  dealRecognizedAt,
+  firstDealEventAt,
+  inProgressOrders,
+  localMonthKey,
+  orderAmount,
+  sumGmv,
+  sumInProgressAmount,
+  type StatusEventRow,
+} from '@/lib/metrics';
 
 /* ---------------------------------------------------------------
  * 新資料表尚未進 types.ts,沿用專案既有的 cast 慣例
@@ -83,13 +96,19 @@ interface MonthBucket {
   month: string;
   label: string;
   gmv: number;
+  /** 成交單數 */
   orders: number;
+  /** 有金額的成交單數(平均成交金額的分母) */
+  priced: number;
   paid: number;
 }
 
 /* ------------------------------ constants ------------------------------ */
-/** 認列 GMV 的狀態:餐廳確認收貨之後才算數(completed 為既有資料的舊「已完成」) */
-const GMV_STATUSES: OrderStatus[] = ['received', 'reviewed', 'closed', 'completed'];
+// GMV(成交)的定義在 src/lib/metrics.ts(業主拍板 Q5-A):餐廳確認收貨之後才算
+// (received / reviewed / closed / completed),並歸到第一次進入成交狀態的月份(本地時區)。
+
+/** PostgREST 單次查詢的預設上限;達到就代表資料可能被截斷(跟成長分頁同一個門檻) */
+const ROW_CAP = 1000;
 
 const DEFAULT_RATE = 3;
 const MIN_RATE = 3;
@@ -108,6 +127,9 @@ export default function AdminRevenuePage() {
   const navigate = useNavigate();
 
   const [orders, setOrders] = useState<OrderRow[]>([]);
+  const [dealEvents, setDealEvents] = useState<StatusEventRow[]>([]);
+  const [eventsError, setEventsError] = useState<string | null>(null);
+  const [capWarnings, setCapWarnings] = useState<string[]>([]);
   const [payments, setPayments] = useState<PaymentRow[] | null>(null);
   const [restaurantMap, setRestaurantMap] = useState<Record<string, string>>({});
   const [supplierMap, setSupplierMap] = useState<Record<string, string>>({});
@@ -122,10 +144,14 @@ export default function AdminRevenuePage() {
     else setLoading(true);
     setLoadError(null);
 
-    const [oRes, pRes, restRes, supRes] = await Promise.all([
+    const [oRes, evRes, pRes, restRes, supRes] = await Promise.all([
       table<OrderRow>('supplier_orders').select(
         'id, status, restaurant_id, supplier_id, total_amount, created_at',
       ),
+      // 成交算在哪個月:第一次進入成交狀態的時間(通常是餐廳按下收貨)
+      table<StatusEventRow>('order_events')
+        .select('order_id, to_status, created_at')
+        .in('to_status', GMV_STATUSES),
       table<PaymentRow>('order_payments').select(
         'id, order_id, amount, status, method, paid_at, created_at',
       ),
@@ -143,6 +169,18 @@ export default function AdminRevenuePage() {
     }
 
     setOrders(oRes.data ?? []);
+    // 事件讀不到時,成交月份退回用訂單建立時間(dealRecognizedAt 的後備),並在頁面上註明
+    setDealEvents(evRes.error ? [] : evRes.data ?? []);
+    setEventsError(evRes.error ? evRes.error.message : null);
+    // 單次查詢達上限 → 數字會被低估 / 部分成交月份退回建立時間,寧可明講
+    setCapWarnings(
+      ([
+        ['supplier_orders', oRes.data?.length ?? 0, 'GMV 與筆數可能被低估'],
+        ['order_events', evRes.data?.length ?? 0, '部分成交單的月份會退回用建立時間'],
+      ] as [string, number, string][])
+        .filter(([, n]) => n >= ROW_CAP)
+        .map(([t, , affected]) => `${t} 單次查詢已達 ${ROW_CAP} 筆上限,${affected},需改為後端彙總`),
+    );
     // order_payments 不存在或無權限時 → null,金流欄位顯示「—」
     setPayments(pRes.error ? null : pRes.data ?? []);
 
@@ -167,9 +205,18 @@ export default function AdminRevenuePage() {
   }, [fetchData]);
 
   /* ---------------- GMV ---------------- */
-  const gmvOrders = useMemo(
-    () => orders.filter((o) => GMV_STATUSES.includes(o.status)),
-    [orders],
+  const gmvOrders = useMemo(() => dealOrders(orders), [orders]);
+
+  /** 每張成交單算在什麼時間 */
+  const recognizedAt = useMemo(() => {
+    const first = firstDealEventAt(dealEvents);
+    const map = new Map<string, string>();
+    gmvOrders.forEach((o) => map.set(o.id, dealRecognizedAt(o, first)));
+    return map;
+  }, [dealEvents, gmvOrders]);
+  const recognizedAtOf = useCallback(
+    (o: OrderRow) => recognizedAt.get(o.id) ?? o.created_at,
+    [recognizedAt],
   );
 
   const paidByOrder = useMemo(() => {
@@ -185,16 +232,20 @@ export default function AdminRevenuePage() {
   const months = useMemo<MonthBucket[]>(() => {
     const byMonth = new Map<string, MonthBucket>();
     gmvOrders.forEach((o) => {
-      const ym = o.created_at.slice(0, 7);
+      const ym = localMonthKey(recognizedAtOf(o));
+      if (!ym) return;
       const b =
-        byMonth.get(ym) ?? { month: ym, label: monthLabel(ym), gmv: 0, orders: 0, paid: 0 };
-      b.gmv += Number(o.total_amount) || 0;
+        byMonth.get(ym) ??
+        { month: ym, label: monthLabel(ym), gmv: 0, orders: 0, priced: 0, paid: 0 };
+      const amount = orderAmount(o);
+      b.gmv += amount;
       b.orders += 1;
+      if (amount > 0) b.priced += 1;
       b.paid += paidByOrder.get(o.id) ?? 0;
       byMonth.set(ym, b);
     });
     return [...byMonth.values()].sort((a, b) => a.month.localeCompare(b.month));
-  }, [gmvOrders, paidByOrder]);
+  }, [gmvOrders, paidByOrder, recognizedAtOf]);
 
   const chartData = useMemo(
     () =>
@@ -207,18 +258,18 @@ export default function AdminRevenuePage() {
   );
 
   const stats = useMemo(() => {
-    const thisMonth = new Date().toISOString().slice(0, 7);
-    const totalGmv = gmvOrders.reduce((s, o) => s + (Number(o.total_amount) || 0), 0);
+    const thisMonth = localMonthKey(new Date().toISOString()) ?? '';
+    const totalGmv = sumGmv(orders);
     const monthGmv = months.find((m) => m.month === thisMonth)?.gmv ?? 0;
     const monthOrders = months.find((m) => m.month === thisMonth)?.orders ?? 0;
-    const avgOrder = gmvOrders.length > 0 ? totalGmv / gmvOrders.length : 0;
-    // 尚未認列 GMV 的在途訂單(已報價但還沒收貨)
-    const pipelineAmount = orders
-      .filter((o) => !GMV_STATUSES.includes(o.status))
-      .reduce((s, o) => s + (Number(o.total_amount) || 0), 0);
+    // 平均成交金額:分母只算有金額的成交單(跟成長分頁的 AOV 同一個函式)
+    const avgOrder = averageDealAmount(orders);
+    // 在途:有效訂單但餐廳還沒確認收貨(不含草稿、取消、拒單、逾時)
+    const pipelineAmount = sumInProgressAmount(orders);
+    const pipelineCount = inProgressOrders(orders).length;
 
-    return { totalGmv, monthGmv, monthOrders, avgOrder, pipelineAmount, thisMonth };
-  }, [gmvOrders, months, orders]);
+    return { totalGmv, monthGmv, monthOrders, avgOrder, pipelineAmount, pipelineCount, thisMonth };
+  }, [months, orders]);
 
   const paymentStats = useMemo(() => {
     if (payments == null) return null;
@@ -243,16 +294,16 @@ export default function AdminRevenuePage() {
   const recent = useMemo(
     () =>
       [...gmvOrders]
-        .sort((a, b) => b.created_at.localeCompare(a.created_at))
+        .sort((a, b) => Date.parse(recognizedAtOf(b)) - Date.parse(recognizedAtOf(a)))
         .slice(0, 10),
-    [gmvOrders],
+    [gmvOrders, recognizedAtOf],
   );
 
   const kpis = [
     {
       title: '本月 GMV',
       value: money(stats.monthGmv),
-      hint: `${stats.monthOrders} 筆已收貨訂單`,
+      hint: `${stats.monthOrders} 筆成交(本月確認收貨)`,
       icon: CalendarDays,
       accent: 'text-emerald-600',
       bg: 'bg-emerald-50',
@@ -260,7 +311,7 @@ export default function AdminRevenuePage() {
     {
       title: '累計 GMV',
       value: money(stats.totalGmv),
-      hint: `${gmvOrders.length} 筆已收貨訂單`,
+      hint: `${gmvOrders.length} 筆成交`,
       icon: ShoppingBag,
       accent: 'text-slate-800',
       bg: 'bg-slate-100',
@@ -274,9 +325,9 @@ export default function AdminRevenuePage() {
       bg: 'bg-blue-50',
     },
     {
-      title: '平均客單價',
+      title: '平均成交金額',
       value: money(stats.avgOrder),
-      hint: '已收貨訂單的平均金額',
+      hint: '成交訂單的平均金額(不含還沒填金額的單)',
       icon: Coins,
       accent: 'text-purple-600',
       bg: 'bg-purple-50',
@@ -320,11 +371,23 @@ export default function AdminRevenuePage() {
         </Button>
       </div>
       <p className="text-sm text-slate-500 mb-6">
-        GMV 只認列餐廳已確認收貨的訂單(已收貨／已評價／已結案)
+        GMV(成交金額)只認列餐廳確認收貨之後的訂單(待評價／已評價／已結案,含舊資料的已完成),
+        算在確認收貨的月份
         {fetchedAt && (
           <span className="text-slate-400"> · 更新於 {fetchedAt.toLocaleTimeString('zh-TW')}</span>
         )}
       </p>
+
+      {eventsError && (
+        <p className="mb-4 text-xs text-amber-700">
+          訂單事件讀取失敗,成交月份暫以訂單建立時間認列({eventsError})
+        </p>
+      )}
+      {capWarnings.map((w) => (
+        <p key={w} className="mb-2 text-xs text-amber-700">
+          {w}
+        </p>
+      ))}
 
       {loadError && (
         <div className="mb-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3">
@@ -357,10 +420,10 @@ export default function AdminRevenuePage() {
             <Inbox className="h-10 w-10 mx-auto mb-3 opacity-40" />
             <p className="text-sm text-slate-500 font-medium">還沒有可認列 GMV 的訂單</p>
             <p className="text-xs mt-1.5 max-w-md mx-auto leading-relaxed">
-              訂單要走到「餐廳確認收貨」才會計入 GMV。目前有 {orders.length} 筆訂單在流程中
+              訂單要走到「餐廳確認收貨」才會計入 GMV。目前有 {stats.pipelineCount} 筆訂單在途(還沒確認收貨)
               {stats.pipelineAmount > 0 && `,在途金額 ${money(stats.pipelineAmount)}`}。
             </p>
-            {orders.length > 0 && (
+            {stats.pipelineCount > 0 && (
               <Button
                 variant="outline"
                 size="sm"
@@ -518,12 +581,12 @@ export default function AdminRevenuePage() {
                   <TableHeader>
                     <TableRow className="bg-slate-50">
                       <TableHead className="text-slate-600">月份</TableHead>
-                      <TableHead className="text-slate-600 text-right">訂單數</TableHead>
+                      <TableHead className="text-slate-600 text-right">成交單數</TableHead>
                       <TableHead className="text-slate-600 text-right">GMV</TableHead>
                       <TableHead className="text-slate-600 text-right">
                         抽成試算 {rate.toFixed(1)}%
                       </TableHead>
-                      <TableHead className="text-slate-600 text-right">平均客單價</TableHead>
+                      <TableHead className="text-slate-600 text-right">平均成交金額</TableHead>
                       <TableHead className="text-slate-600 text-right">已收款</TableHead>
                     </TableRow>
                   </TableHeader>
@@ -551,7 +614,7 @@ export default function AdminRevenuePage() {
                           {money((m.gmv * rate) / 100)}
                         </TableCell>
                         <TableCell className="text-right text-sm text-slate-600 tabular-nums whitespace-nowrap">
-                          {money(m.orders > 0 ? m.gmv / m.orders : 0)}
+                          {money(m.priced > 0 ? m.gmv / m.priced : 0)}
                         </TableCell>
                         <TableCell className="text-right text-sm text-slate-600 tabular-nums whitespace-nowrap">
                           {payments == null ? '—' : money(m.paid)}
@@ -633,7 +696,7 @@ export default function AdminRevenuePage() {
                           </Badge>
                         </TableCell>
                         <TableCell className="text-right text-sm text-slate-800 tabular-nums whitespace-nowrap">
-                          {money(Number(o.total_amount) || 0)}
+                          {money(orderAmount(o))}
                         </TableCell>
                         <TableCell className="text-right text-sm text-slate-600 tabular-nums whitespace-nowrap">
                           {payments == null ? '—' : money(paidByOrder.get(o.id) ?? 0)}
