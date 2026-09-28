@@ -67,7 +67,6 @@ import SupplierOrdersPage from "./pages/supplier/SupplierOrdersPage";
 import SupplierShipmentsPage from "./pages/supplier/SupplierShipmentsPage";
 import SupplierCatalogPage from "./pages/supplier/SupplierCatalogPage";
 import SupplierQuotesPage from "./pages/supplier/SupplierQuotesPage";
-import SupplierLogisticsPage from "./pages/supplier/SupplierLogisticsPage";
 import SupplierLeadsPage from "./pages/supplier/SupplierLeadsPage";
 import SupplierPricingPage from "./pages/supplier/SupplierPricingPage";
 import SupplierForecastPage from "./pages/supplier/SupplierForecastPage";
@@ -169,7 +168,8 @@ const MainRoutes = () => (
       <Route path="pricing" element={<SupplierPricingPage />} />
       <Route path="forecast" element={<SupplierForecastPage />} />
       <Route path="customers" element={<SupplierCustomersPage />} />
-      <Route path="logistics" element={<SupplierLogisticsPage />} />
+      {/* 後台精簡第一期:物流追蹤併入出貨(同表同篩選的真重複,見 PROPOSAL.md §3),轉址到新分頁 */}
+      <Route path="logistics" element={<Navigate to="/supplier/shipments" replace />} />
       <Route path="shipments" element={<SupplierShipmentsPage />} />
       <Route path="reviews" element={<SupplierReviewsPage />} />
     </Route>
