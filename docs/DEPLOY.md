@@ -78,7 +78,7 @@ https://ifoodmap-landing.vercel.app 的原始碼在 `landing/`:純靜態頁 + `l
   `landing/tests/deploy-workflow.test.cjs` 有擋。
 - **12/31 排程**:cron `5 16 31 12 *`(UTC)= 台北每年 1/1 00:05 自動重建一次,只重跑預渲染、不 commit ——
   頁尾年份是程式算的,但不跑 JavaScript 的爬蟲讀的是預渲染時烤進 HTML 的年份。排程只在 main 上跑,`paths` 對排程無效。
-  手動重建:`gh workflow run landing-deploy.yml -R ifoodmap-ai/dish-to-supply`。
+  手動重建:`gh workflow run landing-deploy.yml -R ifoodmap-ai/ifoodmap-ai`。
 - 🔴 **Vercel 上 `ifoodmap-landing` 專案的 Root Directory 必須保持空白**:workflow 已經在 `landing/` 裡跑 `vercel build`,
   改成 `landing` 的話 CLI 會去找 `landing/landing`,建置直接失敗。
 - 預渲染用到全域 `WebSocket`,Node 必須 ≥ 22;workflow 固定 24(= Vercel 專案的 function runtime)。

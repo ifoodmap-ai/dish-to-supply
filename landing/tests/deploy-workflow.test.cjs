@@ -3,7 +3,7 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');
 
-// 2026-09-28 起形象站住在 ifoodmap-ai/dish-to-supply 的 landing/,部署 workflow 在 repo 根目錄。
+// 2026-09-28 起形象站住在 ifoodmap-ai/ifoodmap-ai 的 landing/,部署 workflow 在 repo 根目錄。
 // 產品端(根目錄)有自己的 deploy-vercel.yml / product-ci.yml,兩邊靠路徑過濾互不觸發。
 const wf = fs.readFileSync(path.join(__dirname, '..', '..', '.github/workflows/landing-deploy.yml'), 'utf8');
 
