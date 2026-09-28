@@ -561,7 +561,8 @@ const READY_PROBE = `(() => {
   if (!document.title) return { ready: false, why: '沒有 title' };
   // 首頁統計數字要跑完（0 → 3,000+）。卡在 0 就是 rAF 沒跑完，再等。
   const stats = [...document.querySelectorAll('.mc-statnum')].map((e) => e.textContent.trim());
-  if (stats.length && stats.some((t) => /^0\+?$/.test(t))) return { ready: false, why: '統計數字還停在 0（' + stats.join('/') + '）' };
+  // 數字後面可能帶單位(0+家、0+筆)—— 只看開頭那個數字是不是 0,不要要求整串剛好等於「0+」
+  if (stats.length && stats.some((t) => /^0(?![\d,.])/.test(t))) return { ready: false, why: '統計數字還停在 0（' + stats.join('/') + '）' };
   return { ready: true };
 })()`;
 

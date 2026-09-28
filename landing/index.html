@@ -810,8 +810,8 @@
     <section class="ifm-v2" style="border-bottom:1px solid #E6EAE7">
       <div class="mc-stats" ref="{{ statsRef }}" style="max-width:1240px;margin:0 auto;padding:0 26px;display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr))">
         <sc-for list="{{ stats }}" as="s" hint-placeholder-count="4">
-          <div class="mc-statcell2" style="padding:34px 22px 34px 0">
-            <div class="mc-statnum" style="font-family:'Space Grotesk',sans-serif;font-size:32px;font-weight:700">{{ s.num }}</div>
+          <div class="mc-statcell2" style="padding:34px 12px;text-align:center">
+            <div class="mc-statnum" style="font-family:'Space Grotesk',sans-serif;font-size:32px;font-weight:700">{{ s.num }}<span class="mc-statunit" style="font-family:'Noto Sans TC',sans-serif;font-size:.56em;font-weight:700;margin-left:.22em">{{ s.unit }}</span></div>
             <div class="mc-statlabel" style="font-size:13px;color:#4B5A52;margin-top:6px">{{ s.label }}</div>
           </div>
         </sc-for>
@@ -1945,7 +1945,7 @@
       </div>
     </div>
     <div style="border-top:1px solid rgba(255,255,255,.1)">
-      <div style="max-width:1240px;margin:0 auto;padding:18px 26px;font-family:'Space Grotesk',sans-serif;font-size:12px;color:#71867A">© 2026 iFoodMap</div>
+      <div style="max-width:1240px;margin:0 auto;padding:18px 26px;font-family:'Space Grotesk',sans-serif;font-size:12px;color:#71867A;letter-spacing:.04em">{{ copyrightText }}</div>
     </div>
   </footer>
 
@@ -1991,7 +1991,10 @@ class Component extends DCLogic {
       ? window.IfmRouting.pathToRoute(window.location.pathname).slug
       : null,
     tick: 0,
-    countP: 0,
+    // 預渲染時直接是終點(1),不跑 0 → 目標值的動畫。靜態 HTML 是給不跑 JS 的爬蟲看的,
+    // 烤到動畫的哪一格不能靠時機賭:2026-09-28 加了單位(家/筆/項)之後,就緒檢查認不得「0+家」,
+    // 結果 AI 爬蟲讀到的是「0+ 家合作供應商」。真實訪客(沒有 __IFM_PRERENDERING)照舊從 0 跳上去。
+    countP: typeof window !== 'undefined' && window.__IFM_PRERENDERING ? 1 : 0,
     cw: typeof window !== 'undefined' ? window.innerWidth : 1200,
     menuOpen: false,
     // 語系提示條在這一頁被收掉了(按了切換、按了 ×、或按了 header 的語言鈕)。
@@ -2104,6 +2107,7 @@ class Component extends DCLogic {
   /* ---------- 首頁:統計數字 0 → 目標值 ---------- */
   watchStats() {
     if (this.counted || this.state.page !== 'home') return;
+    if (typeof window !== 'undefined' && window.__IFM_PRERENDERING) { this.counted = true; return; }
     setTimeout(() => this.runCount(), 500);
   }
   runCount() {
@@ -2711,6 +2715,11 @@ class Component extends DCLogic {
       // 但 href 沒帶的話,在 /legal/terms 或 /news/<slug> 上右鍵開新分頁、cmd+click 與爬蟲
       // 會被丟到 /en/legal、/en/news 這種列表頁 —— 畫面上點起來正常,所以很難發現。
       langHref: href2(page, this.state.slug, otherLang),
+      // 年份每次渲染時算,不寫死。訪客看到的是瀏覽器當下的年份;爬蟲讀的是預渲染時烤進去的年份,
+      // 所以 deploy.yml 每年 1/1 會自動重建一次(見那裡的 schedule)。
+      copyrightText: i18n && L.footer && L.footer.copyright
+        ? i18n.format(L.footer.copyright, { year: new Date().getFullYear() })
+        : '©' + new Date().getFullYear() + ' iFoodmap',
       langLabel: otherLang === 'en' ? (L.meta && L.meta.langSwitchToEn) : (L.meta && L.meta.langSwitchToZh),
       langAria: L.meta && L.meta.langSwitchLabel,
       langTag: otherLang === 'en' ? 'en' : 'zh-Hant',
@@ -2735,14 +2744,17 @@ class Component extends DCLogic {
       openAI: (event) => this.openAI(event),
       submitPartnership: (event) => this.submitPartnership(event),
       heroPromises: list('heroPromises'),
+      // 數字是業主提供的實際數據(2026-09-28),不再標「示意」。單位(家/筆/項)在字典的 statsUnits,
+      // 英文沒有量詞所以是空字串、名詞放在標籤裡。捲到這裡才從 0 跳到目標值;預渲染烤的是最終值。
       stats: [
-        { target: 3000, suffix: '+' },
-        { target: 12000, suffix: '+' },
-        { target: 28, suffix: '' },
-        { text: D.statsNationwide || '' },
+        { target: 800, suffix: '+' },
+        { target: 20000, suffix: '+' },
+        { target: 6500, suffix: '+' },
+        { target: 50000, suffix: '+' },
       ].map((s, i) => ({
         label: list('stats')[i] || '',
-        num: s.text ? s.text : Math.round(s.target * p).toLocaleString('en-US') + s.suffix,
+        unit: list('statsUnits')[i] || '',
+        num: Math.round(s.target * p).toLocaleString('en-US') + s.suffix,
       })),
       audiences: list('audiences').map((a, i) => ({
         no: NO_LABELS[i], title: a.title, desc: a.desc,
@@ -2979,7 +2991,7 @@ class Component extends DCLogic {
 
   /* 統計數字：原本被 .m-grid-1 塌成 1 欄（4 格 = 0.7 螢幕），改回 2 欄 */
   .mc-stats      { grid-template-columns: 1fr 1fr !important; padding: 0 18px !important; }
-  .mc-statcell2  { padding: 16px 10px 16px 0 !important; }
+  .mc-statcell2  { padding: 16px 8px !important; }   /* 左右要對稱,不然置中的數字會偏左 */
   .mc-statnum    { font-size: 26px !important; }
   .mc-statlabel  { margin-top: 2px !important; line-height: 1.4 !important; }
 

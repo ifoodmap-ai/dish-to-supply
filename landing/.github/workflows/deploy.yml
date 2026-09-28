@@ -4,6 +4,12 @@ on:
   push:
     branches: [main]
   workflow_dispatch:
+  # 每年 1/1 00:05(台北)自動重建一次:頁尾版權年份是程式算的,訪客永遠看到當年;
+  # 但爬蟲讀的是預渲染時烤進靜態 HTML 的年份,不重建就會停在去年。
+  # ⚠️ 這是公開 repo:GitHub 會在「60 天沒有任何活動」時自動停用排程。被停用的話,
+  #    訪客看到的年份仍然正確,只有爬蟲看到的年份要等下次推版才更新。
+  schedule:
+    - cron: '5 16 31 12 *'
 
 concurrency:
   group: vercel-prod

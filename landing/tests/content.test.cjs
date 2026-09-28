@@ -61,11 +61,14 @@ const approvedCases = [
 
 function assertHomeMetricsAndWorkflow(fragment, data) {
   // 數字目標仍在元件原始碼(不是文案);標籤與六步流程的文字已搬進字典
-  for (const metric of ["target: 3000, suffix: '+'", "target: 12000, suffix: '+'", "target: 28"]) {
+  // 業主 2026-09-28 提供的實際數據(不再標「示意」)
+  for (const metric of ["target: 800, suffix: '+'", "target: 20000, suffix: '+'", "target: 6500, suffix: '+'", "target: 50000, suffix: '+'"]) {
     assert.ok(fragment.includes(metric), `missing metric ${metric}`);
   }
-  assert.deepEqual(data.stats, ['合作供應商（示意）', '累積媒合需求（示意）', '食材分類', '配送涵蓋']);
-  assert.equal(data.statsNationwide, '全台');
+  assert.deepEqual(data.stats, ['合作供應商', '累積媒合需求', '服務餐飲及食品業者', '食材與食品品項']);
+  assert.deepEqual(data.statsUnits, ['家', '筆', '家', '項']);
+  assert.equal(data.statsNationwide, undefined, 'statsNationwide 已經沒有人用,不要留孤兒 key');
+  assert.ok(!data.stats.some((l) => /示意/.test(l)), '數字已是實際數據,標籤不該再標示意');
   assert.deepEqual(
     data.flow.map((step) => step.title),
     ['填需求', '系統媒合', '收到報價', '比較洽談', '下單進貨', '雙邊評價'],
@@ -405,7 +408,10 @@ test('mobile menu mirrors desktop destinations and the legacy drawer is no longe
 });
 
 test('content guards fail when home metrics or home workflow are removed', () => {
-  assert.throws(() => assertHomeMetricsAndWorkflow(component.replace("target: 12000, suffix: '+'", ''), homeData));
+  assert.throws(() => assertHomeMetricsAndWorkflow(component.replace("target: 20000, suffix: '+'", ''), homeData));
+  // 標籤被改回「示意」、或單位被拿掉,守門也要叫
+  assert.throws(() => assertHomeMetricsAndWorkflow(component, { ...homeData, stats: homeData.stats.map((l, i) => (i ? l : l + '（示意）')) }));
+  assert.throws(() => assertHomeMetricsAndWorkflow(component, { ...homeData, statsUnits: undefined }));
   const renamedStep = {
     ...homeData,
     flow: homeData.flow.map((step) => (step.title === '系統媒合' ? { ...step, title: '媒合' } : step)),

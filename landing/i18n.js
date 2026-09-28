@@ -104,12 +104,17 @@
             "平均 4 小時有回覆"
           ],
           "stats": [
-            "合作供應商（示意）",
-            "累積媒合需求（示意）",
-            "食材分類",
-            "配送涵蓋"
+            "合作供應商",
+            "累積媒合需求",
+            "服務餐飲及食品業者",
+            "食材與食品品項"
           ],
-          "statsNationwide": "全台",
+          "statsUnits": [
+            "家",
+            "筆",
+            "家",
+            "項"
+          ],
           "audiences": [
             {
               "title": "餐廳・餐酒館",
@@ -530,7 +535,8 @@
         "socialLineAria": "加入 iFoodmap 客服 LINE@（另開新視窗）",
         "socialFollowLabel": "追蹤我們",
         "socialFacebookAria": "在 Facebook 追蹤 iFoodmap（另開新視窗）",
-        "sep": "｜"
+        "sep": "｜",
+        "copyright": "©{year} by ifoodmap 食材地圖 All rights are reserved."
       },
       "meta": {
         "siteName": "iFoodmap 食材地圖",
@@ -748,12 +754,17 @@
             "Avg. 4-hour reply"
           ],
           "stats": [
-            "Partner suppliers (illustrative)",
-            "Requests matched (illustrative)",
-            "Ingredient categories",
-            "Delivery coverage"
+            "Partner suppliers",
+            "Requests matched",
+            "F&B and food businesses served",
+            "Ingredients and food products"
           ],
-          "statsNationwide": "Nationwide",
+          "statsUnits": [
+            "",
+            "",
+            "",
+            ""
+          ],
           "audiences": [
             {
               "title": "Restaurants & Bistros",
@@ -1174,7 +1185,8 @@
         "socialLineAria": "Add the iFoodmap customer-service LINE@ account (opens in a new window)",
         "socialFollowLabel": "Follow us",
         "socialFacebookAria": "Follow iFoodmap on Facebook (opens in a new window)",
-        "sep": ": "
+        "sep": ": ",
+        "copyright": "©{year} by ifoodmap All rights are reserved."
       },
       "meta": {
         "siteName": "iFoodmap",
