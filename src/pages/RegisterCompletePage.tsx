@@ -9,6 +9,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { Loader2, CheckCircle2, AlertTriangle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import PublicHeader from "@/components/PublicHeader";
 import { supabase } from "@/integrations/supabase/client";
 
 type Phase = "working" | "done" | "no-session" | "failed";
@@ -101,51 +102,54 @@ const RegisterCompletePage = () => {
   }, [navigate]);
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-slate-50 to-white flex items-center justify-center px-4">
-      <Card className="p-8 max-w-md w-full text-center">
-        {phase === "working" && (
-          <>
-            <Loader2 className="h-9 w-9 animate-spin text-emerald-600 mx-auto mb-4" />
-            <h1 className="text-lg font-semibold text-slate-900">正在完成註冊</h1>
-            <p className="text-sm text-slate-500 mt-2">信箱已驗證,正在為你建立餐廳資料…</p>
-          </>
-        )}
+    <div className="min-h-screen bg-gradient-to-b from-slate-50 to-white flex flex-col px-4 sm:px-6">
+      <PublicHeader className="pt-3" />
+      <main className="flex flex-1 items-center justify-center py-12">
+        <Card className="p-8 max-w-md w-full text-center">
+          {phase === "working" && (
+            <>
+              <Loader2 className="h-9 w-9 animate-spin text-emerald-600 mx-auto mb-4" />
+              <h1 className="text-lg font-semibold text-slate-900">正在完成註冊</h1>
+              <p className="text-sm text-slate-500 mt-2">信箱已驗證,正在為你建立餐廳資料…</p>
+            </>
+          )}
 
-        {phase === "done" && (
-          <>
-            <CheckCircle2 className="h-10 w-10 text-emerald-600 mx-auto mb-4" />
-            <h1 className="text-lg font-semibold text-slate-900">註冊完成</h1>
-            <p className="text-sm text-slate-500 mt-2">正在帶你進入餐廳後台…</p>
-          </>
-        )}
+          {phase === "done" && (
+            <>
+              <CheckCircle2 className="h-10 w-10 text-emerald-600 mx-auto mb-4" />
+              <h1 className="text-lg font-semibold text-slate-900">註冊完成</h1>
+              <p className="text-sm text-slate-500 mt-2">正在帶你進入餐廳後台…</p>
+            </>
+          )}
 
-        {phase === "no-session" && (
-          <>
-            <AlertTriangle className="h-10 w-10 text-amber-500 mx-auto mb-4" />
-            <h1 className="text-lg font-semibold text-slate-900">連結已失效</h1>
-            <p className="text-sm text-slate-500 mt-2 mb-5">
-              確認連結可能已經過期或被使用過。請直接用你註冊的帳號密碼登入。
-            </p>
-            <Button asChild className="w-full"><Link to="/">前往登入</Link></Button>
-          </>
-        )}
+          {phase === "no-session" && (
+            <>
+              <AlertTriangle className="h-10 w-10 text-amber-500 mx-auto mb-4" />
+              <h1 className="text-lg font-semibold text-slate-900">連結已失效</h1>
+              <p className="text-sm text-slate-500 mt-2 mb-5">
+                確認連結可能已經過期或被使用過。請直接用你註冊的帳號密碼登入。
+              </p>
+              <Button asChild className="w-full"><Link to="/">前往登入</Link></Button>
+            </>
+          )}
 
-        {phase === "failed" && (
-          <>
-            <AlertTriangle className="h-10 w-10 text-red-500 mx-auto mb-4" />
-            <h1 className="text-lg font-semibold text-slate-900">還差一步</h1>
-            <p className="text-sm text-slate-500 mt-2 mb-5">{detail}</p>
-            <div className="flex gap-2">
-              <Button asChild variant="outline" className="flex-1">
-                <Link to="/">回登入頁</Link>
-              </Button>
-              <Button asChild className="flex-1">
-                <Link to="/register/restaurant">回註冊頁</Link>
-              </Button>
-            </div>
-          </>
-        )}
-      </Card>
+          {phase === "failed" && (
+            <>
+              <AlertTriangle className="h-10 w-10 text-red-500 mx-auto mb-4" />
+              <h1 className="text-lg font-semibold text-slate-900">還差一步</h1>
+              <p className="text-sm text-slate-500 mt-2 mb-5">{detail}</p>
+              <div className="flex gap-2">
+                <Button asChild variant="outline" className="flex-1">
+                  <Link to="/">回登入頁</Link>
+                </Button>
+                <Button asChild className="flex-1">
+                  <Link to="/register/restaurant">回註冊頁</Link>
+                </Button>
+              </div>
+            </>
+          )}
+        </Card>
+      </main>
     </div>
   );
 };

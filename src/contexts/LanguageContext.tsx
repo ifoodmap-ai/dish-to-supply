@@ -121,6 +121,10 @@ const translations = {
     'buyers.markets': 'Markets of Experience',
     'buyers.brands': 'Sourced Brands',
     'buyers.viewMore': 'View More',
+
+    // Public pages header (logo + link back to the landing site)
+    'public.homeAria': 'Back to the iFoodmap homepage',
+    'public.backHome': 'Back to home',
   },
   zh: {
     // Hero
@@ -232,6 +236,10 @@ const translations = {
     'buyers.markets': '經驗市場',
     'buyers.brands': '合作品牌',
     'buyers.viewMore': '看更多',
+
+    // 公開頁頁首(logo + 回形象站首頁)
+    'public.homeAria': '回到 iFoodmap 食材地圖首頁',
+    'public.backHome': '回首頁',
   },
 };
 

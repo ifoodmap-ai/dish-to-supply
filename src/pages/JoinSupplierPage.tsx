@@ -9,6 +9,9 @@ import { Store, Sparkles, ClipboardList, CheckCircle2, Loader2 } from "lucide-re
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { track } from "@/lib/analytics";
+import { landingHomeUrl } from "@/lib/site";
+import { useLanguage } from "@/contexts/LanguageContext";
+import PublicHeader from "@/components/PublicHeader";
 
 const sellingPoints = [
   {
@@ -31,6 +34,7 @@ const sellingPoints = [
 const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 const JoinSupplierPage = () => {
+  const { language } = useLanguage();
   const [companyName, setCompanyName] = useState("");
   const [contactName, setContactName] = useState("");
   const [contactEmail, setContactEmail] = useState("");
@@ -91,7 +95,8 @@ const JoinSupplierPage = () => {
 
   return (
     <div className="min-h-screen bg-background">
-      <div className="container px-4 py-12 md:py-16 mx-auto max-w-5xl">
+      <PublicHeader className="max-w-5xl px-4 pt-3" />
+      <main className="container px-4 py-12 md:py-16 mx-auto max-w-5xl">
         {/* Hero */}
         <div className="text-center space-y-4 mb-12">
           <h1 className="text-3xl md:text-5xl font-bold tracking-tight">
@@ -128,8 +133,9 @@ const JoinSupplierPage = () => {
               審核通過後將以 Email 通知,請留意您的收件匣。
             </p>
             <div className="pt-2">
+              {/* 申請者還沒有帳號,產品站的 `/` 是登入頁對他沒用 —— 回形象站首頁 */}
               <Button variant="hero" asChild>
-                <Link to="/">返回首頁</Link>
+                <a href={landingHomeUrl(language)}>返回首頁</a>
               </Button>
             </div>
           </Card>
@@ -253,7 +259,7 @@ const JoinSupplierPage = () => {
             </form>
           </Card>
         )}
-      </div>
+      </main>
     </div>
   );
 };

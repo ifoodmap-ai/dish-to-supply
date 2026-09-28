@@ -13,6 +13,7 @@ import { Card } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "sonner";
 import { useLanguage } from "@/contexts/LanguageContext";
+import PublicHeader from "@/components/PublicHeader";
 import {
   UtensilsCrossed, Truck, Shield, Eye, EyeOff, Loader2, ArrowLeft, Check, Globe,
 } from "lucide-react";
@@ -173,22 +174,25 @@ const LoginPortal = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-slate-50 to-white flex flex-col">
-      <div className="flex justify-end px-4 pt-4">
-        <button
-          type="button"
-          onClick={() => setLanguage(language === "zh" ? "en" : "zh")}
-          className="flex items-center gap-1.5 text-sm text-slate-500 hover:text-slate-800 px-3 py-1.5 rounded-md hover:bg-slate-100 transition-colors"
-        >
-          <Globe className="h-4 w-4" />
-          {language === "zh" ? "English" : "繁體中文"}
-        </button>
-      </div>
+      {/* logo 已在頁首(連回形象站首頁),內文不再重複放一次 */}
+      <PublicHeader
+        className="px-4 pt-3 sm:px-6"
+        actions={
+          <button
+            type="button"
+            onClick={() => setLanguage(language === "zh" ? "en" : "zh")}
+            className="inline-flex min-h-11 items-center gap-1.5 rounded-md px-3 text-sm text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600 focus-visible:ring-offset-2"
+          >
+            {/* 手機上省掉地球圖示,英文模式頁首才排得進一行 */}
+            <Globe className="hidden h-4 w-4 sm:block" />
+            {language === "zh" ? "English" : "繁體中文"}
+          </button>
+        }
+      />
 
       <main className="flex-1 flex flex-col items-center justify-center px-4 py-12">
         <div className="w-full max-w-3xl">
           <div className="text-center mb-10">
-            <img src="/logo.png" alt="iFoodmap" className="h-10 mx-auto mb-4"
-                 onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = "none"; }} />
             <h1 className="text-2xl md:text-3xl font-bold text-slate-900">
               {IS_ADMIN_BUILD ? "iFoodmap 平台營運後台" : "登入 iFoodmap"}
             </h1>

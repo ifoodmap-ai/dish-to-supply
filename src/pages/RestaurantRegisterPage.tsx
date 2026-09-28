@@ -16,6 +16,7 @@ import {
   ShoppingBasket,
 } from "lucide-react";
 import { toast } from "sonner";
+import PublicHeader from "@/components/PublicHeader";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -242,24 +243,11 @@ const RestaurantRegisterPage = () => {
   };
 
   return (
-    <main className="min-h-screen overflow-x-hidden bg-gradient-to-b from-emerald-50/70 via-white to-slate-50 px-4 py-8 text-slate-900 sm:px-6 lg:py-12">
-      <div className="mx-auto grid w-full max-w-6xl gap-8 lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)] lg:items-center lg:gap-14">
+    <div className="min-h-screen overflow-x-hidden bg-gradient-to-b from-emerald-50/70 via-white to-slate-50 px-4 text-slate-900 sm:px-6">
+      <PublicHeader className="pt-3 sm:pt-4" />
+      <main className="mx-auto grid w-full max-w-6xl gap-8 py-8 lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)] lg:items-center lg:gap-14 lg:py-12">
         <section className="mx-auto w-full max-w-xl lg:mx-0">
-          <Link
-            to="/"
-            className="inline-flex min-h-11 items-center rounded-md px-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600 focus-visible:ring-offset-2"
-            aria-label="返回 iFoodmap 登入平台"
-          >
-            <img
-              src="/logo.png"
-              alt="iFoodmap"
-              width="192"
-              height="56"
-              className="h-10 w-auto max-w-full object-contain"
-            />
-          </Link>
-
-          <div className="mt-8">
+          <div>
             <p className="text-sm font-semibold tracking-wide text-emerald-700">
               餐廳採購，從今天開始更簡單
             </p>
@@ -479,8 +467,8 @@ const RestaurantRegisterPage = () => {
             </Link>
           </p>
         </Card>
-      </div>
-    </main>
+      </main>
+    </div>
   );
 };
 

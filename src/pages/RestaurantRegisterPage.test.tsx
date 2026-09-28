@@ -54,6 +54,8 @@ vi.mock("@/contexts/LanguageContext", () => ({
   useLanguage: () => ({
     language: "zh",
     setLanguage: vi.fn(),
+    // 共用頁首(PublicHeader)會用 t();頁首本身的文案另有測試
+    t: (key: string) => key,
   }),
 }));
 

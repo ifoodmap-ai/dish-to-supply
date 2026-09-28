@@ -16,6 +16,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card } from "@/components/ui/card";
+import PublicHeader from "@/components/PublicHeader";
 import { toast } from "sonner";
 import { ArrowLeft, Eye, EyeOff, Loader2, MailCheck, KeyRound } from "lucide-react";
 
@@ -108,8 +109,11 @@ const ResetPasswordPage = () => {
   };
 
   const shell = (children: React.ReactNode) => (
-    <div className="min-h-screen bg-gradient-to-b from-slate-50 to-white flex items-center justify-center px-4 py-12">
-      <Card className="p-6 md:p-8 w-full max-w-md">{children}</Card>
+    <div className="min-h-screen bg-gradient-to-b from-slate-50 to-white flex flex-col px-4 sm:px-6">
+      <PublicHeader className="pt-3" />
+      <main className="flex flex-1 items-center justify-center py-12">
+        <Card className="p-6 md:p-8 w-full max-w-md">{children}</Card>
+      </main>
     </div>
   );
 
