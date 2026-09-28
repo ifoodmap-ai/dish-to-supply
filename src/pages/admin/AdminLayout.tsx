@@ -9,6 +9,7 @@ import {
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import PortalSwitcher from '@/components/PortalSwitcher';
+import AIAssistantBubble from '@/components/AIAssistantBubble';
 
 const navGroups: { group: string; items: { label: string; icon: typeof LayoutDashboard; to: string }[] }[] = [
   {
@@ -171,10 +172,15 @@ const AdminLayout = () => {
           <span className="font-semibold text-slate-800">ifoodmap Admin</span>
         </div>
 
-        <main className="flex-1 p-6">
+        {/* 底部多留 pb-40(160px):右下角的 AI 助手泡泡(距底 18–88px)與小標籤(距底 100–144px)
+            不能蓋住表格底下靠右的分頁按鈕 —— 捲到底時它要停在兩者上方 */}
+        <main className="flex-1 p-6 pb-40">
           <Outlet />
         </main>
       </div>
+
+      {/* AI 助手:管理員站是另一個網站,沒有 /restaurant/* —— admin 模式純對話,不導頁 */}
+      <AIAssistantBubble variant="admin" />
     </div>
   );
 };

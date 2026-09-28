@@ -8,6 +8,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { useRestaurant, canSeeCost } from "@/components/RestaurantRoute";
 import PortalSwitcher from "@/components/PortalSwitcher";
+import AIAssistantBubble from "@/components/AIAssistantBubble";
 
 const navItems = [
   { label: "營運總覽", icon: LayoutDashboard, to: "/restaurant", end: true },
@@ -114,10 +115,15 @@ const RestaurantLayout = () => {
             {mobileOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
           </Button>
         </header>
-        <main className="p-4 md:p-8 max-w-7xl mx-auto">
+        {/* 底部多留 pb-40(160px):右下角的 AI 小助手泡泡(距底 18–88px)與小標籤(距底 100–144px)
+            不能蓋住頁尾最後一個按鈕 —— 捲到底時它要停在兩者上方 */}
+        <main className="p-4 pb-40 md:p-8 md:pb-40 max-w-7xl mx-auto">
           <Outlet />
         </main>
       </div>
+
+      {/* AI 小助手:每一頁都看得到;對話送出需求後自己導去「AI 菜單分析」頁 */}
+      <AIAssistantBubble />
     </div>
   );
 };

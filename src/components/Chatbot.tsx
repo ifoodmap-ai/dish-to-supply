@@ -18,15 +18,31 @@ interface Message {
 
 interface ChatbotProps {
   onRequirementsSubmit?: (requirements: string[], meta: AnalysisMeta) => void;
+  /**
+   * 外觀。對話邏輯兩種都一樣,只有外框不同:
+   * - "card"(預設):整段區塊 —— 大標題 + 卡片外框 + 卡片內標題列。訪客首頁 Index.tsx 用這個,
+   *   不傳 variant 時的輸出由 Chatbot.test.tsx 的快照鎖住,不能變。
+   * - "panel":放進 AI 小助手泡泡(AIAssistantBubble)的面板裡。面板自己有標題列,所以這裡
+   *   拿掉外框與重複標題、高度撐滿父層,配色跟形象站的 AI 泡泡一致。
+   */
+  variant?: "card" | "panel";
+  /**
+   * 開場白(第一則 AI 訊息)。不傳 = 字典的 chat.welcome —— 訪客首頁與餐廳版泡泡都不傳。
+   * 管理員版泡泡是純對話、不交接,原本那句「幫您找到合適的供應商」對它不成立,才另外傳一句。
+   */
+  greeting?: string;
 }
 
-const Chatbot = ({ onRequirementsSubmit }: ChatbotProps) => {
-  const { t } = useLanguage();
-  
+// panel 版新增的無障礙標籤,字典裡沒有對應的 key(字典檔不在這次改動範圍),先放這裡
+const PANEL_INPUT_LABEL = { zh: "輸入食材需求", en: "Describe the ingredients you need" } as const;
+
+const Chatbot = ({ onRequirementsSubmit, variant = "card", greeting }: ChatbotProps) => {
+  const { t, language } = useLanguage();
+
   const [messages, setMessages] = useState<Message[]>([
     {
       id: 1,
-      text: t('chat.welcome'),
+      text: greeting ?? t('chat.welcome'),
       sender: "bot",
       timestamp: new Date(),
     },
@@ -34,8 +50,17 @@ const Chatbot = ({ onRequirementsSubmit }: ChatbotProps) => {
   const [inputValue, setInputValue] = useState("");
   const [isTyping, setIsTyping] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const listRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
 
   const scrollToBottom = () => {
+    // listRef 只有 panel 版會掛上。panel 在固定定位的泡泡面板裡,只捲訊息列表自己 ——
+    // scrollIntoView 會連外層頁面一起捲,把使用者正在看的分析結果拉走(面板收著時也一樣)。
+    const list = listRef.current;
+    if (list) {
+      list.scrollTop = list.scrollHeight;
+      return;
+    }
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   };
 
@@ -115,6 +140,90 @@ const Chatbot = ({ onRequirementsSubmit }: ChatbotProps) => {
       handleSend();
     }
   };
+
+  if (variant === "panel") {
+    // 配色取自形象站 AI 泡泡(ifoodmap-landing 的 .ai-body / .ai-bub / .ai-foot)。
+    // 使用者泡泡用綠底深字:原本的橘底白字對比只有約 2:1,讀不清楚。
+    return (
+      <div className="flex h-full min-h-0 flex-col bg-white">
+        <div
+          ref={listRef}
+          role="log"
+          aria-live="polite"
+          aria-label={t('chat.title')}
+          className="min-h-0 flex-1 space-y-3 overflow-y-auto overscroll-contain bg-[#f6f9f5] p-4"
+        >
+          {messages.map((message) => (
+            <div
+              key={message.id}
+              className={`flex ${message.sender === "user" ? "justify-end" : "justify-start"}`}
+            >
+              <div
+                className={`max-w-[88%] rounded-[15px] px-3.5 py-2.5 ${
+                  message.sender === "user"
+                    ? "rounded-tr-[5px] bg-gradient-to-br from-[#46c138] to-[#1f9e4e] text-[#0E1A14]"
+                    : "rounded-tl-[5px] border border-[#e8efe6] bg-white text-[#1d2b22]"
+                }`}
+              >
+                <p className="text-sm leading-relaxed whitespace-pre-line break-words">{message.text}</p>
+                <p
+                  className={`mt-1 text-[11px] leading-none ${
+                    message.sender === "user" ? "text-[#0E1A14]" : "text-slate-500"
+                  }`}
+                >
+                  {message.timestamp.toLocaleTimeString([], {
+                    hour: "2-digit",
+                    minute: "2-digit",
+                  })}
+                </p>
+              </div>
+            </div>
+          ))}
+
+          {isTyping && (
+            <div className="flex justify-start">
+              <div className="rounded-[15px] rounded-tl-[5px] border border-[#e8efe6] bg-white px-3.5 py-3">
+                <span className="sr-only">{t('chat.analyzing')}</span>
+                <div aria-hidden="true" className="flex gap-1">
+                  <span className="h-1.5 w-1.5 rounded-full bg-[#9bbf8f] animate-pulse motion-reduce:animate-none" />
+                  <span className="h-1.5 w-1.5 rounded-full bg-[#9bbf8f] animate-pulse [animation-delay:200ms] motion-reduce:animate-none" />
+                  <span className="h-1.5 w-1.5 rounded-full bg-[#9bbf8f] animate-pulse [animation-delay:400ms] motion-reduce:animate-none" />
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+
+        <div className="shrink-0 border-t border-[#eef1ee] bg-white p-2.5">
+          <div className="flex items-center gap-2">
+            <Input
+              ref={inputRef}
+              value={inputValue}
+              onChange={(e) => setInputValue(e.target.value)}
+              onKeyPress={handleKeyPress}
+              placeholder={t('chat.placeholder')}
+              aria-label={PANEL_INPUT_LABEL[language === "en" ? "en" : "zh"]}
+              className="h-11 flex-1 rounded-full border-[#dde5dc] px-4 focus-visible:ring-[#1f9e4e] focus-visible:ring-offset-0"
+            />
+            <Button
+              type="button"
+              // 送出後輸入框清空、按鈕變 disabled,焦點會掉到 body(手機的焦點陷阱也跟著失效),
+              // 所以按完把焦點放回輸入框,讓人可以接著打字。
+              onClick={() => {
+                handleSend();
+                inputRef.current?.focus();
+              }}
+              disabled={!inputValue.trim()}
+              aria-label={t('chat.send')}
+              className="h-11 w-11 shrink-0 rounded-full bg-gradient-to-br from-[#46c138] to-[#1f9e4e] p-0 text-[#0E1A14] hover:brightness-105 focus-visible:ring-[#0B6B40] [&_svg]:size-[18px]"
+            >
+              <Send aria-hidden="true" />
+            </Button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <section className="py-16 bg-background">
