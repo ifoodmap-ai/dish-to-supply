@@ -16,6 +16,7 @@ import {
   isStuck,
   type OrderStatus,
 } from '@/lib/orders';
+import { ACTIVE_ORDER_STATUSES } from './adminCounts';
 
 /* ---------------------------------------------------------------
  * 新資料表尚未進 types.ts,沿用專案既有的 cast 慣例
@@ -58,8 +59,8 @@ const STAGE_ALIAS: Partial<Record<OrderStatus, OrderStatus>> = {
 
 const bucketOf = (s: OrderStatus): OrderStatus => STAGE_ALIAS[s] ?? s;
 
-/** 沒有 order_pipeline view 時的後備查詢範圍 */
-const ACTIVE_STATUSES: OrderStatus[] = [...PIPELINE_STAGES, 'pending', 'sent', 'discrepancy', 'disputed'];
+/** 沒有 order_pipeline view 時的後備查詢範圍 —— 跟總覽「今日待辦」的卡關訂單數共用同一份 */
+const ACTIVE_STATUSES: OrderStatus[] = ACTIVE_ORDER_STATUSES;
 
 const money = (v: number | null) =>
   v == null ? null : `NT$ ${Number(v).toLocaleString('zh-TW', { maximumFractionDigits: 0 })}`;
@@ -175,7 +176,7 @@ export default function AdminPipelinePage() {
     return (
       <button
         type="button"
-        onClick={() => navigate(`/admin/orders/${row.id}/timeline`)}
+        onClick={() => navigate(`/admin/orders/${row.id}`)}
         className={`w-full text-left rounded-lg border p-3 transition-shadow hover:shadow-md ${
           stuck ? 'border-red-300 bg-red-50 hover:bg-red-100/70' : 'border-slate-200 bg-white hover:bg-slate-50'
         }`}

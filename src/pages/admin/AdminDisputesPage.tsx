@@ -435,7 +435,7 @@ export default function AdminDisputesPage() {
                         </Badge>
                         <button
                           type="button"
-                          onClick={() => navigate(`/admin/orders/${d.order_id}/timeline`)}
+                          onClick={() => navigate(`/admin/orders/${d.order_id}`)}
                           className="inline-flex items-center gap-1 font-mono text-xs text-blue-600 hover:text-blue-800 hover:underline"
                         >
                           #{d.order_id.slice(-8)}

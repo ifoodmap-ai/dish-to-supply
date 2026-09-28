@@ -606,7 +606,7 @@ export default function AdminRevenuePage() {
                       <TableRow
                         key={o.id}
                         className="cursor-pointer hover:bg-slate-50"
-                        onClick={() => navigate(`/admin/orders/${o.id}/timeline`)}
+                        onClick={() => navigate(`/admin/orders/${o.id}`)}
                       >
                         <TableCell className="font-mono text-xs text-slate-500">
                           #{o.id.slice(-8)}

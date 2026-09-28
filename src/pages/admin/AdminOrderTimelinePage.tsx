@@ -1,5 +1,15 @@
+// 單筆訂單頁 /admin/orders/:id(訂單分區)。
+//
+// 後台精簡第一期:舊的「訂單明細」(/admin/orders/:id)與「訂單履歷」(/admin/orders/:id/timeline)
+// 併成這一頁,以履歷為底(PROPOSAL.md §1 訂單列)。舊明細獨有的兩張卡「買方聯絡資訊」「對應分析來源」搬進來;
+// 舊的 /timeline 網址在 App.tsx 轉址到這裡。舊明細的「更新狀態」卡與「刪除」沒有搬:
+//   - 改狀態:直接 UPDATE status 會被 trg_guard_order_status 擋;刪除:會被 order_events 的 append-only 護欄擋
+//     (PROPOSAL §5 #2)。正式的管理員動作列(派單/取消/結案/刪單,走 recordOrderEvent / admin_delete_order)是第二期。
+//   - 同一張卡上的「備註」:狀態不變時其實存得進去,但那是直接改 supplier_orders.notes、不會留下任何事件,
+//     放在這個「事實紀錄」頁上等於能無痕改訂單內容 —— 所以先不搬,要不要保留待業主決定(備註照樣在「訂單資訊」唯讀顯示)。
+// 這一頁維持純唯讀,不寫任何資料表。
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import {
   AlertTriangle,
   ArrowLeft,
@@ -99,6 +109,13 @@ interface Review {
   rating_accuracy: number | null;
   comment: string | null;
   created_at: string;
+}
+
+/** 形象站留下的買方聯絡資訊(用 analysis_id 對到這張單的來源分析) */
+interface BuyerLead {
+  company_name: string | null;
+  contact_phone: string | null;
+  contact_line: string | null;
 }
 
 interface Dispute {
@@ -289,6 +306,15 @@ const ReceiptBlock = ({ receipt }: { receipt: Receipt }) => {
 export default function AdminOrderTimelinePage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const location = useLocation();
+  // 這一頁從看板、全部訂單、爭議、營收、媒合品質都點得進來 —— 返回鈕回到來的地方;
+  // 直接打網址或從外部連結進來(沒有站內上一頁)時,退回「全部訂單」。
+  // BrowserRouter 在 history.state 放 idx(這個分頁裡第幾筆站內紀錄),replace 不會讓它變大 ——
+  // 所以從外部連結打舊的 /timeline 網址(會 replace 轉址)進來,也算「沒有站內上一頁」,不會被帶離網站。
+  const historyIdx = (window.history.state as { idx?: number } | null)?.idx;
+  const hasInAppHistory = location.key !== 'default' && (historyIdx === undefined || historyIdx > 0);
+  const goBack = () => (hasInAppHistory ? navigate(-1) : navigate('/admin/orders'));
+  const backLabel = hasInAppHistory ? '返回上一頁' : '返回全部訂單';
 
   const [order, setOrder] = useState<OrderRow | null>(null);
   const [restaurantName, setRestaurantName] = useState('');
@@ -298,6 +324,8 @@ export default function AdminOrderTimelinePage() {
   const [receipts, setReceipts] = useState<Receipt[]>([]);
   const [reviews, setReviews] = useState<Review[]>([]);
   const [disputes, setDisputes] = useState<Dispute[]>([]);
+  const [analysisSummary, setAnalysisSummary] = useState<string | null>(null);
+  const [buyer, setBuyer] = useState<BuyerLead | null>(null);
   const [loading, setLoading] = useState(true);
   const [timelineError, setTimelineError] = useState<string | null>(null);
 
@@ -305,6 +333,12 @@ export default function AdminOrderTimelinePage() {
     if (!id) return;
     setLoading(true);
     setTimelineError(null);
+    // 換到另一張單時,不要留著上一張單的名稱與聯絡資訊
+    setRestaurantName('');
+    setBranchName('');
+    setSupplierName('');
+    setAnalysisSummary(null);
+    setBuyer(null);
 
     const orderRes = await table<OrderRow>('supplier_orders').select('*').eq('id', id);
     const o = orderRes.data?.[0] ?? null;
@@ -324,6 +358,19 @@ export default function AdminOrderTimelinePage() {
       if (o.supplier_id) {
         const s = await table<{ name: string }>('suppliers').select('name').eq('id', o.supplier_id);
         setSupplierName(s.data?.[0]?.name ?? '');
+      }
+      // 從舊明細搬來:這張單若來自某筆 AI 分析,帶出分析摘要與形象站留下的買方聯絡資訊
+      if (o.analysis_id) {
+        const [analysisRes, leadRes] = await Promise.all([
+          table<{ summary: string | null }>('analysis_records').select('summary').eq('id', o.analysis_id),
+          table<BuyerLead>('landing_leads')
+            .select('company_name, contact_phone, contact_line')
+            .eq('analysis_id', o.analysis_id)
+            .order('created_at', { ascending: false })
+            .limit(1),
+        ]);
+        setAnalysisSummary(analysisRes.data?.[0]?.summary ?? null);
+        setBuyer(leadRes.data?.[0] ?? null);
       }
     }
 
@@ -399,11 +446,11 @@ export default function AdminOrderTimelinePage() {
     return (
       <div className="max-w-4xl">
         <button
-          onClick={() => navigate('/admin/pipeline')}
+          onClick={goBack}
           className="mb-5 flex items-center gap-1.5 text-sm text-slate-500 transition-colors hover:text-slate-800"
         >
           <ArrowLeft className="h-4 w-4" />
-          返回交易看板
+          {backLabel}
         </button>
         <div className="py-20 text-center text-slate-500">找不到這筆訂單</div>
       </div>
@@ -414,11 +461,11 @@ export default function AdminOrderTimelinePage() {
   return (
     <div className="max-w-4xl">
       <button
-        onClick={() => navigate('/admin/pipeline')}
+        onClick={goBack}
         className="mb-5 flex items-center gap-1.5 text-sm text-slate-500 transition-colors hover:text-slate-800"
       >
         <ArrowLeft className="h-4 w-4" />
-        返回交易看板
+        {backLabel}
       </button>
 
       <div className="mb-1 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -430,9 +477,6 @@ export default function AdminOrderTimelinePage() {
           <Badge variant="outline" className={statusClass(order.status)}>
             {statusLabel(order.status)}
           </Badge>
-          <Button variant="outline" size="sm" onClick={() => navigate(`/admin/orders/${order.id}`)}>
-            訂單詳情 →
-          </Button>
         </div>
       </div>
       <p className="mb-5 text-sm text-slate-500">
@@ -475,6 +519,9 @@ export default function AdminOrderTimelinePage() {
               }
             />
             <InfoRow label="建立時間" value={new Date(order.created_at).toLocaleString('zh-TW')} />
+            {order.sent_at && (
+              <InfoRow label="發送時間" value={new Date(order.sent_at).toLocaleString('zh-TW')} />
+            )}
             <InfoRow
               label="等待對象"
               value={waitingOn ? ROLE_LABEL[waitingOn] : <span className="text-slate-400">流程已結束</span>}
@@ -482,6 +529,20 @@ export default function AdminOrderTimelinePage() {
             {order.notes && <InfoRow label="備註" value={order.notes} />}
           </CardContent>
         </Card>
+
+        {/* 買方聯絡資訊(從舊明細搬來) */}
+        {buyer && (
+          <Card className="border-emerald-200">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-base text-emerald-700">買方聯絡資訊</CardTitle>
+            </CardHeader>
+            <CardContent className="grid gap-2 text-sm sm:grid-cols-2">
+              <InfoRow label="姓名 / 名稱" value={buyer.company_name || '—'} />
+              <InfoRow label="聯絡電話" value={buyer.contact_phone || '—'} />
+              <InfoRow label="LINE ID" value={buyer.contact_line || '—'} />
+            </CardContent>
+          </Card>
+        )}
 
         {/* 品項 */}
         <Card>
@@ -517,6 +578,27 @@ export default function AdminOrderTimelinePage() {
             )}
           </CardContent>
         </Card>
+
+        {/* 對應分析來源(從舊明細搬來) */}
+        {order.analysis_id && (
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-base text-slate-700">對應分析來源</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <p className="whitespace-pre-wrap text-sm text-slate-700">
+                {analysisSummary ?? <span className="italic text-slate-400">無摘要</span>}
+              </p>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => navigate(`/admin/analyses/${order.analysis_id}`)}
+              >
+                查看分析紀錄 →
+              </Button>
+            </CardContent>
+          </Card>
+        )}
 
         {/* 時間軸 */}
         <Card>

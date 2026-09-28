@@ -1,3 +1,9 @@
+// 單筆 AI 分析紀錄 /admin/analyses/:id(需求與媒合 › AI 分析紀錄)。
+//
+// 業主拍板 Q3-A:分析紀錄保留當「潛在客戶名單」,拿掉「批准並發送」。
+// 那顆按鈕會直接 insert 一張舊狀態(pending)的 supplier_orders —— 沒有餐廳、沒有事件履歷、
+// 餐廳後台看不到,兩個寫入都沒檢查 error,失敗也照樣顯示成功。要成交請對方註冊餐廳後台叫貨,走正式訂單流程。
+// 這一頁因此不會再寫 supplier_orders,也不需要再讀供應商清單;拒絕與刪除照舊。
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { ArrowLeft, Loader2, Trash2 } from 'lucide-react';
@@ -21,7 +27,6 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
@@ -49,12 +54,30 @@ interface AnalysisRecord {
 
 const asDataUrl = (s: string) => (s.startsWith('data:') ? s : `data:image/jpeg;base64,${s}`);
 
-interface Supplier {
-  id: string;
-  name: string;
-  contact_email: string | null;
-  phone: string | null;
+interface BuyerLead {
+  company_name: string | null;
+  contact_phone: string | null;
+  contact_line: string | null;
 }
+
+/* analysis_records / landing_leads 還沒進 types.ts,沿用專案既有的 cast 慣例,只描述這頁用得到的 builder */
+type PgError = { message: string } | null;
+type WriteRes = { error: PgError };
+
+const db = supabase as never as {
+  from: (t: string) => {
+    select: (c: string) => {
+      eq: (col: string, v: unknown) => {
+        single: () => PromiseLike<{ data: AnalysisRecord | null; error: PgError }>;
+        order: (col: string, o: { ascending: boolean }) => {
+          limit: (n: number) => PromiseLike<{ data: BuyerLead[] | null; error: PgError }>;
+        };
+      };
+    };
+    update: (v: Record<string, unknown>) => { eq: (col: string, v: unknown) => PromiseLike<WriteRes> };
+    delete: () => { eq: (col: string, v: unknown) => PromiseLike<WriteRes> };
+  };
+};
 
 const statusBadgeClass: Record<AnalysisRecord['status'], string> = {
   pending_review: 'bg-yellow-100 text-yellow-800 border-yellow-300',
@@ -76,18 +99,8 @@ const AnalysisDetailPage = () => {
   const { toast } = useToast();
 
   const [record, setRecord] = useState<AnalysisRecord | null>(null);
-  const [suppliers, setSuppliers] = useState<Supplier[]>([]);
-  const [buyer, setBuyer] = useState<{
-    company_name: string | null;
-    contact_phone: string | null;
-    contact_line: string | null;
-  } | null>(null);
+  const [buyer, setBuyer] = useState<BuyerLead | null>(null);
   const [loading, setLoading] = useState(true);
-
-  // Approve dialog state
-  const [approveOpen, setApproveOpen] = useState(false);
-  const [selectedSupplier, setSelectedSupplier] = useState<string>('');
-  const [approving, setApproving] = useState(false);
 
   // Reject dialog state
   const [rejectOpen, setRejectOpen] = useState(false);
@@ -103,10 +116,7 @@ const AnalysisDetailPage = () => {
   const handleDelete = async () => {
     if (!record) return;
     setDeleting(true);
-    const { error } = await (supabase as never)
-      .from('analysis_records')
-      .delete()
-      .eq('id', record.id);
+    const { error } = await db.from('analysis_records').delete().eq('id', record.id);
     setDeleting(false);
     setDeleteOpen(false);
     if (error) {
@@ -122,71 +132,26 @@ const AnalysisDetailPage = () => {
   };
 
   const fetchRecord = async () => {
-    const { data } = await (supabase as never)
-      .from('analysis_records')
-      .select('*')
-      .eq('id', id)
-      .single();
-    setRecord(data as AnalysisRecord | null);
+    const { data } = await db.from('analysis_records').select('*').eq('id', id).single();
+    setRecord(data);
 
-    const { data: leads } = (await (supabase as never)
+    const { data: leads } = await db
       .from('landing_leads')
       .select('company_name, contact_phone, contact_line')
       .eq('analysis_id', id)
       .order('created_at', { ascending: false })
-      .limit(1)) as {
-      data: { company_name: string | null; contact_phone: string | null; contact_line: string | null }[] | null;
-    };
+      .limit(1);
     setBuyer((leads && leads[0]) ?? null);
-  };
-
-  const fetchSuppliers = async () => {
-    const { data } = await (supabase as never)
-      .from('suppliers')
-      .select('id, name, contact_email, phone');
-    setSuppliers((data as Supplier[] | null) ?? []);
   };
 
   useEffect(() => {
     const init = async () => {
       setLoading(true);
-      await Promise.all([fetchRecord(), fetchSuppliers()]);
+      await fetchRecord();
       setLoading(false);
     };
     init();
   }, [id]);
-
-  const handleApprove = async () => {
-    if (!record || !selectedSupplier) return;
-    setApproving(true);
-
-    const { data: { session } } = await supabase.auth.getSession();
-    const currentUserId = session?.user?.id;
-
-    await (supabase as never)
-      .from('supplier_orders')
-      .insert({
-        analysis_id: record.id,
-        supplier_id: selectedSupplier,
-        ingredient_list: record.ingredient_list,
-        status: 'pending',
-      });
-
-    await (supabase as never)
-      .from('analysis_records')
-      .update({
-        status: 'sent',
-        reviewed_at: new Date().toISOString(),
-        reviewed_by: currentUserId,
-      })
-      .eq('id', record.id);
-
-    await fetchRecord();
-    setApproving(false);
-    setApproveOpen(false);
-    setSelectedSupplier('');
-    toast({ title: '已審核並發送訂單 (Approved and order sent)' });
-  };
 
   const handleReject = async () => {
     if (!record) return;
@@ -195,7 +160,7 @@ const AnalysisDetailPage = () => {
     const { data: { session } } = await supabase.auth.getSession();
     const currentUserId = session?.user?.id;
 
-    await (supabase as never)
+    const { error } = await db
       .from('analysis_records')
       .update({
         status: 'rejected',
@@ -204,6 +169,17 @@ const AnalysisDetailPage = () => {
         reviewed_by: currentUserId,
       })
       .eq('id', record.id);
+
+    if (error) {
+      // 以前這裡不看 error,寫入失敗也跳「已拒絕」。失敗就照實說,對話框留著讓人重試
+      setRejecting(false);
+      toast({
+        title: '拒絕失敗 (Reject failed)',
+        description: error.message,
+        variant: 'destructive',
+      });
+      return;
+    }
 
     await fetchRecord();
     setRejecting(false);
@@ -418,56 +394,22 @@ const AnalysisDetailPage = () => {
         )}
 
         {isPending && (
-          <div className="flex gap-3 pt-2">
-            <Button
-              className="bg-emerald-600 hover:bg-emerald-700 text-white"
-              onClick={() => setApproveOpen(true)}
-            >
-              批准並發送 (Approve &amp; Send)
-            </Button>
-            <Button
-              variant="destructive"
-              onClick={() => setRejectOpen(true)}
-            >
-              拒絕 (Reject)
-            </Button>
+          <div className="space-y-3 pt-2">
+            <p className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm text-slate-600">
+              這筆是潛在客戶名單:要成交,請對方註冊餐廳後台叫貨,走正式的訂單流程。
+              {buyer ? '聯絡方式見上方「買方聯絡資訊」。' : ''}
+            </p>
+            <div className="flex gap-3">
+              <Button
+                variant="destructive"
+                onClick={() => setRejectOpen(true)}
+              >
+                拒絕 (Reject)
+              </Button>
+            </div>
           </div>
         )}
       </div>
-
-      {/* Approve Dialog */}
-      <Dialog open={approveOpen} onOpenChange={setApproveOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>選擇供應商 (Select Supplier)</DialogTitle>
-          </DialogHeader>
-          <div className="py-2">
-            <Select value={selectedSupplier} onValueChange={setSelectedSupplier}>
-              <SelectTrigger>
-                <SelectValue placeholder="選擇供應商…" />
-              </SelectTrigger>
-              <SelectContent>
-                {suppliers.map((s) => (
-                  <SelectItem key={s.id} value={s.id}>
-                    {s.name}
-                    {s.contact_email ? ` — ${s.contact_email}` : ''}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setApproveOpen(false)}>取消</Button>
-            <Button
-              className="bg-emerald-600 hover:bg-emerald-700 text-white"
-              disabled={!selectedSupplier || approving}
-              onClick={handleApprove}
-            >
-              {approving ? <Loader2 className="h-4 w-4 animate-spin" /> : '確認發送'}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
 
       {/* Reject Dialog */}
       <Dialog open={rejectOpen} onOpenChange={setRejectOpen}>

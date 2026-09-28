@@ -460,6 +460,9 @@ export default function AdminGrowthPage() {
       },
     ];
     const funnelBase = funnel[0].count || Math.max(...funnel.map((f) => f.count), 0);
+    // 供應商填入駐申請表(/join)的次數 —— 不在漏斗比例裡。原本放在營運儀表板的漏斗下方,
+    // 兩個儀表板合成「總覽」後漏斗只留在這裡,這個數字跟著搬過來
+    const supplierApplied = eventCounts['supplier_applied'] ?? 0;
 
     return {
       monthKeys,
@@ -489,6 +492,7 @@ export default function AdminGrowthPage() {
       npsByAudience,
       funnel,
       funnelBase,
+      supplierApplied,
     };
   }, [restaurants, suppliers, orders, receivedEvents, npsRows, appEvents]);
 
@@ -1031,6 +1035,10 @@ export default function AdminGrowthPage() {
                     </div>
                   );
                 })}
+                <div className="pt-3 mt-1 border-t border-slate-100 flex items-center gap-2 text-sm">
+                  <span className="text-slate-500">供應商申請(不計入漏斗)</span>
+                  <span className="font-semibold text-emerald-600 tabular-nums">{derived.supplierApplied}</span>
+                </div>
               </div>
             )}
           </CardContent>

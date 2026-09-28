@@ -1,5 +1,13 @@
+// 總覽分區的「營運」分頁(/admin)。成長分頁是 /admin/growth(AdminGrowthPage)。
+//
+// 後台精簡第一期(業主拍板 Q4-A):兩個儀表板合成「總覽」一區,這一頁最上方是「今日待辦」。
+// 兩頁重複的東西只留一份(PROPOSAL.md §1 總覽列):
+//   - 「供應商數」與轉換漏斗前 5 段 → 只留在成長分頁(同表同定義、逐字相同);
+//     漏斗下方原本的「供應商申請」事件數一起搬到成長分頁的漏斗卡。
+//   - KPI「待審核」→ 跟今日待辦的「待審分析」是同一個數字,只留今日待辦那一個(而且那邊是精確筆數,
+//     這裡的 analysis_records 一次最多讀回 1000 筆)。
 import { useEffect, useMemo, useState } from 'react';
-import { ClipboardList, CheckCircle, Package, Store, Boxes, TrendingUp } from 'lucide-react';
+import { ClipboardList, CheckCircle, Package, Boxes, TrendingUp } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import {
   ResponsiveContainer,
@@ -16,6 +24,7 @@ import {
   Bar,
 } from 'recharts';
 import { supabase } from '@/integrations/supabase/client';
+import TodayTodos from './TodayTodos';
 
 interface AnalysisRow {
   id: string;
@@ -28,51 +37,51 @@ interface AnalysisRow {
 const SOURCE_LABEL: Record<string, string> = { menu_upload: '菜單上傳', chatbot: '對話萃取' };
 const PIE_COLORS = ['#10b981', '#f59e0b', '#3b82f6', '#8b5cf6'];
 
-const FUNNEL_STAGES: { event: string; label: string }[] = [
-  { event: 'analysis_started', label: '開始分析' },
-  { event: 'analysis_completed', label: '完成分析' },
-  { event: 'contact_captured', label: '留下聯絡' },
-  { event: 'match_viewed', label: '看媒合' },
-  { event: 'inquiry_sent', label: '送出詢價' },
-];
+/* 這幾張表還沒進 types.ts,沿用專案既有的 cast 慣例,只描述這頁用得到的那一小段 builder */
+type CountRes = { count: number | null; error: { message: string } | null };
+type RowsRes<T> = { data: T[] | null; error: { message: string } | null };
+
+const headCount = (table: string) =>
+  (supabase as never as {
+    from: (t: string) => { select: (c: string, o: { count: 'exact'; head: true }) => PromiseLike<CountRes> };
+  })
+    .from(table)
+    .select('id', { count: 'exact', head: true });
+
+const analysisRows = () =>
+  (supabase as never as {
+    from: (t: string) => {
+      select: (c: string) => {
+        order: (col: string, o: { ascending: boolean }) => PromiseLike<RowsRes<AnalysisRow>>;
+      };
+    };
+  })
+    .from('analysis_records')
+    .select('id, created_at, source_type, status, ingredient_list')
+    .order('created_at', { ascending: true });
 
 const AdminDashboard = () => {
   const [rows, setRows] = useState<AnalysisRow[]>([]);
   const [ordersCount, setOrdersCount] = useState(0);
-  const [suppliersCount, setSuppliersCount] = useState(0);
   const [suppliesCount, setSuppliesCount] = useState(0);
-  const [eventCounts, setEventCounts] = useState<Record<string, number>>({});
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     (async () => {
-      const [aRes, oRes, spRes, suRes, evRes] = await Promise.all([
-        (supabase as never)
-          .from('analysis_records')
-          .select('id, created_at, source_type, status, ingredient_list')
-          .order('created_at', { ascending: true }),
-        (supabase as never).from('supplier_orders').select('id', { count: 'exact', head: true }),
-        (supabase as never).from('suppliers').select('id', { count: 'exact', head: true }),
-        (supabase as never).from('supplies').select('id', { count: 'exact', head: true }),
-        (supabase as never).from('app_events').select('event'),
+      const [aRes, oRes, suRes] = await Promise.all([
+        analysisRows(),
+        headCount('supplier_orders'),
+        headCount('supplies'),
       ]);
-      setRows(((aRes as { data: AnalysisRow[] | null }).data) ?? []);
-      setOrdersCount((oRes as { count: number | null }).count ?? 0);
-      setSuppliersCount((spRes as { count: number | null }).count ?? 0);
-      setSuppliesCount((suRes as { count: number | null }).count ?? 0);
-      const events = ((evRes as { data: { event: string }[] | null }).data) ?? [];
-      const counts: Record<string, number> = {};
-      events.forEach((e) => {
-        if (e?.event) counts[e.event] = (counts[e.event] ?? 0) + 1;
-      });
-      setEventCounts(counts);
+      setRows(aRes.data ?? []);
+      setOrdersCount(oRes.count ?? 0);
+      setSuppliesCount(suRes.count ?? 0);
       setLoading(false);
     })();
   }, []);
 
   const derived = useMemo(() => {
     const total = rows.length;
-    const pending = rows.filter((r) => r.status === 'pending_review').length;
     const sent = rows.filter((r) => r.status === 'sent').length;
     const matchRate = total > 0 ? Math.round((sent / total) * 100) : 0;
 
@@ -104,15 +113,13 @@ const AdminDashboard = () => {
       .slice(0, 8)
       .map(([name, count]) => ({ name, count }));
 
-    return { total, pending, sent, matchRate, trend, sources, topIngredients };
+    return { total, sent, matchRate, trend, sources, topIngredients };
   }, [rows]);
 
   const kpis = [
     { title: '需求總數', value: derived.total, icon: ClipboardList, accent: 'text-slate-700', bg: 'bg-slate-100' },
-    { title: '待審核', value: derived.pending, icon: TrendingUp, accent: 'text-yellow-600', bg: 'bg-yellow-50' },
     { title: '已媒合', value: derived.sent, icon: CheckCircle, accent: 'text-emerald-600', bg: 'bg-emerald-50' },
     { title: '媒合率', value: `${derived.matchRate}%`, icon: TrendingUp, accent: 'text-emerald-600', bg: 'bg-emerald-50' },
-    { title: '供應商數', value: suppliersCount, icon: Store, accent: 'text-blue-600', bg: 'bg-blue-50' },
     { title: '上架商品', value: suppliesCount, icon: Boxes, accent: 'text-purple-600', bg: 'bg-purple-50' },
     { title: '總訂單', value: ordersCount, icon: Package, accent: 'text-blue-600', bg: 'bg-blue-50' },
   ];
@@ -122,8 +129,10 @@ const AdminDashboard = () => {
       <h1 className="text-2xl font-bold text-slate-800 mb-1">營運儀表板 (Dashboard)</h1>
       <p className="text-sm text-slate-500 mb-6">平台需求媒合與供應鏈營運概況</p>
 
+      <TodayTodos />
+
       {/* KPIs */}
-      <div className="grid grid-cols-2 md:grid-cols-4 xl:grid-cols-7 gap-3 mb-6">
+      <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-5 gap-3 mb-6">
         {kpis.map(({ title, value, icon: Icon, accent, bg }) => (
           <Card key={title} className="border border-slate-200">
             <CardContent className="p-4">
@@ -186,56 +195,6 @@ const AdminDashboard = () => {
                 <Bar dataKey="count" fill="#10b981" radius={[0, 4, 4, 0]} name="出現次數" />
               </BarChart>
             </ResponsiveContainer>
-          </CardContent>
-        </Card>
-
-        {/* 轉換漏斗 */}
-        <Card className="border-slate-200 lg:col-span-3">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-base text-slate-700">轉換漏斗 (Funnel)</CardTitle>
-          </CardHeader>
-          <CardContent>
-            {loading ? (
-              <div className="space-y-3">
-                {FUNNEL_STAGES.map((s) => (
-                  <div key={s.event} className="h-8 rounded bg-slate-100 animate-pulse" />
-                ))}
-              </div>
-            ) : FUNNEL_STAGES.every((s) => (eventCounts[s.event] ?? 0) === 0) &&
-              (eventCounts['supplier_applied'] ?? 0) === 0 ? (
-              <div className="py-8 text-center text-slate-400 text-sm">尚無事件資料</div>
-            ) : (
-              <div className="space-y-3">
-                {FUNNEL_STAGES.map((stage) => {
-                  const count = eventCounts[stage.event] ?? 0;
-                  const base = eventCounts[FUNNEL_STAGES[0].event] ?? 0;
-                  const pct = base > 0 ? Math.round((count / base) * 100) : 0;
-                  return (
-                    <div key={stage.event} className="flex items-center gap-3">
-                      <div className="w-24 shrink-0 text-sm text-slate-600 text-right">
-                        {stage.label}
-                      </div>
-                      <div className="flex-1 h-6 rounded bg-slate-100 overflow-hidden">
-                        <div
-                          className="h-full rounded bg-emerald-500 transition-all"
-                          style={{ width: `${Math.min(pct, 100)}%` }}
-                        />
-                      </div>
-                      <div className="w-28 shrink-0 text-sm tabular-nums">
-                        <span className="font-semibold text-slate-800">{count}</span>
-                        <span className="text-slate-400 ml-1.5">{pct}%</span>
-                      </div>
-                    </div>
-                  );
-                })}
-                <div className="pt-3 mt-1 border-t border-slate-100 flex items-center gap-2 text-sm">
-                  <span className="text-slate-500">供應商申請</span>
-                  <span className="font-semibold text-emerald-600 tabular-nums">
-                    {eventCounts['supplier_applied'] ?? 0}
-                  </span>
-                </div>
-              </div>
-            )}
           </CardContent>
         </Card>
       </div>

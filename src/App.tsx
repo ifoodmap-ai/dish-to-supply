@@ -100,7 +100,10 @@ const AdminRoutes = () => (
       <Route path="analyses/:id" element={<AnalysisDetailPage />} />
       <Route path="orders" element={<AdminOrdersPage />} />
       <Route path="orders/:id" element={<AdminOrderDetailPage />} />
-      <Route path="orders/:id/timeline" element={<AdminOrderTimelinePage />} />
+      {/* 後台精簡第一期:舊明細與「訂單履歷」併成 /admin/orders/:id 一頁(以履歷為底),
+          舊的 /timeline 網址轉址過去 —— 管理員後台唯一的一條轉址(PROPOSAL.md §1)。
+          relative="path":".." 是去掉網址最後一段(/timeline),不是回上一層路由 */}
+      <Route path="orders/:id/timeline" element={<Navigate to=".." relative="path" replace />} />
       <Route path="matching" element={<AdminMatchingPage />} />
       <Route path="forecast" element={<AdminForecastPage />} />
       <Route path="restaurants" element={<AdminRestaurantsPage />} />

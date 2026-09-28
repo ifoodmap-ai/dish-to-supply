@@ -41,6 +41,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { supabase } from '@/integrations/supabase/client';
+import { MAIN_SITE_URL } from '@/lib/portal';
 
 interface PriceRow {
   id: string;
@@ -94,6 +95,23 @@ const median = (nums: number[]): number | null => {
 const fmtMoney = (v: number | null): string =>
   v == null ? '—' : `$${Number(v).toLocaleString('zh-TW', { maximumFractionDigits: 2 })}`;
 
+/* price_history / ingredients / suppliers 還沒進 types.ts,沿用專案既有的 cast 慣例 */
+type Res<T> = { data: T[] | null; error: { message: string } | null };
+
+interface Chain<T> extends PromiseLike<Res<T>> {
+  order(col: string, opts?: { ascending: boolean }): Chain<T>;
+  limit(n: number): Chain<T>;
+}
+
+const table = <T,>(name: string) =>
+  (supabase as never as {
+    from: (t: string) => { select: (c: string) => Chain<T> };
+  }).from(name);
+
+/** 主站上的公開供應商頁(管理員站沒有 /supplier/:id) */
+const supplierPageHref = (supplierId: string) =>
+  `${MAIN_SITE_URL.replace(/\/+$/, '')}/supplier/${encodeURIComponent(supplierId)}`;
+
 const AdminPricesPage = () => {
   const [rows, setRows] = useState<PriceRow[]>([]);
   const [ingredients, setIngredients] = useState<IngredientLite[]>([]);
@@ -107,26 +125,24 @@ const AdminPricesPage = () => {
   const fetchAll = useCallback(async () => {
     setLoading(true);
     const [phRes, ingRes, supRes] = await Promise.all([
-      (supabase as never)
-        .from('price_history')
+      table<PriceRow>('price_history')
         .select(
           'id, ingredient_id, supply_id, supplier_id, raw_name, price, unit, normalized_price, region, captured_at',
         )
         .order('captured_at', { ascending: false })
         .limit(1000),
-      (supabase as never)
-        .from('ingredients')
+      table<IngredientLite>('ingredients')
         .select('id, canonical_name')
         .order('canonical_name', { ascending: true }),
-      (supabase as never).from('suppliers').select('id, name'),
+      table<SupplierLite>('suppliers').select('id, name'),
     ]);
 
-    const err = (phRes as { error: { message?: string } | null }).error;
+    const err = phRes.error;
     if (err) toast.error('載入價格資料失敗', { description: err.message });
 
-    setRows(((phRes as { data: PriceRow[] | null }).data) ?? []);
-    setIngredients(((ingRes as { data: IngredientLite[] | null }).data) ?? []);
-    setSuppliers(((supRes as { data: SupplierLite[] | null }).data) ?? []);
+    setRows(phRes.data ?? []);
+    setIngredients(ingRes.data ?? []);
+    setSuppliers(supRes.data ?? []);
     setLoading(false);
   }, []);
 
@@ -439,12 +455,14 @@ const AdminPricesPage = () => {
                     </TableCell>
                     <TableCell className="text-right">
                       {r.supplier_id ? (
+                        // 公開供應商頁 /supplier/:id 只在主站(dish-to-supply)上有;管理員站沒有這條路由,
+                        // 以前寫相對網址會被管理員站的萬用路由導回登入頁。改成開主站那一頁(新分頁)
                         <a
-                          href={`/supplier/${r.supplier_id}`}
+                          href={supplierPageHref(r.supplier_id)}
                           target="_blank"
-                          rel="noreferrer"
+                          rel="noopener noreferrer"
                           className="inline-flex items-center gap-1 text-xs text-emerald-700 hover:text-emerald-800 hover:underline whitespace-nowrap"
-                          title="開啟該供應商品項,修正單位或價格"
+                          title="在主站開啟這家供應商的頁面(新分頁),核對品項的單位與價格"
                         >
                           修正品項
                           <ExternalLink className="h-3 w-3" />
