@@ -49,7 +49,7 @@
         "heroSubB": "填一次需求，供應商主動來找你。",
         "searchAriaLabel": "搜尋食材",
         "searchPlaceholder": "搜尋食材，例如：有機葉菜、火鍋肉片",
-        "searchButton": "搜尋",
+        "searchButton": "找食材",
         "audienceTitleA": "任何有食材需求的人，",
         "audienceTitleB": "都適用",
         "audienceSub": "不只是餐廳。只要需要進貨，我們就幫你找到對的供應商。",
