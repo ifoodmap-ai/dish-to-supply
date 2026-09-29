@@ -2,11 +2,23 @@
 //
 // 掃原始碼:顯示成交 / GMV / 採購金額 / 訂單數的頁面,一律從 src/lib/metrics.ts 取定義(業主拍板 Q5-A)。
 // 頁面測試只能證明「數字跟共用定義一致」;如果有人在頁面上抄一份語意相同的狀態清單,數字照樣對,
-// 但下次改定義時那一頁就會漏改 —— 這支測試專門擋「抄一份清單」。
+// 但下次改定義時那一頁就會漏改 —— 這支測試專門擋「抄一份清單」,
+// 以及「算成交卻沒讀收貨事件」(已結案的單要收過貨才算成交,判斷靠 order_events)。
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { EXCLUDED_ORDER_STATUSES, GMV_STATUSES, IN_PROGRESS_STATUSES } from './metrics';
+import {
+  DEAL_STATUSES,
+  EXCLUDED_ORDER_STATUSES,
+  IN_PROGRESS_STATUSES,
+  RECEIPT_REQUIRED_STATUSES,
+} from './metrics';
+
+/** 會變成 GMV 的狀態(一定算的 + 收過貨才算的) */
+const GMV_CANDIDATES: readonly string[] = [...DEAL_STATUSES, ...RECEIPT_REQUIRED_STATUSES];
+
+/** 算成交的共用函式:用到任何一個,就一定要有收貨帳本 */
+const DEAL_FUNCTIONS = ['isDeal', 'dealOrders', 'countDeals', 'sumGmv', 'pricedDeals', 'averageDealAmount'];
 
 const ROOT = resolve(__dirname, '../..');
 
@@ -62,7 +74,7 @@ const countIn = (items: string[], set: readonly string[]) => items.filter((s) =>
 
 /** 看起來像在重寫共用定義的清單:≥2 個成交狀態、≥2 個不算訂單的狀態,或 ≥4 個在途狀態 */
 const looksLikeDefinition = (items: string[]) =>
-  countIn(items, GMV_STATUSES) >= 2 ||
+  countIn(items, GMV_CANDIDATES) >= 2 ||
   countIn(items, EXCLUDED_ORDER_STATUSES) >= 2 ||
   countIn(items, IN_PROGRESS_STATUSES) >= 4;
 
@@ -79,6 +91,18 @@ describe('共用定義守門:頁面不准自己抄狀態清單', () => {
     expect(offenders).toEqual([]);
   });
 
+  it.each(PAGES)('%s 算成交時有讀收貨事件、做成帳本(已結案要收過貨才算)', (file) => {
+    const src = source(file);
+    const usesDeals = DEAL_FUNCTIONS.some((fn) => new RegExp(`\\b${fn}\\(`).test(src));
+    if (!usesDeals) return;
+    expect(src).toContain('dealLedger(');
+    expect(src).toContain("'order_events'");
+  });
+
+  it.each(PAGES)('%s 沒有自己判斷「已結案算不算成交」', (file) => {
+    expect(source(file)).not.toMatch(/status\s*[!=]==?\s*['"]closed['"]/);
+  });
+
   it.each(PAGES)('%s 沒有再定義舊的狀態清單名稱', (file) => {
     const src = source(file);
     const found = FORBIDDEN_NAMES.filter((name) => new RegExp(`\\b${name}\\s*[:=]`).test(src));
@@ -92,6 +116,7 @@ describe('共用定義守門:頁面不准自己抄狀態清單', () => {
     expect(hits("['submitted', 'dispatched', 'accepted', 'quoted', 'confirmed']")).toBe(1);
     expect(hits("earliestOf(o.id, ['dispatched', 'sent'])")).toBe(0);
     expect(hits("earliestOf(o.id, ['accepted', 'quoted', 'rejected'])")).toBe(0);
+    expect(hits("['received', 'closed']")).toBe(1); // 自己把 closed 當成交
   });
 
   it('允許清單都還真的存在(不然就該從白名單拿掉)', () => {

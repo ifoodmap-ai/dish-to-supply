@@ -41,6 +41,19 @@ import {
 } from '@/components/ui/dialog';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
+import { formatOrderNo } from '@/lib/order-number';
+
+/* 這幾張表還沒進 types.ts,沿用專案既有的 cast 慣例,只描述這頁用得到的那一小段 builder */
+type QueryError = { message: string } | null;
+interface SelectQuery<T> extends PromiseLike<{ data: T[] | null; error: QueryError }> {
+  order(column: string, options: { ascending: boolean }): SelectQuery<T>;
+}
+interface Table<T> {
+  select(columns: string): SelectQuery<T>;
+  insert(values: Record<string, unknown>): PromiseLike<{ error: QueryError }>;
+}
+const db = <T,>(table: string): Table<T> =>
+  (supabase as never as { from: (t: string) => Table<T> }).from(table);
 
 // ---------- Types ----------
 interface OrderRow {
@@ -103,8 +116,8 @@ const fmtMoney = (n: number | null | undefined) =>
 const fmtDate = (s: string | null | undefined) =>
   s ? new Date(s).toLocaleString('zh-TW') : '—';
 
-const orderLabel = (id: string | null | undefined) =>
-  id ? `#${id.slice(0, 8)}` : '—';
+/** 訂單編號用全站統一的格式(src/lib/order-number.ts);沒有對應訂單時顯示「—」 */
+const orderLabel = (id: string | null | undefined) => (id ? formatOrderNo(id) : '—');
 
 const pad4 = () => String(Math.floor(1000 + Math.random() * 9000));
 const yyyymmdd = () => {
@@ -140,22 +153,19 @@ const AdminBillingPage = () => {
 
   const loadAll = async () => {
     const [oRes, pRes, iRes] = await Promise.all([
-      (supabase as never)
-        .from('supplier_orders')
+      db<OrderRow>('supplier_orders')
         .select('id, created_at, status, supplier_id')
         .order('created_at', { ascending: false }),
-      (supabase as never)
-        .from('order_payments')
+      db<PaymentRow>('order_payments')
         .select('id, order_id, amount, method, status, transaction_no, paid_at, created_at')
         .order('created_at', { ascending: false }),
-      (supabase as never)
-        .from('invoices')
+      db<InvoiceRow>('invoices')
         .select('id, order_id, invoice_number, buyer_name, amount, tax_amount, status, issued_at, created_at')
         .order('created_at', { ascending: false }),
     ]);
-    setOrders(((oRes as { data: OrderRow[] | null }).data) ?? []);
-    setPayments(((pRes as { data: PaymentRow[] | null }).data) ?? []);
-    setInvoices(((iRes as { data: InvoiceRow[] | null }).data) ?? []);
+    setOrders(oRes.data ?? []);
+    setPayments(pRes.data ?? []);
+    setInvoices(iRes.data ?? []);
   };
 
   useEffect(() => {
@@ -238,7 +248,7 @@ const AdminBillingPage = () => {
     setPaySaving(true);
     const now = new Date().toISOString();
     const txn = `DEMO${Date.now()}`;
-    const { error } = await (supabase as never).from('order_payments').insert({
+    const { error } = await db<PaymentRow>('order_payments').insert({
       order_id: payOrderId,
       amount: amt,
       method: payMethod,
@@ -289,7 +299,7 @@ const AdminBillingPage = () => {
     const now = new Date().toISOString();
     const invoiceNumber = `AB-${yyyymmdd()}-${pad4()}`;
     const tax = Math.round(amt * 0.05);
-    const { error } = await (supabase as never).from('invoices').insert({
+    const { error } = await db<InvoiceRow>('invoices').insert({
       order_id: invOrderId,
       invoice_number: invoiceNumber,
       buyer_name: invBuyer.trim(),

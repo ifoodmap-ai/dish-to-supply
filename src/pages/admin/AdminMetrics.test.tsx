@@ -4,6 +4,7 @@
 //   ①頁面顯示的數字 = metrics.ts 對同一份資料算出來的數字,而且不是該頁舊算法的數字
 //   ②頁面真的呼叫了 metrics.ts 的函式(函式包成 spy,見 src/test/metricsSpy.ts)
 // 預期值一律在 describe 層先算好 —— it() 裡看到的 metrics 呼叫就一定是頁面發出的。
+// 已結案(closed)要收過貨才算成交(業主 2026-09-29 決定):每頁都驗「收過貨的結案算、爭議直接結案不算」。
 // supabase 換成記憶體假資料(testFakeSupabase),不打網路、不碰正式庫。
 
 import { cleanup, render, screen, waitFor, within } from '@testing-library/react';
@@ -27,7 +28,56 @@ vi.mock('@/lib/metrics', async (importOriginal) =>
 );
 vi.mock('sonner', () => ({ toast: { error: vi.fn(), success: vi.fn() } }));
 
-const { GMV_STATUSES, ORDER_STATUSES } = metrics;
+const { DEAL_EVENT_STATUSES, ORDER_STATUSES } = metrics;
+
+/** 會變成 GMV 的四種狀態(closed 要收過貨) */
+const GMV_CANDIDATES = ['received', 'reviewed', 'closed', 'completed'] as const;
+/** 收貨事件:四種各一筆 received(closed 那張收過貨) */
+const receivedEvents = (at: string) =>
+  GMV_CANDIDATES.map((status) => ({ order_id: orderIdFor(status), to_status: 'received', created_at: at }));
+/** 同上,但 closed 那張是爭議直接結案:沒有收貨事件,只有 disputed / closed */
+const disputeClosedEvents = (at: string) => [
+  ...GMV_CANDIDATES.filter((s) => s !== 'closed').map((status) => ({
+    order_id: orderIdFor(status), to_status: 'received', created_at: at,
+  })),
+  { order_id: orderIdFor('closed'), to_status: 'disputed', created_at: at },
+  { order_id: orderIdFor('closed'), to_status: 'closed', created_at: at },
+];
+/** spy 呼叫時的第二個參數:收貨帳本 */
+const anyLedger = expect.objectContaining({ received: expect.any(Set), firstDealAt: expect.any(Map) });
+
+/**
+ * 1,500 筆別張單的收貨事件排前面,目標事件放在最後(第 1,501 筆之後):
+ * 不分頁讀完就看不到 → 已結案那張會被漏算(假 supabase 跟 PostgREST 一樣照 .range 切)。
+ */
+const behindFirstPage = <T,>(tail: T[]) => [
+  ...Array.from({ length: 1500 }, (_, i) => ({
+    order_id: `filler-${i}`, to_status: 'received', created_at: '2026-09-01T02:00:00.000Z',
+  })),
+  ...tail,
+];
+/** order_events 查詢一律照 created_at、id 排序並分頁 */
+const expectPagedEventReads = () => {
+  const reads = fakeSupabase.queriesOf('order_events');
+  expect(reads.length).toBeGreaterThanOrEqual(2);
+  reads.forEach((q) => {
+    expect(q.filters.some((f) => f.op === 'range')).toBe(true);
+    expect(q.filters.filter((f) => f.op === 'order').map((f) => [f.column, f.value])).toEqual([
+      ['created_at', { ascending: true }],
+      ['id', { ascending: true }],
+    ]);
+  });
+};
+const EVENTS_ERROR = { error: { message: '模擬:事件讀取失敗' } };
+/**
+ * 收貨事件在第一頁、第二頁讀取失敗:整份要當成讀取失敗(不能拿半套事件算),
+ * 所以已結案那張「不算」才對;如果頁面拿了半套資料,它反而會被算進去。
+ */
+const failOnSecondPage = (head: unknown[]) => (q: RecordedQuery) => {
+  const range = q.filters.find((f) => f.op === 'range')?.value as [number, number] | undefined;
+  if (range && range[0] >= 1000) return EVENTS_ERROR;
+  return { data: [...head, ...behindFirstPage([])] };
+};
 
 // recharts 的 ResponsiveContainer 需要 ResizeObserver,jsdom 沒有
 class ResizeObserverStub {
@@ -98,24 +148,29 @@ describe('總覽 › 成長(AdminGrowthPage):GMV、AOV、漏斗', () => {
     restaurant_id: status === 'draft' ? 'rest-2' : 'rest-1',
     created_at: localIso(2026, 8, 20),
   }));
-  const EVENTS = GMV_STATUSES.map((status) => ({
-    order_id: orderIdFor(status),
-    to_status: 'received',
-    created_at: localIso(2026, 9, 5),
-  }));
-  const GMV = ntd(metrics.sumGmv(ORDERS));
-  const DEALS = metrics.countDeals(ORDERS); // 4
-  const AOV = ntd(metrics.averageDealAmount(ORDERS));
+  const EVENTS = receivedEvents(localIso(2026, 9, 5));
+  const LEDGER = metrics.dealLedger(EVENTS);
+  const GMV = ntd(metrics.sumGmv(ORDERS, LEDGER));
+  const DEALS = metrics.countDeals(ORDERS, LEDGER); // 4
+  const AOV = ntd(metrics.averageDealAmount(ORDERS, LEDGER));
   const PLACED = String(metrics.countOrders(ORDERS)); // 16;舊算法(只排除草稿、取消)是 18
 
-  beforeEach(() => {
+  // 爭議直接結案版本:closed 那張沒收過貨
+  const DISPUTE_EVENTS = disputeClosedEvents(localIso(2026, 9, 5));
+  const DISPUTE_LEDGER = metrics.dealLedger(DISPUTE_EVENTS);
+  const GMV_DISPUTE = ntd(metrics.sumGmv(ORDERS, DISPUTE_LEDGER));
+  const DEALS_DISPUTE = metrics.countDeals(ORDERS, DISPUTE_LEDGER); // 3
+  const AOV_DISPUTE = ntd(metrics.averageDealAmount(ORDERS, DISPUTE_LEDGER));
+
+  const respond = (events: unknown[]) =>
     fakeSupabase.respond((q) => {
       if (q.table === 'supplier_orders') return { data: ORDERS };
-      if (q.table === 'order_events') return { data: EVENTS };
+      if (q.table === 'order_events') return { data: events };
       if (q.table === 'restaurants') return { data: [{ id: 'rest-1', created_at: localIso(2026, 7, 1) }] };
       return { data: [] };
     });
-  });
+
+  beforeEach(() => respond(EVENTS));
 
   it('累計 GMV / 近 30 天 / 成交筆數 = metrics.ts 的成交定義', async () => {
     renderIn(<AdminGrowthPage />, '/admin/growth');
@@ -125,11 +180,11 @@ describe('總覽 › 成長(AdminGrowthPage):GMV、AOV、漏斗', () => {
     expect(cellOf('累計 GMV')).toHaveTextContent(`近 30 天 ${GMV} · ${DEALS} 筆成交`);
     expect(GMV).toBe(ntd(sumFor(['received', 'reviewed', 'closed', 'completed'])));
 
-    // 頁面呼叫的是共用函式,成交歸月查的是共用的 GMV_STATUSES
-    expect(metrics.sumGmv).toHaveBeenCalledWith(ORDERS);
-    expect(metrics.dealOrders).toHaveBeenCalledWith(ORDERS);
-    expect(metrics.firstDealEventAt).toHaveBeenCalledWith(EVENTS);
-    expect(statusFilterOf(fakeSupabase.queriesOf('order_events')[0], 'to_status')).toBe(GMV_STATUSES);
+    // 頁面呼叫的是共用函式,收貨事件查的是共用的 DEAL_EVENT_STATUSES
+    expect(metrics.sumGmv).toHaveBeenCalledWith(ORDERS, anyLedger);
+    expect(metrics.dealOrders).toHaveBeenCalledWith(ORDERS, anyLedger);
+    expect(metrics.dealLedger).toHaveBeenCalledWith(EVENTS);
+    expect(statusFilterOf(fakeSupabase.queriesOf('order_events')[0], 'to_status')).toBe(DEAL_EVENT_STATUSES);
     // GMV 月趨勢用本地時區、以收貨時間分月(月份函式跟營收頁共用)
     expect(metrics.localMonthKey).toHaveBeenCalledWith(EVENTS[0].created_at);
   });
@@ -138,7 +193,42 @@ describe('總覽 › 成長(AdminGrowthPage):GMV、AOV、漏斗', () => {
     renderIn(<AdminGrowthPage />, '/admin/growth');
     await waitFor(() => expectValueIn('平均成交金額 (AOV)', AOV));
     expect(screen.queryByText('平均訂單金額 (AOV)')).toBeNull();
-    expect(metrics.averageDealAmount).toHaveBeenCalledWith(ORDERS);
+    expect(metrics.averageDealAmount).toHaveBeenCalledWith(ORDERS, anyLedger);
+  });
+
+  it('爭議直接結案(沒收過貨)的已結案單:不算 GMV、不算完成收貨、不進 AOV,但仍算成立訂單', async () => {
+    respond(DISPUTE_EVENTS);
+    renderIn(<AdminGrowthPage />, '/admin/growth');
+
+    await waitFor(() => expectValueIn('累計 GMV', GMV_DISPUTE));
+    expect(GMV_DISPUTE).toBe(ntd(sumFor(['received', 'reviewed', 'completed'])));
+    expect(cellOf('累計 GMV')).toHaveTextContent(`${DEALS_DISPUTE} 筆成交`);
+    expectValueIn('完成收貨', String(DEALS_DISPUTE));
+    expectValueIn('成立訂單', PLACED); // closed 還是有效訂單
+    expectValueIn('平均成交金額 (AOV)', AOV_DISPUTE);
+    expect(cellOf('平均成交金額 (AOV)')).toHaveTextContent(`樣本 ${DEALS_DISPUTE} 筆有金額的成交訂單`);
+  });
+
+  it('收貨事件超過 1,000 筆:分頁讀完,排在後面的收貨事件也算得到', async () => {
+    respond(behindFirstPage(EVENTS));
+    renderIn(<AdminGrowthPage />, '/admin/growth');
+    await waitFor(() => expectValueIn('累計 GMV', GMV)); // 含已結案那張
+    expectPagedEventReads();
+  });
+
+  it.each([
+    ['一開始就失敗', () => EVENTS_ERROR],
+    ['讀到第二頁才失敗(不能拿半套)', failOnSecondPage(EVENTS)],
+  ] as const)('收貨事件讀取失敗(%s):已結案的單不算 GMV,並常駐提示', async (_label, events) => {
+    fakeSupabase.respond((q) => {
+      if (q.table === 'supplier_orders') return { data: ORDERS };
+      if (q.table === 'order_events') return (events as (q: RecordedQuery) => unknown)(q) as never;
+      if (q.table === 'restaurants') return { data: [{ id: 'rest-1', created_at: localIso(2026, 7, 1) }] };
+      return { data: [] };
+    });
+    renderIn(<AdminGrowthPage />, '/admin/growth');
+    await waitFor(() => expectValueIn('累計 GMV', GMV_DISPUTE));
+    expect(screen.getByText(/已結案的單無法確認收過貨、暫不計入 GMV/)).toBeInTheDocument();
   });
 
   it('漏斗「成立訂單」= 共用的訂單數(舊算法連拒單、逾時也算),「完成收貨」= 成交單數', async () => {
@@ -157,23 +247,23 @@ describe('財務 › 營收與抽成(AdminRevenuePage)', () => {
     supplier_id: 'sup-1',
     created_at: localIso(2026, 8, 20),
   }));
-  const EVENTS = GMV_STATUSES.map((status) => ({
-    order_id: orderIdFor(status),
-    to_status: 'received',
-    created_at: localIso(2026, 9, 2),
-  }));
-  const GMV = ntd(metrics.sumGmv(ORDERS));
-  const DEALS = metrics.countDeals(ORDERS);
+  const EVENTS = receivedEvents(localIso(2026, 9, 2));
+  const LEDGER = metrics.dealLedger(EVENTS);
+  const GMV = ntd(metrics.sumGmv(ORDERS, LEDGER));
+  const DEALS = metrics.countDeals(ORDERS, LEDGER);
+  const DISPUTE_EVENTS = disputeClosedEvents(localIso(2026, 9, 2));
+  const GMV_DISPUTE = ntd(metrics.sumGmv(ORDERS, metrics.dealLedger(DISPUTE_EVENTS)));
+  const AVG_DISPUTE = ntd(metrics.averageDealAmount(ORDERS, metrics.dealLedger(DISPUTE_EVENTS)));
 
   const UNPRICED = {
     id: 'order-unpriced', status: 'received', total_amount: null,
     restaurant_id: 'rest-1', supplier_id: 'sup-1', created_at: localIso(2026, 8, 21),
   };
   const WITH_UNPRICED = [...ORDERS, UNPRICED];
-  const AVG = metrics.averageDealAmount(WITH_UNPRICED); // 分母 4(舊算法除以 5)
-  const AVG_OLD = metrics.sumGmv(ORDERS) / 5;
+  const AVG = metrics.averageDealAmount(WITH_UNPRICED, LEDGER); // 分母 4(舊算法除以 5)
+  const AVG_OLD = metrics.sumGmv(ORDERS, LEDGER) / 5;
 
-  const NO_DEALS = ORDERS.filter((o) => !GMV_STATUSES.includes(o.status));
+  const NO_DEALS = ORDERS.filter((o) => !(GMV_CANDIDATES as readonly string[]).includes(o.status));
   const IN_PROGRESS_COUNT = metrics.countOrders(NO_DEALS); // 12(沒有成交單時,在途 = 全部有效訂單)
   const IN_PROGRESS_AMOUNT = ntd(metrics.sumOrderAmount(NO_DEALS));
 
@@ -191,11 +281,45 @@ describe('財務 › 營收與抽成(AdminRevenuePage)', () => {
     await waitFor(() => expectValueIn('本月 GMV', GMV));
     expectValueIn('累計 GMV', GMV);
     expect(cellOf('累計 GMV')).toHaveTextContent(`${DEALS} 筆成交`);
-    expect(metrics.sumGmv).toHaveBeenCalledWith(ORDERS);
+    expect(metrics.sumGmv).toHaveBeenCalledWith(ORDERS, anyLedger);
     // 本月 GMV、月度表、最近認列清單、累計筆數都從這一份成交單來
-    expect(metrics.dealOrders).toHaveBeenCalledWith(ORDERS);
+    expect(metrics.dealOrders).toHaveBeenCalledWith(ORDERS, anyLedger);
+    expect(metrics.dealLedger).toHaveBeenCalledWith(EVENTS);
     expect(metrics.dealRecognizedAt).toHaveBeenCalled();
-    expect(statusFilterOf(fakeSupabase.queriesOf('order_events')[0], 'to_status')).toBe(GMV_STATUSES);
+    expect(statusFilterOf(fakeSupabase.queriesOf('order_events')[0], 'to_status')).toBe(DEAL_EVENT_STATUSES);
+  });
+
+  it('爭議直接結案(沒收過貨)的已結案單不算 GMV,也不算在途', async () => {
+    respond(ORDERS, DISPUTE_EVENTS);
+    renderIn(<AdminRevenuePage />, '/admin/revenue');
+
+    await waitFor(() => expectValueIn('累計 GMV', GMV_DISPUTE));
+    expect(GMV_DISPUTE).toBe(ntd(sumFor(['received', 'reviewed', 'completed'])));
+    expectValueIn('本月 GMV', GMV_DISPUTE);
+    expect(cellOf('累計 GMV')).toHaveTextContent('3 筆成交');
+    expectValueIn('成交訂單的平均金額(不含還沒填金額的單)', AVG_DISPUTE);
+  });
+
+  it('收貨事件超過 1,000 筆:分頁讀完,排在後面的收貨事件也算得到', async () => {
+    respond(ORDERS, behindFirstPage(EVENTS));
+    renderIn(<AdminRevenuePage />, '/admin/revenue');
+    await waitFor(() => expectValueIn('累計 GMV', GMV));
+    expectPagedEventReads();
+    expect(screen.queryByText(/單次查詢已達/)).toBeNull(); // 事件讀完整了,不再誤報上限
+  });
+
+  it.each([
+    ['一開始就失敗', () => EVENTS_ERROR],
+    ['讀到第二頁才失敗(不能拿半套)', failOnSecondPage(EVENTS)],
+  ] as const)('收貨事件讀取失敗(%s):已結案的單不算 GMV,並常駐提示', async (_label, events) => {
+    fakeSupabase.respond((q) => {
+      if (q.table === 'supplier_orders') return { data: ORDERS };
+      if (q.table === 'order_events') return (events as (q: RecordedQuery) => unknown)(q) as never;
+      return { data: [] };
+    });
+    renderIn(<AdminRevenuePage />, '/admin/revenue');
+    await waitFor(() => expectValueIn('累計 GMV', GMV_DISPUTE));
+    expect(screen.getByText(/已結案的單無法確認收過貨、暫不計入 GMV/)).toBeInTheDocument();
   });
 
   it('月初清晨確認收貨的單算在當月(本地時區,不是 UTC)', async () => {
@@ -217,7 +341,7 @@ describe('財務 › 營收與抽成(AdminRevenuePage)', () => {
     // KPI 卡用說明文字定位(「平均成交金額」同時也是月度表的欄名)
     await waitFor(() => expectValueIn('成交訂單的平均金額(不含還沒填金額的單)', ntd(AVG)));
     expect(AVG).not.toBe(AVG_OLD);
-    expect(metrics.averageDealAmount).toHaveBeenCalledWith(WITH_UNPRICED);
+    expect(metrics.averageDealAmount).toHaveBeenCalledWith(WITH_UNPRICED, anyLedger);
     expect(screen.getAllByText('平均成交金額')).toHaveLength(2); // KPI 標題 + 月度表欄名
     expect(screen.queryByText('平均客單價')).toBeNull();
     expect(screen.getByRole('columnheader', { name: '成交單數' })).toBeInTheDocument();
@@ -244,32 +368,65 @@ describe('需求與媒合 › 供給缺口與品質(AdminMatchQualityPage)', () 
     current_stage_since: localIso(2026, 9, 14),
     created_at: localIso(2026, 9, 1),
   }));
-  const DEALS = String(metrics.countDeals(ORDERS)); // 4
+  const EVENTS = receivedEvents(localIso(2026, 9, 5));
+  const LEDGER = metrics.dealLedger(EVENTS);
+  const DEALS = String(metrics.countDeals(ORDERS, LEDGER)); // 4
+  const DEALS_DISPUTE = String(metrics.countDeals(ORDERS, metrics.dealLedger(disputeClosedEvents(localIso(2026, 9, 5))))); // 3
   const ORDER_COUNT = metrics.countOrders(ORDERS); // 16
-  const DEAL_RATE = Math.round((metrics.countDeals(ORDERS) / ORDER_COUNT) * 100); // 25(舊算法:4 ÷ 全部 20 = 20)
+  const DEAL_RATE = Math.round((metrics.countDeals(ORDERS, LEDGER) / ORDER_COUNT) * 100); // 25(舊算法:4 ÷ 全部 20 = 20)
   // 未接單 4 張(待接單 / 已派發 / 拒單 / 逾時),其中拒單、逾時不算訂單 → 分母 = 16 + 2
   const LOST_RATE = Math.round((4 / (ORDER_COUNT + 2)) * 100); // 22
 
-  it('已成交筆數 = 共用成交定義;「派發後未成交」改叫「派發後未接單」', async () => {
+  const respond = (events: unknown[]) =>
     fakeSupabase.respond((q) => {
       if (q.table === 'supplier_orders') return { data: ORDERS };
+      if (q.table === 'order_events') return { data: events };
       return { data: [] };
     });
+
+  it('已成交筆數 = 共用成交定義;「派發後未成交」改叫「派發後未接單」', async () => {
+    respond(EVENTS);
     renderIn(<AdminMatchQualityPage />, '/admin/match-quality');
 
     await waitFor(() => expectValueIn('已成交筆數', DEALS));
-    expect(metrics.countDeals).toHaveBeenCalledWith(ORDERS);
+    expect(metrics.countDeals).toHaveBeenCalledWith(ORDERS, anyLedger);
+    expect(statusFilterOf(fakeSupabase.queriesOf('order_events')[0], 'to_status')).toBe(DEAL_EVENT_STATUSES);
     expectValueIn('未接單筆數', '4'); // dispatched / sent / rejected / expired
     expect(screen.getByText('派發後未接單')).toBeInTheDocument();
     expect(screen.queryByText('派發後未成交')).toBeNull();
     expect(screen.queryByText('媒合了但沒成交')).toBeNull();
   });
 
-  it('訂單數與成交率用共用定義:成交率 = 成交單數 ÷ 訂單數;未接單比例的分母把拒單、逾時加回來', async () => {
+  it('爭議直接結案(沒收過貨)的已結案單不算已成交', async () => {
+    respond(disputeClosedEvents(localIso(2026, 9, 5)));
+    renderIn(<AdminMatchQualityPage />, '/admin/match-quality');
+    await waitFor(() => expectValueIn('已成交筆數', DEALS_DISPUTE));
+    expect(DEALS_DISPUTE).toBe('3');
+  });
+
+  it('收貨事件超過 1,000 筆:分頁讀完,排在後面的收貨事件也算得到', async () => {
+    respond(behindFirstPage(EVENTS));
+    renderIn(<AdminMatchQualityPage />, '/admin/match-quality');
+    await waitFor(() => expectValueIn('已成交筆數', DEALS));
+    expectPagedEventReads();
+  });
+
+  it.each([
+    ['一開始就失敗', () => EVENTS_ERROR],
+    ['讀到第二頁才失敗(不能拿半套)', failOnSecondPage(EVENTS)],
+  ] as const)('收貨事件讀取失敗(%s):已結案的單不算已成交,並常駐提示', async (_label, events) => {
     fakeSupabase.respond((q) => {
       if (q.table === 'supplier_orders') return { data: ORDERS };
+      if (q.table === 'order_events') return (events as (q: RecordedQuery) => unknown)(q) as never;
       return { data: [] };
     });
+    renderIn(<AdminMatchQualityPage />, '/admin/match-quality');
+    await waitFor(() => expectValueIn('已成交筆數', '3'));
+    expect(screen.getByText(/已結案的單無法確認收過貨,暫不計入已成交/)).toBeInTheDocument();
+  });
+
+  it('訂單數與成交率用共用定義:成交率 = 成交單數 ÷ 訂單數;未接單比例的分母把拒單、逾時加回來', async () => {
+    respond(EVENTS);
     renderIn(<AdminMatchQualityPage />, '/admin/match-quality');
 
     await waitFor(() => expect(screen.getByText(/成交率/)).toHaveTextContent(`成交率 ${DEAL_RATE}%(成交單數 ÷ 訂單數)`));
@@ -285,9 +442,12 @@ describe('需求與媒合 › 供給缺口與品質(AdminMatchQualityPage)', () 
 /* ------------------------------------------------------------------ */
 describe('會員 › 供應商(AdminSuppliersPage):成交單數 / 訂單數', () => {
   const ORDERS = orderMatrix(() => ({ supplier_id: 'sup-1' }));
-  const EXPECTED = `${metrics.countDeals(ORDERS)} / ${metrics.countOrders(ORDERS)}`; // 4 / 16
+  const EVENTS = receivedEvents(localIso(2026, 9, 5));
+  const EXPECTED = `${metrics.countDeals(ORDERS, metrics.dealLedger(EVENTS))} / ${metrics.countOrders(ORDERS)}`; // 4 / 16
+  const DISPUTE_EVENTS = disputeClosedEvents(localIso(2026, 9, 5));
+  const EXPECTED_DISPUTE = `${metrics.countDeals(ORDERS, metrics.dealLedger(DISPUTE_EVENTS))} / ${metrics.countOrders(ORDERS)}`; // 3 / 16
 
-  it('delivered(待收貨)不再算成交;分母只數有效訂單', async () => {
+  const respond = (events: unknown[]) =>
     fakeSupabase.respond((q) => {
       if (q.table === 'suppliers') {
         return {
@@ -301,8 +461,12 @@ describe('會員 › 供應商(AdminSuppliersPage):成交單數 / 訂單數', ()
         };
       }
       if (q.table === 'supplier_orders') return { data: ORDERS };
+      if (q.table === 'order_events') return { data: events };
       return { data: [] };
     });
+
+  it('delivered(待收貨)不再算成交;分母只數有效訂單', async () => {
+    respond(EVENTS);
     renderIn(<AdminSuppliersPage />, '/admin/suppliers');
 
     const row = (await screen.findByText('鮮綠農產')).closest('tr') as HTMLElement;
@@ -310,8 +474,51 @@ describe('會員 › 供應商(AdminSuppliersPage):成交單數 / 訂單數', ()
     // 新:4 / 16;舊算法是 5 / 20(把 delivered 算成交、分母連草稿取消都算)
     await waitFor(() => expect(row).toHaveTextContent(EXPECTED));
     expect(row).not.toHaveTextContent('5 / 20');
-    expect(metrics.isDeal).toHaveBeenCalledWith('delivered');
+    expect(metrics.isDeal).toHaveBeenCalledWith(expect.objectContaining({ status: 'delivered' }), anyLedger);
     expect(metrics.isCountedOrder).toHaveBeenCalledWith('draft');
+    expect(statusFilterOf(fakeSupabase.queriesOf('order_events')[0], 'to_status')).toBe(DEAL_EVENT_STATUSES);
+  });
+
+  it('爭議直接結案(沒收過貨)的已結案單不算成交,但還是算一張訂單', async () => {
+    respond(DISPUTE_EVENTS);
+    renderIn(<AdminSuppliersPage />, '/admin/suppliers');
+    const row = (await screen.findByText('鮮綠農產')).closest('tr') as HTMLElement;
+    await waitFor(() => expect(row).toHaveTextContent(EXPECTED_DISPUTE));
+    expect(EXPECTED_DISPUTE).toBe('3 / 16');
+  });
+
+  it('收貨事件超過 1,000 筆:分頁讀完,排在後面的收貨事件也算得到', async () => {
+    respond(behindFirstPage(EVENTS));
+    renderIn(<AdminSuppliersPage />, '/admin/suppliers');
+    const row = (await screen.findByText('鮮綠農產')).closest('tr') as HTMLElement;
+    await waitFor(() => expect(row).toHaveTextContent(EXPECTED));
+    expectPagedEventReads();
+  });
+
+  it.each([
+    ['一開始就失敗', () => EVENTS_ERROR],
+    ['讀到第二頁才失敗(不能拿半套)', failOnSecondPage(EVENTS)],
+  ] as const)('收貨事件讀取失敗(%s):已結案的單不算成交,並常駐提示(不是只跳 toast)', async (_label, events) => {
+    fakeSupabase.respond((q) => {
+      if (q.table === 'suppliers') {
+        return {
+          data: [
+            {
+              id: 'sup-1', name: '鮮綠農產', description: null, service_areas: ['台北市'],
+              contact_name: null, contact_email: null, phone: null, is_active: true,
+              created_at: localIso(2026, 7, 1),
+            },
+          ],
+        };
+      }
+      if (q.table === 'supplier_orders') return { data: ORDERS };
+      if (q.table === 'order_events') return (events as (q: RecordedQuery) => unknown)(q) as never;
+      return { data: [] };
+    });
+    renderIn(<AdminSuppliersPage />, '/admin/suppliers');
+    const row = (await screen.findByText('鮮綠農產')).closest('tr') as HTMLElement;
+    await waitFor(() => expect(row).toHaveTextContent('3 / 16'));
+    expect(screen.getByText(/收貨紀錄讀取失敗:已結案的單無法確認收過貨/)).toBeInTheDocument();
   });
 });
 

@@ -34,6 +34,7 @@ import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Textarea } from '@/components/ui/textarea';
 import { supabase } from '@/integrations/supabase/client';
 import { ORDER_STATUS, ROLE_LABEL, type ActorRole, type OrderStatus } from '@/lib/orders';
+import { formatOrderNo } from '@/lib/order-number';
 
 /* ---------------------------------------------------------------
  * 新資料表尚未進 types.ts,沿用專案既有的 cast 慣例
@@ -438,7 +439,7 @@ export default function AdminDisputesPage() {
                           onClick={() => navigate(`/admin/orders/${d.order_id}`)}
                           className="inline-flex items-center gap-1 font-mono text-xs text-blue-600 hover:text-blue-800 hover:underline"
                         >
-                          #{d.order_id.slice(-8)}
+                          {formatOrderNo(d.order_id)}
                           <ExternalLink className="h-3 w-3" />
                         </button>
                         {order && (
@@ -542,7 +543,7 @@ export default function AdminDisputesPage() {
             <DialogDescription>
               {editing && (
                 <>
-                  訂單 #{editing.order_id.slice(-8)} · {KIND_META[editing.kind]?.label ?? editing.kind}
+                  訂單 {formatOrderNo(editing.order_id)} · {KIND_META[editing.kind]?.label ?? editing.kind}
                   {' · 已擱置 '}
                   {formatDays(daysBetween(editing.created_at, editing.resolved_at))}
                 </>

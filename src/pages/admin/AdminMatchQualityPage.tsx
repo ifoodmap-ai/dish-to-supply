@@ -43,7 +43,16 @@ import {
 } from '@/components/ui/table';
 import { supabase } from '@/integrations/supabase/client';
 import { ORDER_STATUS, formatStageAge, isStuck, type OrderStatus } from '@/lib/orders';
-import { countDeals, countOrders, isCountedOrder } from '@/lib/metrics';
+import { formatOrderNo } from '@/lib/order-number';
+import {
+  DEAL_EVENT_STATUSES,
+  countDeals,
+  countOrders,
+  dealLedger,
+  fetchAllPages,
+  isCountedOrder,
+  type StatusEventRow,
+} from '@/lib/metrics';
 
 /* ---------------------------------------------------------------
  * 新資料表尚未進 types.ts,沿用專案既有的 cast 慣例
@@ -56,6 +65,7 @@ interface Chain<T> extends PromiseLike<Res<T>> {
   gte(col: string, v: unknown): Chain<T>;
   order(col: string, opts?: { ascending: boolean }): Chain<T>;
   limit(n: number): Chain<T>;
+  range(from: number, to: number): Chain<T>;
 }
 
 const table = <T,>(name: string) =>
@@ -170,6 +180,9 @@ export default function AdminMatchQualityPage() {
   const [ingredients, setIngredients] = useState<IngredientRow[]>([]);
   const [aliases, setAliases] = useState<AliasRow[]>([]);
   const [orders, setOrders] = useState<OrderRow[]>([]);
+  /** 收貨事件:已結案的單要收過貨才算成交(見 src/lib/metrics.ts) */
+  const [dealEvents, setDealEvents] = useState<StatusEventRow[]>([]);
+  const [eventsError, setEventsError] = useState<string | null>(null);
   const [matchResults, setMatchResults] = useState<MatchResultRow[] | null>(null);
   const [restaurantMap, setRestaurantMap] = useState<Record<string, string>>({});
   const [supplierMap, setSupplierMap] = useState<Record<string, string>>({});
@@ -184,7 +197,7 @@ export default function AdminMatchQualityPage() {
 
       const since = new Date(Date.now() - Number(days) * 86_400_000).toISOString();
 
-      const [aRes, suRes, ingRes, aliasRes, oRes, mRes, restRes, supRes] = await Promise.all([
+      const [aRes, suRes, ingRes, aliasRes, oRes, evRes, mRes, restRes, supRes] = await Promise.all([
         table<AnalysisRow>('analysis_records')
           .select('id, created_at, ingredient_list')
           .gte('created_at', since)
@@ -194,6 +207,15 @@ export default function AdminMatchQualityPage() {
         table<AliasRow>('ingredient_aliases').select('ingredient_id, alias'),
         table<OrderRow>('supplier_orders').select(
           'id, status, restaurant_id, supplier_id, total_amount, current_stage_since, created_at',
+        ),
+        // 分頁讀完 —— 被 1000 筆上限截掉的收貨事件會讓已結案的單悄悄不算成交
+        fetchAllPages((from, to) =>
+          table<StatusEventRow>('order_events')
+            .select('order_id, to_status, created_at')
+            .in('to_status', DEAL_EVENT_STATUSES)
+            .order('created_at', { ascending: true })
+            .order('id', { ascending: true })
+            .range(from, to),
         ),
         table<MatchResultRow>('match_results').select('id, confidence_score, status, created_at'),
         table<NameRow>('restaurants').select('id, name'),
@@ -213,6 +235,9 @@ export default function AdminMatchQualityPage() {
       setIngredients(ingRes.error ? [] : ingRes.data ?? []);
       setAliases(aliasRes.error ? [] : aliasRes.data ?? []);
       setOrders(oRes.error ? [] : oRes.data ?? []);
+      // 事件讀不到時:已結案的單無法確認收過貨、先不算成交,頁面上註明
+      setDealEvents(evRes.error ? [] : evRes.data);
+      setEventsError(evRes.error ? evRes.error.message : null);
       // match_results 不存在或無權限時 → null,改用訂單狀態分布
       setMatchResults(mRes.error ? null : mRes.data ?? []);
 
@@ -355,7 +380,8 @@ export default function AdminMatchQualityPage() {
   };
 
   /* 成交單數 / 訂單數:區塊 2 與區塊 3 共用同一次計算(只有一個呼叫點,改定義時不會漏改其中一格) */
-  const dealCount = useMemo(() => countDeals(orders), [orders]);
+  const ledger = useMemo(() => dealLedger(dealEvents), [dealEvents]);
+  const dealCount = useMemo(() => countDeals(orders, ledger), [orders, ledger]);
   const orderCount = useMemo(() => countOrders(orders), [orders]);
 
   /* ---------------- 區塊 2:媒合了但供應商沒接單 ---------------- */
@@ -553,6 +579,12 @@ export default function AdminMatchQualityPage() {
           <span className="text-slate-400"> · 更新於 {fetchedAt.toLocaleTimeString('zh-TW')}</span>
         )}
       </p>
+
+      {eventsError && (
+        <p className="mb-4 text-xs text-amber-700">
+          訂單事件讀取失敗:已結案的單無法確認收過貨,暫不計入已成交({eventsError})
+        </p>
+      )}
 
       {loadError && (
         <div className="mb-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3">
@@ -797,7 +829,7 @@ export default function AdminMatchQualityPage() {
                             onClick={() => navigate(`/admin/orders/${o.id}`)}
                           >
                             <TableCell className="font-mono text-xs text-slate-500">
-                              #{o.id.slice(-8)}
+                              {formatOrderNo(o.id)}
                             </TableCell>
                             <TableCell className="text-sm text-slate-700">
                               {(o.restaurant_id && restaurantMap[o.restaurant_id]) || (

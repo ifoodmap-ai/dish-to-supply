@@ -30,12 +30,13 @@ import {
 } from 'recharts';
 import { supabase } from '@/integrations/supabase/client';
 import {
-  GMV_STATUSES,
+  DEAL_EVENT_STATUSES,
   averageDealAmount,
   countedOrders,
+  dealLedger,
+  fetchAllPages,
   dealOrders,
   dealRecognizedAt,
-  firstDealEventAt,
   localMonthKey,
   orderAmount,
   pricedDeals,
@@ -53,6 +54,7 @@ interface Chain<T> extends PromiseLike<Res<T>> {
   gte(col: string, v: unknown): Chain<T>;
   order(col: string, opts?: { ascending: boolean }): Chain<T>;
   limit(n: number): Chain<T>;
+  range(from: number, to: number): Chain<T>;
 }
 
 const table = <T,>(name: string) =>
@@ -107,7 +109,8 @@ const MIN_NPS = 10;
 const ROW_CAP = 1000;
 
 // 「有下單」與「成交 / GMV」都用全站共用的定義(src/lib/metrics.ts,業主拍板 Q5-A):
-//   有下單 = 訂單(不含草稿、取消、拒單、逾時);成交 = 餐廳確認收貨之後(received / reviewed / closed / completed)
+//   有下單 = 訂單(不含草稿、取消、拒單、逾時);
+//   成交 = 餐廳確認收貨之後(received / reviewed / completed;closed 要收過貨才算,爭議直接結案不算)
 
 const FUNNEL_APP_STAGES: { event: string; label: string }[] = [
   { event: 'analysis_started', label: '開始分析' },
@@ -240,8 +243,16 @@ export default function AdminGrowthPage() {
       table<EntityRow>('restaurants').select('id, created_at'),
       table<EntityRow>('suppliers').select('id, created_at'),
       table<OrderRow>('supplier_orders').select('id, restaurant_id, status, total_amount, created_at'),
-      // 成交歸月用「第一次進入成交狀態」的時間(通常是餐廳按下收貨)
-      table<EventRow>('order_events').select('order_id, to_status, created_at').in('to_status', GMV_STATUSES),
+      // 收貨事件:判斷已結案的單收過貨沒,並把成交歸到第一次進入成交狀態的月份(通常是餐廳按下收貨)。
+      // 分頁讀完 —— 被 1000 筆上限截掉的收貨事件會讓已結案的單悄悄不算 GMV
+      fetchAllPages((from, to) =>
+        table<EventRow>('order_events')
+          .select('order_id, to_status, created_at')
+          .in('to_status', DEAL_EVENT_STATUSES)
+          .order('created_at', { ascending: true })
+          .order('id', { ascending: true })
+          .range(from, to),
+      ),
       table<NpsRow>('nps_responses').select('score, audience, created_at'),
       table<AppEventRow>('app_events').select('event'),
     ]);
@@ -258,16 +269,20 @@ export default function AdminGrowthPage() {
 
     const warn: string[] = [];
     if (supRes.error) warn.push(`供應商資料讀取失敗(${supRes.error.message})`);
-    if (evRes.error) warn.push(`訂單事件讀取失敗,GMV 改以訂單建立時間歸月(${evRes.error.message})`);
+    if (evRes.error) {
+      warn.push(
+        `訂單事件讀取失敗:已結案的單無法確認收過貨、暫不計入 GMV,其餘成交改以訂單建立時間歸月(${evRes.error.message})`,
+      );
+    }
     if (npsRes.error) warn.push(`NPS 資料讀取失敗(${npsRes.error.message})`);
     if (appRes.error) warn.push(`前台事件讀取失敗,漏斗前段無資料(${appRes.error.message})`);
 
     // 單次查詢達 1000 筆上限 → 數字會被低估,寧可明講也不要給投資人錯的數
+    // (收貨事件已經分頁讀完,不在這張表裡)
     ([
       ['restaurants', restRes.data?.length ?? 0, '餐廳數與成長曲線'],
       ['suppliers', supRes.data?.length ?? 0, '供應商數與成長曲線'],
       ['supplier_orders', orderRes.data?.length ?? 0, 'GMV、複購率與 cohort'],
-      ['order_events', evRes.data?.length ?? 0, 'GMV 歸月'],
       ['app_events', appRes.data?.length ?? 0, '漏斗前 5 段'],
     ] as [string, number, string][]).forEach(([t, n, affected]) => {
       if (n >= ROW_CAP) {
@@ -278,7 +293,8 @@ export default function AdminGrowthPage() {
     setRestaurants(restRes.data ?? []);
     setSuppliers(supRes.data ?? []);
     setOrders(orderRes.data ?? []);
-    setDealEvents(evRes.data ?? []);
+    // 讀到一半失敗就整份不用(半套事件會讓部分已結案的單算、部分不算)
+    setDealEvents(evRes.error ? [] : evRes.data);
     setNpsRows(npsRes.data ?? []);
     setAppEvents(appRes.data ?? []);
     setWarnings(warn);
@@ -314,10 +330,10 @@ export default function AdminGrowthPage() {
       return d != null && d <= 30;
     }).length;
 
-    /* 2) GMV —— 只認成交(餐廳確認收貨之後)的訂單,歸到第一次進入成交狀態的月份 */
-    const firstDealAt = firstDealEventAt(dealEvents);
-    const deals = dealOrders(orders);
-    const recognizedAtOf = (o: OrderRow) => dealRecognizedAt(o, firstDealAt);
+    /* 2) GMV —— 只認成交(餐廳確認收貨之後;已結案的單要收過貨)的訂單,歸到第一次進入成交狀態的月份 */
+    const ledger = dealLedger(dealEvents);
+    const deals = dealOrders(orders, ledger);
+    const recognizedAtOf = (o: OrderRow) => dealRecognizedAt(o, ledger);
 
     const gmvByMonth = new Map<string, { gmv: number; count: number }>();
     deals.forEach((o) => {
@@ -334,15 +350,16 @@ export default function AdminGrowthPage() {
       count: gmvByMonth.get(k)?.count ?? 0,
     }));
 
-    const gmvTotal = sumGmv(orders);
+    const gmvTotal = sumGmv(orders, ledger);
     const gmv30 = sumGmv(
       deals.filter((o) => {
         const d = daysSince(recognizedAtOf(o));
         return d != null && d <= 30;
       }),
+      ledger,
     );
-    const pricedCount = pricedDeals(orders).length;
-    const aov = averageDealAmount(orders);
+    const pricedCount = pricedDeals(orders, ledger).length;
+    const aov = averageDealAmount(orders, ledger);
 
     /* 3) 複購率 + 下單次數分布 */
     const placed = countedOrders(orders);
@@ -528,7 +545,7 @@ export default function AdminGrowthPage() {
       value: money(derived.gmvTotal),
       sub: `近 30 天 ${money(derived.gmv30)} · ${derived.dealCount} 筆成交`,
       formula:
-        'Σ 成交訂單 total_amount(成交 = 餐廳確認收貨之後;以第一次進入成交狀態的時間歸月,未報價金額以 0 計)',
+        'Σ 成交訂單 total_amount(成交 = 餐廳確認收貨之後,已結案的單要收過貨;以第一次進入成交狀態的時間歸月,未報價金額以 0 計)',
       insufficient: derived.dealCount === 0,
     },
     {
@@ -782,8 +799,8 @@ export default function AdminGrowthPage() {
           <CardHeader className="pb-2">
             <CardTitle className="text-base text-slate-700">GMV 月趨勢 · 成交訂單</CardTitle>
             <FormulaNote>
-              成交 = 餐廳確認收貨之後(訂單狀態 received/reviewed/closed/completed,全站同一個定義);
-              歸到第一次進入成交狀態的月份(order_events,舊資料沒有事件就用建立時間),金額取
+              成交 = 餐廳確認收貨之後(received/reviewed/completed;closed 要收過貨才算,爭議直接結案不算 ——
+              全站同一個定義);歸到第一次進入成交狀態的月份(order_events,舊資料沒有事件就用建立時間),金額取
               supplier_orders.total_amount
             </FormulaNote>
           </CardHeader>

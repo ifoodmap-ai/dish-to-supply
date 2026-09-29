@@ -34,8 +34,9 @@ import {
   type OrderStatus,
 } from '@/lib/orders';
 import {
+  dealLedger,
   dealRecognizedAt,
-  firstDealEventAt,
+  fetchAllPages,
   isCountedOrder,
   isDeal,
   orderAmount,
@@ -48,6 +49,7 @@ interface Query<T> extends PromiseLike<QueryResult<T[]>> {
   eq(column: string, value: unknown): Query<T>;
   in(column: string, values: readonly unknown[]): Query<T>;
   order(column: string, options: { ascending: boolean }): Query<T>;
+  range(from: number, to: number): Query<T>;
   maybeSingle(): PromiseLike<QueryResult<T>>;
 }
 const db = <T,>(table: string): Query<T> =>
@@ -80,8 +82,8 @@ interface PipelineRow {
 }
 
 // 「本月成交額」與成交趨勢用全站共用的成交定義(src/lib/metrics.ts,業主拍板 Q5-A):
-// 餐廳確認收貨之後才算(received / reviewed / closed / completed),算在第一次進入成交狀態的那一天。
-// 餐廳確認報價(confirmed)、出貨、待收貨都還不是成交。
+// 餐廳確認收貨之後才算(received / reviewed / completed;closed 要收過貨,爭議直接結案不算),
+// 算在第一次進入成交狀態的那一天。餐廳確認報價(confirmed)、出貨、待收貨都還不是成交。
 
 /** 代表供應商已回覆過的狀態(接單 / 報價 / 拒單,以及之後的所有階段) */
 const RESPONDED_STATUSES = new Set<string>([
@@ -119,6 +121,7 @@ export default function SupplierDashboard() {
   const [supplierId, setSupplierId] = useState<string | null>(null);
   const [orders, setOrders] = useState<OrderRow[]>([]);
   const [events, setEvents] = useState<EventRow[]>([]);
+  const [eventsError, setEventsError] = useState<string | null>(null);
   const [pipeline, setPipeline] = useState<PipelineRow[]>([]);
   const [newLeads, setNewLeads] = useState(0);
   const [restaurantNames, setRestaurantNames] = useState<Record<string, string>>({});
@@ -159,15 +162,24 @@ export default function SupplierDashboard() {
         const pipeRows = pipeRes.data ?? [];
         const leadCount = leadRes.count ?? 0;
 
-        // 訂單事件(算回覆時間 / 成交時間點用)
+        // 訂單事件(算回覆時間、成交時間點、已結案的單收過貨沒)
         let eventRows: EventRow[] = [];
+        let eventErr: string | null = null;
         const orderIds = orderRows.map((o) => o.id);
         if (orderIds.length > 0) {
-          const { data: ev } = await db<EventRow>('order_events')
-            .select('order_id, to_status, created_at')
-            .in('order_id', orderIds)
-            .order('created_at', { ascending: true });
-          eventRows = ev ?? [];
+          // 分頁讀完:一張走完流程的單約 8–10 筆事件,單一多就會碰到 1000 筆上限,
+          // 被截掉的剛好是最新的事件(收貨、結案),本月成交額會悄悄少算
+          const { data: ev, error: evErr } = await fetchAllPages((from, to) =>
+            db<EventRow>('order_events')
+              .select('order_id, to_status, created_at')
+              .in('order_id', orderIds)
+              .order('created_at', { ascending: true })
+              .order('id', { ascending: true })
+              .range(from, to),
+          );
+          // 讀到一半失敗就整份不用(半套事件會讓部分已結案的單算、部分不算)
+          eventRows = evErr ? [] : ev;
+          eventErr = evErr ? evErr.message ?? '未知錯誤' : null;
         }
 
         // 餐廳名稱
@@ -185,6 +197,7 @@ export default function SupplierDashboard() {
         if (cancelled) return;
         setOrders(orderRows);
         setEvents(eventRows);
+        setEventsError(eventErr);
         setPipeline(pipeRows);
         setNewLeads(leadCount);
         setRestaurantNames(nameMap);
@@ -216,12 +229,12 @@ export default function SupplierDashboard() {
       return hits.length > 0 ? Math.min(...hits) : null;
     };
 
-    // ── 成交(含金額與時間):餐廳確認收貨之後才算,算在第一次進入成交狀態的時間 ──
-    const firstDealAt = firstDealEventAt(events);
+    // ── 成交(含金額與時間):餐廳確認收貨之後才算(已結案要收過貨),算在第一次進入成交狀態的時間 ──
+    const ledger = dealLedger(events);
     const deals: { at: number; amount: number }[] = [];
     orders.forEach((o) => {
-      if (!isDeal(o.status)) return;
-      const at = Date.parse(dealRecognizedAt(o, firstDealAt));
+      if (!isDeal(o, ledger)) return;
+      const at = Date.parse(dealRecognizedAt(o, ledger));
       if (!Number.isFinite(at)) return;
       deals.push({ at, amount: orderAmount(o) });
     });
@@ -589,8 +602,13 @@ export default function SupplierDashboard() {
         </Link>
       </div>
 
+      {eventsError && (
+        <p className="text-xs text-amber-700 text-right mt-4">
+          訂單事件讀取失敗:已結案的單無法確認收過貨、暫不計入成交額;回覆時間也可能不準({eventsError})
+        </p>
+      )}
       <p className="text-[11px] text-slate-400 text-right mt-4">
-        成交額只算餐廳確認收貨的訂單,並算在確認收貨的那一天;成交額與回覆時間皆以訂單事件履歷 (order_events) 計算
+        成交額只算餐廳確認收貨的訂單(爭議直接結案、沒收過貨的不算),並算在確認收貨的那一天;成交額與回覆時間皆以訂單事件履歷 (order_events) 計算
       </p>
     </div>
   );

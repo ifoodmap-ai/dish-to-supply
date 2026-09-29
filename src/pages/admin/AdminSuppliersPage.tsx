@@ -35,7 +35,14 @@ import {
 } from 'recharts';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
-import { isCountedOrder, isDeal } from '@/lib/metrics';
+import {
+  DEAL_EVENT_STATUSES,
+  dealLedger,
+  fetchAllPages,
+  isCountedOrder,
+  isDeal,
+  type StatusEventRow,
+} from '@/lib/metrics';
 
 /**
  * supplier_metrics / supplier_orders 尚未進 types.ts,
@@ -45,7 +52,9 @@ type Result<T> = Promise<{ data: T[] | null; error: { message?: string } | null 
 
 interface SelectChain<T> extends Result<T> {
   eq: (column: string, value: unknown) => SelectChain<T>;
+  in: (column: string, values: readonly unknown[]) => SelectChain<T>;
   order: (column: string, opts?: { ascending?: boolean }) => SelectChain<T>;
+  range: (from: number, to: number) => SelectChain<T>;
 }
 
 interface UpdateChain {
@@ -79,6 +88,7 @@ interface SupplyRow {
 }
 
 interface OrderRow {
+  id: string;
   supplier_id: string | null;
   status: string;
 }
@@ -121,7 +131,8 @@ const emptyForm: FormState = {
 };
 
 // 「成交單數 / 訂單數」用全站共用的定義(src/lib/metrics.ts,業主拍板 Q5-A):
-//   成交 = 餐廳確認收貨之後(delivered 待收貨還不算);訂單 = 不含草稿、取消、拒單、逾時
+//   成交 = 餐廳確認收貨之後(delivered 待收貨還不算;已結案要收過貨,所以要讀收貨事件);
+//   訂單 = 不含草稿、取消、拒單、逾時
 
 const startOfWeek = (d: Date) => {
   const x = new Date(d);
@@ -183,11 +194,13 @@ const AdminSuppliersPage = () => {
   const [formOpen, setFormOpen] = useState(false);
   const [areaInput, setAreaInput] = useState('');
   const [saving, setSaving] = useState(false);
+  /** 收貨事件讀不到時的提示(常駐,不只跳 toast):已結案的單暫不計入成交單數 */
+  const [eventsError, setEventsError] = useState<string | null>(null);
 
   const fetchAll = useCallback(async () => {
     setLoading(true);
 
-    const [supRes, itemRes, orderRes, metricRes] = await Promise.all([
+    const [supRes, itemRes, orderRes, evRes, metricRes] = await Promise.all([
       db
         .from('suppliers')
         .select<SupplierRow>(
@@ -195,7 +208,17 @@ const AdminSuppliersPage = () => {
         )
         .order('created_at', { ascending: false }),
       db.from('supplies').select<SupplyRow>('supplier_id, is_available'),
-      db.from('supplier_orders').select<OrderRow>('supplier_id, status'),
+      db.from('supplier_orders').select<OrderRow>('id, supplier_id, status'),
+      // 收貨事件:已結案的單要收過貨才算成交。分頁讀完 —— 被 1000 筆上限截掉會悄悄少算
+      fetchAllPages((from, to) =>
+        db
+          .from('order_events')
+          .select<StatusEventRow>('order_id, to_status, created_at')
+          .in('to_status', DEAL_EVENT_STATUSES)
+          .order('created_at', { ascending: true })
+          .order('id', { ascending: true })
+          .range(from, to),
+      ),
       db
         .from('supplier_metrics')
         .select<MetricRow>('supplier_id, orders_total, ontime_rate, shortage_rate, avg_rating'),
@@ -218,11 +241,15 @@ const AdminSuppliersPage = () => {
       if (s.is_available) a.itemsOnline += 1;
     });
 
+    // 事件讀不到時,已結案的單無法確認收過貨 → 先不算成交,並在頁面上常駐提示
+    setEventsError(evRes.error ? evRes.error.message ?? '未知錯誤' : null);
+    const ledger = dealLedger(evRes.error ? [] : evRes.data);
+
     (orderRes.data ?? []).forEach((o) => {
       if (!o.supplier_id || !isCountedOrder(o.status)) return;
       const a = ensure(o.supplier_id);
       a.orders += 1;
-      if (isDeal(o.status)) a.dealOrders += 1;
+      if (isDeal(o, ledger)) a.dealOrders += 1;
     });
 
     const metricMap: Record<string, MetricRow> = {};
@@ -373,6 +400,11 @@ const AdminSuppliersPage = () => {
       <p className="text-sm text-slate-500 mb-6">
         核准入駐之後的供應商名冊:上架品項、成交表現與服務區維護
       </p>
+      {eventsError && (
+        <p className="-mt-4 mb-4 text-xs text-amber-700">
+          收貨紀錄讀取失敗:已結案的單無法確認收過貨,暫不計入成交單數({eventsError})
+        </p>
+      )}
 
       {/* KPI */}
       <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-5 gap-3 mb-6">

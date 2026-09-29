@@ -37,12 +37,14 @@ import {
 } from '@/components/ui/table';
 import { supabase } from '@/integrations/supabase/client';
 import { ORDER_STATUS, type OrderStatus } from '@/lib/orders';
+import { formatOrderNo } from '@/lib/order-number';
 import {
-  GMV_STATUSES,
+  DEAL_EVENT_STATUSES,
   averageDealAmount,
+  dealLedger,
   dealOrders,
   dealRecognizedAt,
-  firstDealEventAt,
+  fetchAllPages,
   inProgressOrders,
   localMonthKey,
   orderAmount,
@@ -60,6 +62,7 @@ interface Chain<T> extends PromiseLike<Res<T>> {
   eq(col: string, v: unknown): Chain<T>;
   in(col: string, v: readonly unknown[]): Chain<T>;
   order(col: string, opts?: { ascending: boolean }): Chain<T>;
+  range(from: number, to: number): Chain<T>;
 }
 
 const table = <T,>(name: string) =>
@@ -105,7 +108,7 @@ interface MonthBucket {
 
 /* ------------------------------ constants ------------------------------ */
 // GMV(成交)的定義在 src/lib/metrics.ts(業主拍板 Q5-A):餐廳確認收貨之後才算
-// (received / reviewed / closed / completed),並歸到第一次進入成交狀態的月份(本地時區)。
+// (received / reviewed / completed;closed 要收過貨,爭議直接結案不算),並歸到第一次進入成交狀態的月份(本地時區)。
 
 /** PostgREST 單次查詢的預設上限;達到就代表資料可能被截斷(跟成長分頁同一個門檻) */
 const ROW_CAP = 1000;
@@ -148,10 +151,16 @@ export default function AdminRevenuePage() {
       table<OrderRow>('supplier_orders').select(
         'id, status, restaurant_id, supplier_id, total_amount, created_at',
       ),
-      // 成交算在哪個月:第一次進入成交狀態的時間(通常是餐廳按下收貨)
-      table<StatusEventRow>('order_events')
-        .select('order_id, to_status, created_at')
-        .in('to_status', GMV_STATUSES),
+      // 收貨事件:判斷已結案的單收過貨沒,以及成交算在哪個月(第一次進入成交狀態,通常是餐廳按下收貨)。
+      // 分頁讀完 —— 被 1000 筆上限截掉的收貨事件會讓已結案的單悄悄不算 GMV
+      fetchAllPages((from, to) =>
+        table<StatusEventRow>('order_events')
+          .select('order_id, to_status, created_at')
+          .in('to_status', DEAL_EVENT_STATUSES)
+          .order('created_at', { ascending: true })
+          .order('id', { ascending: true })
+          .range(from, to),
+      ),
       table<PaymentRow>('order_payments').select(
         'id, order_id, amount, status, method, paid_at, created_at',
       ),
@@ -169,14 +178,13 @@ export default function AdminRevenuePage() {
     }
 
     setOrders(oRes.data ?? []);
-    // 事件讀不到時,成交月份退回用訂單建立時間(dealRecognizedAt 的後備),並在頁面上註明
-    setDealEvents(evRes.error ? [] : evRes.data ?? []);
+    // 事件讀不到時:已結案的單無法確認收過貨、先不算 GMV;成交月份退回用訂單建立時間。頁面上會註明
+    setDealEvents(evRes.error ? [] : evRes.data);
     setEventsError(evRes.error ? evRes.error.message : null);
-    // 單次查詢達上限 → 數字會被低估 / 部分成交月份退回建立時間,寧可明講
+    // 訂單單次查詢達上限 → GMV 與筆數會被低估,寧可明講(收貨事件已經分頁讀完,不會被截)
     setCapWarnings(
       ([
         ['supplier_orders', oRes.data?.length ?? 0, 'GMV 與筆數可能被低估'],
-        ['order_events', evRes.data?.length ?? 0, '部分成交單的月份會退回用建立時間'],
       ] as [string, number, string][])
         .filter(([, n]) => n >= ROW_CAP)
         .map(([t, , affected]) => `${t} 單次查詢已達 ${ROW_CAP} 筆上限,${affected},需改為後端彙總`),
@@ -205,15 +213,16 @@ export default function AdminRevenuePage() {
   }, [fetchData]);
 
   /* ---------------- GMV ---------------- */
-  const gmvOrders = useMemo(() => dealOrders(orders), [orders]);
+  /** 收貨帳本:哪些單收過貨、每張成交單算在什麼時間 */
+  const ledger = useMemo(() => dealLedger(dealEvents), [dealEvents]);
+  const gmvOrders = useMemo(() => dealOrders(orders, ledger), [orders, ledger]);
 
   /** 每張成交單算在什麼時間 */
   const recognizedAt = useMemo(() => {
-    const first = firstDealEventAt(dealEvents);
     const map = new Map<string, string>();
-    gmvOrders.forEach((o) => map.set(o.id, dealRecognizedAt(o, first)));
+    gmvOrders.forEach((o) => map.set(o.id, dealRecognizedAt(o, ledger)));
     return map;
-  }, [dealEvents, gmvOrders]);
+  }, [ledger, gmvOrders]);
   const recognizedAtOf = useCallback(
     (o: OrderRow) => recognizedAt.get(o.id) ?? o.created_at,
     [recognizedAt],
@@ -259,17 +268,17 @@ export default function AdminRevenuePage() {
 
   const stats = useMemo(() => {
     const thisMonth = localMonthKey(new Date().toISOString()) ?? '';
-    const totalGmv = sumGmv(orders);
+    const totalGmv = sumGmv(orders, ledger);
     const monthGmv = months.find((m) => m.month === thisMonth)?.gmv ?? 0;
     const monthOrders = months.find((m) => m.month === thisMonth)?.orders ?? 0;
     // 平均成交金額:分母只算有金額的成交單(跟成長分頁的 AOV 同一個函式)
-    const avgOrder = averageDealAmount(orders);
+    const avgOrder = averageDealAmount(orders, ledger);
     // 在途:有效訂單但餐廳還沒確認收貨(不含草稿、取消、拒單、逾時)
     const pipelineAmount = sumInProgressAmount(orders);
     const pipelineCount = inProgressOrders(orders).length;
 
     return { totalGmv, monthGmv, monthOrders, avgOrder, pipelineAmount, pipelineCount, thisMonth };
-  }, [months, orders]);
+  }, [months, orders, ledger]);
 
   const paymentStats = useMemo(() => {
     if (payments == null) return null;
@@ -371,8 +380,8 @@ export default function AdminRevenuePage() {
         </Button>
       </div>
       <p className="text-sm text-slate-500 mb-6">
-        GMV(成交金額)只認列餐廳確認收貨之後的訂單(待評價／已評價／已結案,含舊資料的已完成),
-        算在確認收貨的月份
+        GMV(成交金額)只認列餐廳確認收貨之後的訂單(待評價／已評價／收過貨的已結案,含舊資料的已完成;
+        爭議直接結案、沒收過貨的不算),算在確認收貨的月份
         {fetchedAt && (
           <span className="text-slate-400"> · 更新於 {fetchedAt.toLocaleTimeString('zh-TW')}</span>
         )}
@@ -380,7 +389,7 @@ export default function AdminRevenuePage() {
 
       {eventsError && (
         <p className="mb-4 text-xs text-amber-700">
-          訂單事件讀取失敗,成交月份暫以訂單建立時間認列({eventsError})
+          訂單事件讀取失敗:已結案的單無法確認收過貨、暫不計入 GMV,其餘成交月份暫以訂單建立時間認列({eventsError})
         </p>
       )}
       {capWarnings.map((w) => (
@@ -672,7 +681,7 @@ export default function AdminRevenuePage() {
                         onClick={() => navigate(`/admin/orders/${o.id}`)}
                       >
                         <TableCell className="font-mono text-xs text-slate-500">
-                          #{o.id.slice(-8)}
+                          {formatOrderNo(o.id)}
                         </TableCell>
                         <TableCell className="text-sm text-slate-700">
                           {(o.restaurant_id && restaurantMap[o.restaurant_id]) || (

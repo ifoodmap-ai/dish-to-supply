@@ -3,8 +3,10 @@
 // 記錄每一次 from(...) 查詢:表名、動作(select/insert/update/delete)、欄位、選項、篩選、寫入內容;
 // 回應由測試用 respond() 決定。完全不打網路,所以管理員後台的測試不會碰到正式庫。
 // 預設登入身分是管理員(app_metadata.role = 'admin'),AdminRoute 會放行。
+// .range(from, to) 跟真的 PostgREST 一樣會切回應的陣列(分頁讀取 fetchAllPages 靠這個才會停);
+// 一次最多回 1000 筆(= Supabase 的 max rows)—— 沒分頁的查詢在測試裡也會被截,跟正式站一樣。
 
-export type FilterOp = 'eq' | 'neq' | 'in' | 'gte' | 'lte' | 'is' | 'not' | 'order' | 'limit';
+export type FilterOp = 'eq' | 'neq' | 'in' | 'gte' | 'lte' | 'is' | 'not' | 'order' | 'limit' | 'range';
 
 export interface RecordedQuery {
   table: string;
@@ -36,6 +38,9 @@ export const ADMIN_SESSION: FakeSession = {
   user: { id: 'admin-user-1', email: 'admin@example.test', app_metadata: { role: 'admin' } },
   access_token: 'fake-token',
 };
+
+/** 跟 Supabase 的 max rows 一樣:一次查詢最多回幾筆 */
+export const MAX_ROWS = 1000;
 
 /** 沒指定回應時:單筆查詢回 null,其他回空陣列、筆數 0 */
 const defaultResponder: Responder = (q) => (q.single ? { data: null } : { data: [], count: 0 });
@@ -96,6 +101,7 @@ export const createFakeSupabase = () => {
       not: (column: string, _op: string, value: unknown) => addFilter('not', column, value),
       order: (column: string, value?: unknown) => addFilter('order', column, value),
       limit: (value: number) => addFilter('limit', 'limit', value),
+      range: (from: number, to: number) => addFilter('range', 'range', [from, to]),
       single() {
         query.single = true;
         return builder;
@@ -112,8 +118,11 @@ export const createFakeSupabase = () => {
           .then(() => responder(query))
           .then((answer) => {
             const res = (answer ?? defaultResponder(query) ?? {}) as FakeResponse;
+            const range = query.filters.find((f) => f.op === 'range')?.value as [number, number] | undefined;
+            const sliced = range && Array.isArray(res.data) ? res.data.slice(range[0], range[1] + 1) : res.data;
+            const data = Array.isArray(sliced) ? sliced.slice(0, MAX_ROWS) : sliced;
             return {
-              data: res.data === undefined ? null : res.data,
+              data: data === undefined ? null : data,
               error: res.error ?? null,
               count: res.count === undefined ? null : res.count,
             };

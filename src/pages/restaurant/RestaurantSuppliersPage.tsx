@@ -11,6 +11,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useRestaurant, canSeeCost } from "@/components/RestaurantRoute";
 import { ORDER_STATUS, type OrderStatus } from "@/lib/orders";
 import { countedOrders, orderAmount } from "@/lib/metrics";
+import { formatOrderNo } from "@/lib/order-number";
 
 /* ── 新資料表不在 types.ts,沿用專案的 loose cast 慣例 ─────────────── */
 type Result<T> = { data: T[] | null; error: { message: string } | null };
@@ -353,7 +354,7 @@ const RestaurantSuppliersPage = () => {
                           <ul className="mt-1 space-y-1">
                             {p.recent.map((o) => (
                               <li key={o.id} className="flex items-center justify-between gap-2 text-xs text-slate-600">
-                                <span className="font-mono">#{o.id.slice(-8).toUpperCase()}</span>
+                                <span className="font-mono">{formatOrderNo(o.id)}</span>
                                 <span className="text-slate-400">{new Date(o.created_at).toLocaleDateString("zh-TW")}</span>
                                 <span className="ml-auto">{statusLabel(o.status)}</span>
                               </li>
