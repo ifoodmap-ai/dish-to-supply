@@ -515,3 +515,23 @@ anon 對 `profiles` 沒有任何權限;登入者只讀得到自己、自己已�
 - **rollback 順序**:`100300 → 100200 → 100100 → 100000`(`supabase/rollbacks/*.down.sql`,有順序保護)。驗證:`supabase/tests/database/order_transition_rules.test.sql`(172 項)、`order_integrity_hardening.test.sql`(37)、`shipment_receipt_columns.test.sql`(14),在正式庫一律包在 BEGIN…ROLLBACK。
 - **通知信閘門**:notify 在 secret `NOTIFY_LIVE` 不等於字串 `"true"` 時,把同一種收件對象合併成一封寄到 ifoodmaptw@gmail.com,主旨加「[測試轉寄]」,內文列出原收件人。**目前刻意沒設 NOTIFY_LIVE**(正式庫有真實的供應商信箱)。要對真實餐廳/供應商開放時,由業主同意後 `supabase secrets set NOTIFY_LIVE=true --project-ref cwvpehqcvbfuynabpqop`(改 secret 會讓所有 function 重新部署一次)。
 - 訂單編號一律用 `src/lib/order-number.ts` 的 `formatOrderNo`(「#」+ 末 8 碼大寫),notify 也直接引用它。
+
+## 取消、逾時排程、報價後鎖品項、收貨/爭議 RPC(2026-09-29,migration 20260929110000 / 110100 / 110200、notify v9)
+
+- **110000 `order_cancel_requote_rules`**:管理員取消一定要填原因(空白會被擋,22023),原因寫進事件 note;老闆不能取消待出貨以後的單。
+  「退回重新報價」採購員不能做、一定要原因,退回後金額清空、舊報價標成 rejected,供應商可以重新報價。
+  **報價後鎖品項**:待確認起老闆改品項會被擋(`order_items_locked`),管理員可以改。轉移規則共 102 條,前端 `TRANSITIONS` 由 vitest 逐條比對。
+- **110100 `expire_stuck_orders`**:pg_cron 每天 19:00 UTC(台北 03:00)把卡住的單標成 expired(事件身分 = 系統、來源 cron)。
+  時限跟 `ORDER_STATUS.slaHours` 一樣(vitest 比對):待接單 / sent / 待報價 24 小時,待確認 / 待出貨 48 小時。
+  **不會自動逾時**:已出貨以後(含運送中、待收貨,只由管理員處理)、待派發(平台自己的待辦)、收貨有差異、爭議中。
+  每張單 `FOR NO KEY UPDATE SKIP LOCKED`,有人正在處理就跳過,鎖到後會重新確認時限。
+  查執行紀錄:`select * from cron.job_run_details order by runid desc;`(runid 1 是上線當天的驗證執行,刻意保留)。
+  ⚠️ 單張失敗只記在函式回傳值,cron 紀錄照樣顯示 succeeded。
+- **110200 `order_receipt_dispute_rpc`**:確認收貨 / 回報異常 / 申請爭議改成 RPC(SECURITY INVOKER),先寫事件再寫子表,畫面過期整筆回滾;
+  兩人同時操作時後到的人會拿到「畫面過期」。`admin_delete_order` 改成先鎖訂單再刪子表(舊版會跟收貨互鎖)。
+- **部署順序**:notify v9 → 110000 → 110100 → 110200 → 前端。**還原順序**:110200 → 110100 → 110000(`supabase/rollbacks/*.down.sql`);
+  還原 110200 之前要先把前端退回舊版(新前端會呼叫這支 RPC)。
+- 驗證(正式庫一律包在 BEGIN…ROLLBACK):`order_transition_rules.test.sql`(189)、`order_cancel_requote.test.sql`(51)、
+  `order_expiry.test.sql`(27)、`order_receipt_dispute_rpc.test.sql`(39)。
+- 🔴 **開 `NOTIFY_LIVE` 之前要先決定**:訂單逾時、以及從逾時取消,要不要寄信給原供應商?目前兩種都不寄,靠管理員打電話
+  (取消對話框會提醒管理員另外聯絡供應商)。
