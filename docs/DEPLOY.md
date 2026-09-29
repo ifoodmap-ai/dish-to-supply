@@ -9,7 +9,7 @@
 
 管理員後台**刻意不出現在客戶看得到的網域上** —— 主站的 `/admin` 會顯示 404。
 
-形象站 https://ifoodmap-landing.vercel.app 的原始碼也在這個 repo(`landing/`),但它是另一個 Vercel 專案、另一條 workflow,
+形象站 https://ifoodmap.ai 的原始碼也在這個 repo(`landing/`),但它是另一個 Vercel 專案、另一條 workflow,
 見下面的「形象站(landing/)」。
 
 ## 環境變數
@@ -21,6 +21,7 @@
 | `VITE_PORTAL` | (不設) | `admin` |
 | `VITE_ADMIN_SITE_URL` | 選填,預設 `https://ifoodmap-admin.vercel.app` | — |
 | `VITE_MAIN_SITE_URL` | — | 選填,預設 `https://dish-to-supply.vercel.app` |
+| `VITE_LANDING_URL` | 選填,預設 `https://ifoodmap.ai`(`src/lib/site.ts`) | 同左 |
 
 Vite 在建置時把 `import.meta.env.VITE_*` 內聯進 bundle,**改了值一定要重新建置**,不是改 Vercel 環境變數就會生效。
 
@@ -56,7 +57,7 @@ VERCEL_PROJECT_ID=prj_cf9IKsaZJd5AwOr9Jg3TRGmRZUrU \
 
 ## 形象站(landing/)
 
-https://ifoodmap-landing.vercel.app 的原始碼在 `landing/`:純靜態頁 + `landing/api/` 三支 Vercel Function(代理 Edge Function `ai`),
+https://ifoodmap.ai 的原始碼在 `landing/`:純靜態頁 + `landing/api/` 三支 Vercel Function(代理 Edge Function `ai`),
 沒有任何相依套件。2026-09-28 從 `ifoodmap-ai/ifoodmap-landing` 連同完整歷史併進來,`git log -- landing/index.html` 看得到全部歷史。
 **舊 repo 已凍結,不要再 push 過去** —— 它的部署 workflow 在業主停用前仍然開著,推上去會用舊內容蓋掉正式站。
 
@@ -83,6 +84,19 @@ https://ifoodmap-landing.vercel.app 的原始碼在 `landing/`:純靜態頁 + `l
   改成 `landing` 的話 CLI 會去找 `landing/landing`,建置直接失敗。
 - 預渲染用到全域 `WebSocket`,Node 必須 ≥ 22;workflow 固定 24(= Vercel 專案的 function runtime)。
 - 回退:Vercel → `ifoodmap-landing` → Deployments → 選上一個 → Instant Rollback;或 `git revert` 之後 push。
+
+### 正式網域 ifoodmap.ai(2026-09-29 起)
+
+- **DNS 在 GoDaddy**(業主帳號,改記錄每次都要簡訊驗證碼)。形象站用到的記錄:
+  `A @ → 216.198.79.1`、`A @ → 64.29.17.1`、`CNAME www → f5e783407fbb1135.vercel-dns-017.com`。
+  🔴 同一個 zone 還有 GoDaddy 信箱的 `MX @`×2、`CNAME email`、`secureserver1/2._domainkey`、SPF 與 `_dmarc` ——
+  那是業主現在在用的信箱,**不要動**;寄信(Resend)的記錄見「寄件網域」。
+- `www.ifoodmap.ai` → `ifoodmap.ai` 的 308 是 **Vercel 網域設定**做的(ifoodmap-landing 專案 → Domains),不寫在 `landing/vercel.json`。
+- 舊網址 `ifoodmap-landing.vercel.app` 由 `landing/vercel.json` 的 host 條件整站 308 轉到 ifoodmap.ai(路徑與 query 保留);
+  **preview 部署的網址不受影響**。三邊(routing.js / index.html / vercel.json)用 `landing/tests/public-domain.test.cjs` 釘在同一個網址。
+- SSL 憑證:Vercel 當初沒有自動簽,是用 API `POST /v3/certs {"cns":["ifoodmap.ai","www.ifoodmap.ai"]}` 手動簽的(Let's Encrypt,autoRenew)。
+  之後若憑證出問題:先看 `GET /v6/domains/ifoodmap.ai/config` 的 `misconfigured`,再重跑同一支 API。
+  本機 vercel CLI 看不到 ifoodmap team,要用本 repo 的 `VERCEL_TOKEN` secret(例如暫時分支上的一次性 workflow,跑完刪分支)。
 
 ## 跨站 session
 
