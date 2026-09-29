@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 /* ------------------------------------------------------------------ */
 /* 假的 supabase:記錄每張表查詢帶了哪些條件,回傳我們指定的列             */
@@ -36,7 +36,7 @@ vi.mock("@/integrations/supabase/client", () => {
   return { supabase: { from } };
 });
 
-import { getUserPortals, hasPortal, loadUserPortals } from "./portal";
+import { getUserPortals, hasPortal, loadUserPortals, type PortalInfo, type PortalKey } from "./portal";
 
 const session = (role?: string) => ({ user: { id: "u-1", app_metadata: role ? { role } : {} } });
 
@@ -105,5 +105,48 @@ describe("getUserPortals —— 待接受的餐廳邀請不算身分", () => {
   it("沒有登入 → 空清單,不查資料庫", async () => {
     await expect(getUserPortals(null)).resolves.toEqual([]);
     expect(h.queries).toEqual([]);
+  });
+});
+
+/* ------------------------------------------------------------------ */
+/* 兩站互連的網址(仿 site.test.ts)                                     */
+/* ------------------------------------------------------------------ */
+
+// 網址在程式裡只寫在 portal.ts。這裡刻意再寫一次「沒設環境變數時的預設值」:
+// 產品站 2026-09-29 起是正式網域 https://app.ifoodmap.ai;管理員站不搬,仍是 ifoodmap-admin.vercel.app。
+// 被不小心改掉要有測試擋。其餘測試(例如 AdminPricesPage)照舊用 MAIN_SITE_URL,本機若設了環境變數才不會誤報。
+describe("兩站互連的網址", () => {
+  const loadFresh = async () => {
+    vi.resetModules();
+    return import("./portal");
+  };
+  const external = (key: PortalKey, path: string): PortalInfo => ({ key, label: "", orgName: null, path, external: true });
+
+  afterEach(() => {
+    vi.unstubAllEnvs();
+  });
+
+  it("沒設 VITE_MAIN_SITE_URL → 產品站預設是正式網域 https://app.ifoodmap.ai", async () => {
+    vi.stubEnv("VITE_MAIN_SITE_URL", undefined);
+    const portal = await loadFresh();
+
+    expect(portal.MAIN_SITE_URL).toBe("https://app.ifoodmap.ai");
+    // 管理員站的身分切換器連回產品站的後台
+    expect(portal.portalHref(external("restaurant", "/restaurant"))).toBe("https://app.ifoodmap.ai/restaurant");
+  });
+
+  it("VITE_MAIN_SITE_URL 有設就用它(管理員站的 Vercel 專案靠它,會蓋過預設值)", async () => {
+    vi.stubEnv("VITE_MAIN_SITE_URL", "https://main.example.test");
+    const portal = await loadFresh();
+
+    expect(portal.MAIN_SITE_URL).toBe("https://main.example.test");
+    expect(portal.portalHref(external("supplier", "/supplier"))).toBe("https://main.example.test/supplier");
+  });
+
+  it("管理員站不搬:沒設 VITE_ADMIN_SITE_URL 時仍是 https://ifoodmap-admin.vercel.app", async () => {
+    vi.stubEnv("VITE_ADMIN_SITE_URL", undefined);
+    const portal = await loadFresh();
+
+    expect(portal.ADMIN_SITE_URL).toBe("https://ifoodmap-admin.vercel.app");
   });
 });

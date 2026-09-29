@@ -25,7 +25,7 @@ from pathlib import Path
 from playwright.sync_api import sync_playwright, Page
 
 ROOT = Path(__file__).resolve().parents[1]
-MAIN = os.environ.get("DEMO_MAIN_URL", "https://dish-to-supply.vercel.app")
+MAIN = os.environ.get("DEMO_MAIN_URL", "https://app.ifoodmap.ai")
 ADMIN = os.environ.get("DEMO_ADMIN_URL", "https://ifoodmap-admin.vercel.app")
 
 ACCOUNTS = {

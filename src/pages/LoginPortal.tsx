@@ -27,7 +27,7 @@ import {
 } from "lucide-react";
 import {
   loadUserPortals, defaultPortal, hasPortal, portalHref,
-  ADMIN_SITE_URL, IS_ADMIN_BUILD, PORTAL_LABEL, type PortalInfo, type PortalKey, type SessionLike,
+  ADMIN_SITE_URL, MAIN_SITE_URL, IS_ADMIN_BUILD, PORTAL_LABEL, type PortalInfo, type PortalKey, type SessionLike,
 } from "@/lib/portal";
 import { loadPendingRestaurantInvites, type PendingRestaurantInvite } from "@/lib/restaurant-invites";
 import RestaurantInvitePanel from "@/components/RestaurantInvitePanel";
@@ -446,7 +446,7 @@ const LoginPortal = () => {
       <footer className="border-t border-slate-200 py-6 px-4">
         <div className="max-w-3xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-3 text-sm text-slate-500">
           {IS_ADMIN_BUILD ? (
-            <a href="https://dish-to-supply.vercel.app" className="hover:text-slate-800">
+            <a href={MAIN_SITE_URL} className="hover:text-slate-800">
               ← 回餐廳／供應商入口
             </a>
           ) : (

@@ -316,8 +316,10 @@ test('public copy removes free registration and listing claims but keeps free ma
 });
 
 test('product links derive from one canonical product base URL', () => {
-  assert.equal((source.match(/https:\/\/dish-to-supply\.vercel\.app/g) || []).length, 1);
-  assert.match(source, /IFM_PRODUCT_BASE_URL\s*=\s*'https:\/\/dish-to-supply\.vercel\.app'/);
+  // 產品站正式網域(2026-09-29 起);舊的 dish-to-supply.vercel.app 由產品站的 vercel.json 308 過去,這裡不該再出現。
+  assert.equal((source.match(/https:\/\/app\.ifoodmap\.ai/g) || []).length, 1);
+  assert.match(source, /IFM_PRODUCT_BASE_URL\s*=\s*'https:\/\/app\.ifoodmap\.ai'/);
+  assert.doesNotMatch(source, /dish-to-supply\.vercel\.app/);
   assert.match(source, /const productBaseUrl = window\.IFM_PRODUCT_BASE_URL;/);
   assert.match(source, /restaurantRegistrationUrl:\s*productBaseUrl \+ '\/register\/restaurant'/);
   assert.match(source, /supplierApplicationUrl:\s*productBaseUrl \+ '\/join'/);

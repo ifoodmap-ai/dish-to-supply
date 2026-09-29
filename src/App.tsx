@@ -2,7 +2,7 @@
 //
 // 同一份 codebase 部署成兩個 Vercel 站,用建置變數 VITE_PORTAL 分流:
 //   VITE_PORTAL=admin  → ifoodmap-admin.vercel.app,只有平台營運後台
-//   (未設定)          → dish-to-supply.vercel.app,餐廳 + 供應商 + 公開頁
+//   (未設定)          → app.ifoodmap.ai(Vercel 專案 dish-to-supply),餐廳 + 供應商 + 公開頁
 //
 // 管理員後台刻意不出現在客戶看得到的站上。
 

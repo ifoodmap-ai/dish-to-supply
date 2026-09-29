@@ -28,7 +28,7 @@ ROOT = Path(__file__).resolve().parents[2]
 OUT = ROOT / "demo-video-out" / "frames"
 CARDS_HTML = Path(__file__).resolve().parent / "cards.html"
 
-MAIN = os.environ.get("DEMO_MAIN_URL", "https://dish-to-supply.vercel.app")
+MAIN = os.environ.get("DEMO_MAIN_URL", "https://app.ifoodmap.ai")
 ADMIN = os.environ.get("DEMO_ADMIN_URL", "https://ifoodmap-admin.vercel.app")
 
 ACCOUNTS = {

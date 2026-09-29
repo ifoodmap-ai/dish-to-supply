@@ -167,9 +167,13 @@ export const loadUserPortals = async (session: SessionLike | null): Promise<Port
 export const getUserPortals = async (session: SessionLike | null): Promise<PortalInfo[]> =>
   (await loadUserPortals(session)).portals;
 
-/** 前台站的網址(給 admin 站的切換器連回來用) */
+/**
+ * 前台站的網址(給 admin 站的切換器、登入頁頁尾、公開供應商頁連結連回來用)。
+ * 預設值是產品站正式網域(2026-09-29 起;舊的 dish-to-supply 網址由 vercel.json 308 過來)。
+ * 建置時設 VITE_MAIN_SITE_URL 會蓋過它 —— 管理員站的 Vercel 專案有設,換網域時那邊也要改。
+ */
 export const MAIN_SITE_URL =
-  (import.meta.env.VITE_MAIN_SITE_URL as string | undefined) ?? "https://dish-to-supply.vercel.app";
+  (import.meta.env.VITE_MAIN_SITE_URL as string | undefined) ?? "https://app.ifoodmap.ai";
 
 /** 把 PortalInfo 轉成可直接跳的完整網址 */
 export const portalHref = (p: PortalInfo): string => {

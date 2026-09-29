@@ -6,7 +6,7 @@
 
 | 身分 | 網址 | 帳號 | 密碼 |
 |---|---|---|---|
-| 餐廳 | https://dish-to-supply.vercel.app | `restaurant@ifoodmap.ai` | `000000` |
+| 餐廳 | https://app.ifoodmap.ai | `restaurant@ifoodmap.ai` | `000000` |
 | 供應商 | 同上(登入頁選「我是供應商」) | `supplier@ifoodmap.ai` | `000000` |
 | 平台管理員 | https://ifoodmap-admin.vercel.app | `admin@ifoodmap.ai` | `000000` |
 
@@ -19,7 +19,7 @@
 
 ### 開場(1 分):登入頁
 
-`https://dish-to-supply.vercel.app` 直接是登入畫面,兩張角色卡。
+`https://app.ifoodmap.ai` 直接是登入畫面,兩張角色卡。
 
 > 「iFoodmap 是把餐廳跟食材供應商串起來的平台。兩邊各有自己的後台,
 >  中間所有交易平台都看得到。」

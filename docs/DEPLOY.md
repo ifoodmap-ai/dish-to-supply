@@ -4,7 +4,7 @@
 
 | 站台 | 網址 | 內容 | 部署方式 |
 |---|---|---|---|
-| **前台 + 餐廳 + 供應商** | https://dish-to-supply.vercel.app | 登入首頁、餐廳後台、供應商後台、公開頁 | GitHub push main **自動部署** |
+| **前台 + 餐廳 + 供應商** | https://app.ifoodmap.ai(2026-09-29 起;舊的 `dish-to-supply.vercel.app` 整站 308 過來,見「產品站正式網域」) | 登入首頁、餐廳後台、供應商後台、公開頁 | GitHub push main **自動部署** |
 | **平台營運後台** | https://ifoodmap-admin.vercel.app | 只有 `/admin/*` | GitHub push main **自動部署** |
 
 管理員後台**刻意不出現在客戶看得到的網域上** —— 主站的 `/admin` 會顯示 404。
@@ -20,7 +20,7 @@
 | `VITE_SUPABASE_PUBLISHABLE_KEY` | ✅ | ✅ |
 | `VITE_PORTAL` | (不設) | `admin` |
 | `VITE_ADMIN_SITE_URL` | 選填,預設 `https://ifoodmap-admin.vercel.app` | — |
-| `VITE_MAIN_SITE_URL` | — | 選填,預設 `https://dish-to-supply.vercel.app` |
+| `VITE_MAIN_SITE_URL` | — | 選填,預設 `https://app.ifoodmap.ai`(`src/lib/portal.ts`)。🔴 管理員站專案上有設,會蓋過預設值:值必須是 `https://app.ifoodmap.ai` |
 | `VITE_LANDING_URL` | 選填,預設 `https://ifoodmap.ai`(`src/lib/site.ts`) | 同左 |
 
 Vite 在建置時把 `import.meta.env.VITE_*` 內聯進 bundle,**改了值一定要重新建置**,不是改 Vercel 環境變數就會生效。
@@ -54,6 +54,28 @@ VERCEL_ORG_ID=team_VJzPZOwBqciuXnPC0XltX4MW \
 VERCEL_PROJECT_ID=prj_cf9IKsaZJd5AwOr9Jg3TRGmRZUrU \
   npx vercel deploy --prod --yes --token <ifoodmap-team-token>
 ```
+
+## 產品站正式網域 app.ifoodmap.ai(2026-09-29)
+
+前台 + 餐廳 + 供應商(Vercel 專案 `dish-to-supply`)的正式網址從 `https://dish-to-supply.vercel.app` 換成 **https://app.ifoodmap.ai**
+(業主 2026-09-29 決定)。管理員站 `https://ifoodmap-admin.vercel.app` **不搬**。
+舊網址由根目錄 `vercel.json` 依 host 整站 308 到新網址(路徑與 query 保留)。
+
+換網域要一起動的地方,漏一處就會有人被帶回舊網址,或信裡的連結落錯頁:
+
+| 哪裡 | 設定 |
+|---|---|
+| DNS(GoDaddy,跟形象站同一個 ifoodmap.ai zone) | `CNAME app → 6831af22301ab513.vercel-dns-017.com` |
+| Vercel `dish-to-supply` 專案 → Domains | 掛 `app.ifoodmap.ai` |
+| Supabase Auth → URL Configuration | `site_url` = `https://app.ifoodmap.ai`;`uri_allow_list` 要有新網域(例如 `https://app.ifoodmap.ai/**`),**舊網址至少再留 1–2 週** —— 已寄出的確認信、重設密碼信、邀請信裡的 `redirect_to` 還是舊網址,不在清單上的話 Supabase 會改導到 `site_url` 首頁,而不是原本的 `/reset-password` 等頁 |
+| Edge Function secret `SITE_URL` | `https://app.ifoodmap.ai`,🔴 **結尾不能有斜線**(`notify`、`invite-restaurant-member` 直接字串相接,會變成 `//reset-password`)。讀它的有 `notify`、`invite-restaurant-member`、`approve-supplier`、`notify-lead` 四支 |
+| 管理員站 Vercel 專案的環境變數 `VITE_MAIN_SITE_URL` | `https://app.ifoodmap.ai` —— 它會蓋過程式預設值;建置時內聯,改完要重新部署管理員站 |
+| repo 裡的預設值 | `src/lib/portal.ts` 的 `MAIN_SITE_URL`(`portal.test.ts` 釘住)、根目錄 `index.html` 的 og / twitter 網址、形象站 `landing/index.html` 的 `IFM_PRODUCT_BASE_URL`(`landing/tests/content.test.cjs` 釘住) |
+
+- `supabase/functions/**` 裡的預設值(`SITE_URL` 沒設時用的舊網址)**刻意沒改**:改了要手動重新部署上面四支函式,這次只靠 secret。
+  所以 secret 萬一被刪掉,信裡的連結會退回舊網址。
+- 🔴 **所有人都要重新登入一次**:Supabase session 存在各網域自己的 localStorage(見「跨站 session」),
+  舊網址上的登入狀態不會跟著 308 過去。
 
 ## 形象站(landing/)
 
@@ -465,7 +487,8 @@ anon 對 `profiles` 沒有任何權限;登入者只讀得到自己、自己已�
 
 ### 邀請信連結會落在哪
 
-`redirectTo = ${SITE_URL}/reset-password?type=recovery`(`SITE_URL` 沒設時用 `https://dish-to-supply.vercel.app`)。
+`redirectTo = ${SITE_URL}/reset-password?type=recovery`(secret `SITE_URL` 2026-09-29 起是 `https://app.ifoodmap.ai`;
+沒設時程式預設值仍是舊的 `https://dish-to-supply.vercel.app`,刻意沒改,見「產品站正式網域」)。
 `/reset-password` 只在收到 `PASSWORD_RECOVERY` 事件時才顯示「設定新密碼」,而 supabase-js 解析網址時
 **query 參數優先於 hash**,所以多帶 `?type=recovery` 就會進「設定新密碼」(2026-09-28 用無頭瀏覽器實測)。
 連結過期(`mailer_otp_exp` = 3600 秒,**1 小時**)時沒有 session,會落到「忘記密碼」表單 ——
