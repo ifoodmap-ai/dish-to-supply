@@ -19,6 +19,7 @@ import {
   type OrderStatus,
 } from '@/lib/orders';
 import { formatOrderNo } from '@/lib/order-number';
+import { sumInProgressAmount } from '@/lib/metrics';
 import { ACTIVE_ORDER_STATUSES } from './adminCounts';
 import DispatchOrderDialog, { type DispatchTarget } from './DispatchOrderDialog';
 
@@ -80,7 +81,10 @@ export default function AdminPipelinePage() {
   const [loadError, setLoadError] = useState<string | null>(null);
   const [onlyStuck, setOnlyStuck] = useState(false);
   const [fetchedAt, setFetchedAt] = useState<Date | null>(null);
-  /** 供應商拒絕的單:order_pipeline 不含 rejected,另外查,只放在「異常處理中」欄等改派(不算進上面的數字) */
+  /**
+   * 等改派的單:供應商拒絕(order_pipeline 不含 rejected)與每日排程標成逾時(expired)的單另外查,
+   * 放在「異常處理中」欄讓管理員改派;不算進上面的數字(view 可用時逾時的單本來就在 rows 裡,不重複列)
+   */
   const [rejectedRows, setRejectedRows] = useState<PipelineRow[]>([]);
   const [dispatchTarget, setDispatchTarget] = useState<DispatchTarget | null>(null);
 
@@ -115,10 +119,10 @@ export default function AdminPipelinePage() {
 
     setRows(list);
 
-    // 被拒的單要改派:view 不含 rejected,這裡另外撈(讀不到只是少了改派入口,不擋看板)
+    // 被拒、逾時的單要改派:view 不含 rejected、後備查詢不含 expired,這裡另外撈(讀不到只是少了改派入口,不擋看板)
     const rejected = await table<PipelineRow>('supplier_orders')
       .select('id, status, restaurant_id, supplier_id, total_amount, current_stage_since, created_at')
-      .eq('status', 'rejected');
+      .in('status', ['rejected', 'expired']);
     setRejectedRows(rejected.error ? [] : (rejected.data ?? []));
 
     // 餐廳 / 供應商名稱對照
@@ -177,10 +181,8 @@ export default function AdminPipelinePage() {
     return { columns: cols, exceptions: extra };
   }, [visible, rejectedRows, onlyStuck]);
 
-  const totalAmount = useMemo(
-    () => rows.reduce((sum, r) => sum + (Number(r.total_amount) || 0), 0),
-    [rows],
-  );
+  // 在途金額 = 進行中、餐廳還沒確認收貨的單(src/lib/metrics.ts 的唯一定義);已收貨的是成交,不算在途
+  const totalAmount = useMemo(() => sumInProgressAmount(rows), [rows]);
 
   /* ------------------------------ card ------------------------------ */
   const OrderCard = ({ row }: { row: PipelineRow }) => {
@@ -188,6 +190,8 @@ export default function AdminPipelinePage() {
     const meta = ORDER_STATUS[row.status];
     const waitingOn = meta?.waitingOn;
     const restaurantName = (row.restaurant_id && restaurantMap[row.restaurant_id]) || null;
+    // 異常欄的卡片(被拒、逾時、收貨有差異、爭議中)標出狀態:同一欄裡要改派的、要處理爭議的一眼分得出來
+    const isException = meta != null && meta.step < 0;
     // 「派給…」只給待派發(含舊資料 pending)與被拒/逾時的單,而且轉移表允許管理員派單
     const canDispatch =
       ADMIN_DISPATCHABLE.includes(row.status) && allowedTransitions('admin', row.status).includes('dispatched');
@@ -235,6 +239,15 @@ export default function AdminPipelinePage() {
             {STAGE_ALIAS[row.status] && (
               <Badge variant="outline" className="text-[10px] px-1.5 py-0 bg-slate-100 text-slate-500 border-slate-300">
                 舊狀態·{meta?.label ?? row.status}
+              </Badge>
+            )}
+            {isException && (
+              <Badge
+                variant="outline"
+                data-testid={`exception-status-${row.id}`}
+                className={`text-[10px] px-1.5 py-0 ${meta.className}`}
+              >
+                {meta.label}
               </Badge>
             )}
           </div>
@@ -338,9 +351,10 @@ export default function AdminPipelinePage() {
           </div>
           <div className="rounded-lg border border-slate-200 bg-white px-4 py-3">
             <p className="text-xs text-slate-500">在途金額</p>
-            <p className="text-xl font-bold text-slate-800 tabular-nums">
+            <p className="text-xl font-bold text-slate-800 tabular-nums" data-testid="in-progress-amount">
               {money(totalAmount) ?? '—'}
             </p>
+            <p className="text-[11px] text-slate-400">進行中、還沒確認收貨(不含已成交)</p>
           </div>
         </div>
       )}

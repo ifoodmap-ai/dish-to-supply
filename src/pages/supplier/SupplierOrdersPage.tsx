@@ -84,6 +84,15 @@ interface RestaurantRow {
   city: string | null;
 }
 
+/** 讓這張單變成目前狀態的那筆事件的原因:餐廳退回重新報價、管理員取消、系統逾時 */
+interface ReasonEventRow {
+  order_id: string;
+  from_status: string | null;
+  to_status: string;
+  note: string | null;
+  created_at: string;
+}
+
 interface ShipmentRow {
   order_id: string;
   shipped_at: string | null;
@@ -185,6 +194,7 @@ export default function SupplierOrdersPage() {
   const [orders, setOrders] = useState<OrderRow[]>([]);
   const [restaurants, setRestaurants] = useState<Record<string, RestaurantRow>>({});
   const [shipments, setShipments] = useState<Record<string, ShipmentRow>>({});
+  const [reasons, setReasons] = useState<Record<string, ReasonEventRow>>({});
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
@@ -260,6 +270,34 @@ export default function SupplierOrdersPage() {
       sMap[s.order_id] = s;
     });
     setShipments(sMap);
+
+    // 待報價(被退回重新報價)、已取消、逾時的單:把原因撈出來顯示(讀不到只是少一行說明,不擋列表)
+    const reasonIds = list.filter((o) => ["accepted", "cancelled", "expired"].includes(o.status)).map((o) => o.id);
+    if (reasonIds.length > 0) {
+      const { data: evs } = await db<ReasonEventRow>("order_events")
+        .select("order_id, from_status, to_status, note, created_at")
+        .in("order_id", reasonIds)
+        .in("to_status", ["accepted", "cancelled", "expired"])
+        // 新到舊:筆數超過 PostgREST 上限時被截掉的是最舊的,不會漏掉造成目前狀態的那一筆
+        .order("created_at", { ascending: false });
+      // 「造成目前狀態」的那一筆 = 最新一筆進到目前狀態的事件(前端再排一次,不依賴回傳順序)
+      const statusOf = new Map(list.map((o) => [o.id, o.status]));
+      const latest: Record<string, ReasonEventRow> = {};
+      [...(evs ?? [])]
+        .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+        .forEach((ev) => {
+          if (!latest[ev.order_id] && ev.to_status === statusOf.get(ev.order_id)) latest[ev.order_id] = ev;
+        });
+      // 待報價只有「退回重新報價」(quoted → accepted)才有原因;供應商接單(包含改派後新的供應商接單)不算 ——
+      // 不然改派後的新供應商會看到以前寫給上一家的退回原因
+      const reasonMap: Record<string, ReasonEventRow> = {};
+      Object.values(latest).forEach((ev) => {
+        if (ev.to_status !== "accepted" || ev.from_status === "quoted") reasonMap[ev.order_id] = ev;
+      });
+      setReasons(reasonMap);
+    } else {
+      setReasons({});
+    }
   }, []);
 
   useEffect(() => {
@@ -486,6 +524,7 @@ export default function SupplierOrdersPage() {
             const actions = allowedTransitions("supplier", order.status);
             const restaurant = order.restaurant_id ? restaurants[order.restaurant_id] : undefined;
             const shipment = shipments[order.id];
+            const reason = reasons[order.id];
             const tracking = shipment?.tracking_info ?? {};
             const carrierText = typeof tracking.carrier === "string" ? tracking.carrier : null;
             const trackingText = typeof tracking.tracking_number === "string" ? tracking.tracking_number : null;
@@ -533,6 +572,21 @@ export default function SupplierOrdersPage() {
                 {itemChips(order.ingredient_list)}
 
                 {order.notes && <p className="mt-2 text-xs text-slate-500">餐廳備註:{order.notes}</p>}
+
+                {reason && (
+                  <p
+                    data-testid={`reason-${order.id}`}
+                    className={`mt-2 rounded-md px-3 py-2 text-xs ${
+                      reason.to_status === "accepted" ? "bg-amber-50 text-amber-800" : "bg-slate-50 text-slate-600"
+                    }`}
+                  >
+                    {reason.to_status === "accepted"
+                      ? `餐廳退回報價,請重新報價:${reason.note ?? "(沒有寫原因)"}`
+                      : reason.to_status === "cancelled"
+                        ? `取消原因:${reason.note ?? "(沒有寫原因)"}`
+                        : `逾時:${reason.note ?? "超過處理時限,已交回平台"}`}
+                  </p>
+                )}
 
                 {shipment && (
                   <p className="mt-2 text-xs text-slate-500">

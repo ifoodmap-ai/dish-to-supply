@@ -11,7 +11,7 @@ BEGIN;
 CREATE EXTENSION IF NOT EXISTS pgtap WITH SCHEMA extensions;
 SET search_path = public, extensions;
 
-SELECT plan(172);
+SELECT plan(189);
 
 -- ---------------------------------------------------------------------
 -- fixture(以資料庫擁有者身分建立)
@@ -132,8 +132,9 @@ SELECT ok(
   AND NOT has_function_privilege('authenticated', 'public.order_transition_rules()', 'EXECUTE'),
   'anon / authenticated 不能直接呼叫 order_transition_rules()'
 );
-SELECT is((SELECT count(*)::int FROM public.order_transition_rules()), 85, '轉移表共 85 條');
-SELECT is((SELECT count(*)::int FROM (SELECT DISTINCT actor, from_status, to_status FROM public.order_transition_rules()) d), 85, '轉移表沒有重複列');
+-- 20260929110000 起 102 條(管理員取消進行中的單 7 條、老闆/店長退回重新報價 2 條、系統的聯集 8 條)
+SELECT is((SELECT count(*)::int FROM public.order_transition_rules()), 102, '轉移表共 102 條');
+SELECT is((SELECT count(*)::int FROM (SELECT DISTINCT actor, from_status, to_status FROM public.order_transition_rules()) d), 102, '轉移表沒有重複列');
 SELECT is(
   (SELECT count(*)::int FROM public.order_transition_rules() r
     WHERE r.actor NOT IN ('owner', 'manager', 'purchaser', 'supplier', 'admin', 'system')
@@ -160,33 +161,33 @@ SELECT is(
 );
 
 -- ---------------------------------------------------------------------
--- A. 每一條允許的轉移:各角色各跑一次(85 條)
+-- A. 每一條允許的轉移:各角色各跑一次(102 條;一律帶 note —— 管理員取消進行中的單、退回重新報價要填原因)
 -- ---------------------------------------------------------------------
 SET LOCAL ROLE authenticated;
 SELECT set_config('request.jwt.claims', '{"sub":"e1000000-0000-4000-8000-000000000001","role":"authenticated"}', true);
 SELECT lives_ok(
-  format($$INSERT INTO public.order_events (order_id, from_status, to_status, actor_role, source) VALUES (%L, %L, %L, 'restaurant', 'restaurant_portal')$$,
+  format($$INSERT INTO public.order_events (order_id, from_status, to_status, actor_role, source, note) VALUES (%L, %L, %L, 'restaurant', 'restaurant_portal', 'A 段探針')$$,
          c.order_id, c.from_status, c.to_status),
   format('老闆 %s→%s', c.from_status, c.to_status))
   FROM _cases c WHERE c.actor = 'owner' ORDER BY c.n;
 
 SELECT set_config('request.jwt.claims', '{"sub":"e1000000-0000-4000-8000-000000000002","role":"authenticated"}', true);
 SELECT lives_ok(
-  format($$INSERT INTO public.order_events (order_id, from_status, to_status, actor_role, source) VALUES (%L, %L, %L, 'restaurant', 'restaurant_portal')$$,
+  format($$INSERT INTO public.order_events (order_id, from_status, to_status, actor_role, source, note) VALUES (%L, %L, %L, 'restaurant', 'restaurant_portal', 'A 段探針')$$,
          c.order_id, c.from_status, c.to_status),
   format('店長 %s→%s', c.from_status, c.to_status))
   FROM _cases c WHERE c.actor = 'manager' ORDER BY c.n;
 
 SELECT set_config('request.jwt.claims', '{"sub":"e1000000-0000-4000-8000-000000000003","role":"authenticated"}', true);
 SELECT lives_ok(
-  format($$INSERT INTO public.order_events (order_id, from_status, to_status, actor_role, source) VALUES (%L, %L, %L, 'restaurant', 'restaurant_portal')$$,
+  format($$INSERT INTO public.order_events (order_id, from_status, to_status, actor_role, source, note) VALUES (%L, %L, %L, 'restaurant', 'restaurant_portal', 'A 段探針')$$,
          c.order_id, c.from_status, c.to_status),
   format('採購員 %s→%s', c.from_status, c.to_status))
   FROM _cases c WHERE c.actor = 'purchaser' ORDER BY c.n;
 
 SELECT set_config('request.jwt.claims', '{"sub":"e1000000-0000-4000-8000-000000000005","role":"authenticated"}', true);
 SELECT lives_ok(
-  format($$INSERT INTO public.order_events (order_id, from_status, to_status, actor_role, source, payload) VALUES (%L, %L, %L, 'supplier', 'supplier_portal', %L::jsonb)$$,
+  format($$INSERT INTO public.order_events (order_id, from_status, to_status, actor_role, source, payload, note) VALUES (%L, %L, %L, 'supplier', 'supplier_portal', %L::jsonb, 'A 段探針')$$,
          c.order_id, c.from_status, c.to_status,
          CASE c.to_status WHEN 'quoted' THEN '{"total_amount":1234}' WHEN 'shipped' THEN '{"tracking":{"carrier":"黑貓"}}' ELSE '{}' END),
   format('供應商 %s→%s', c.from_status, c.to_status))
@@ -195,7 +196,7 @@ SELECT lives_ok(
 SELECT set_config('request.jwt.claims',
   '{"sub":"e1000000-0000-4000-8000-000000000006","role":"authenticated","app_metadata":{"role":"admin"}}', true);
 SELECT lives_ok(
-  format($$INSERT INTO public.order_events (order_id, from_status, to_status, actor_role, source, payload) VALUES (%L, %L, %L, 'admin', 'admin_portal', %L::jsonb)$$,
+  format($$INSERT INTO public.order_events (order_id, from_status, to_status, actor_role, source, payload, note) VALUES (%L, %L, %L, 'admin', 'admin_portal', %L::jsonb, 'A 段探針')$$,
          c.order_id, c.from_status, c.to_status,
          CASE c.to_status WHEN 'dispatched' THEN '{"supplier_id":"e4000000-0000-4000-8000-000000000001"}' ELSE '{}' END),
   format('管理員 %s→%s', c.from_status, c.to_status))
@@ -204,7 +205,7 @@ SELECT lives_ok(
 SET LOCAL ROLE service_role;
 SELECT set_config('request.jwt.claims', '{"role":"service_role"}', true);
 SELECT lives_ok(
-  format($$INSERT INTO public.order_events (order_id, from_status, to_status, actor_role, source, payload) VALUES (%L, %L, %L, 'system', 'system', %L::jsonb)$$,
+  format($$INSERT INTO public.order_events (order_id, from_status, to_status, actor_role, source, payload, note) VALUES (%L, %L, %L, 'system', 'system', %L::jsonb, 'A 段探針')$$,
          c.order_id, c.from_status, c.to_status,
          CASE c.to_status WHEN 'quoted' THEN '{"total_amount":1234}'
                           WHEN 'dispatched' THEN '{"supplier_id":"e4000000-0000-4000-8000-000000000001"}' ELSE '{}' END),
@@ -214,12 +215,12 @@ SELECT lives_ok(
 RESET ROLE;
 SELECT is(
   (SELECT count(*)::int FROM _cases c JOIN public.supplier_orders o ON o.id = c.order_id WHERE o.status = c.to_status),
-  85, 'A 段 85 條轉移全部生效(訂單狀態都同步成目標狀態)'
+  102, 'A 段 102 條轉移全部生效(訂單狀態都同步成目標狀態)'
 );
 SELECT is(
   (SELECT count(*)::int FROM _cases c JOIN public.order_events e ON e.order_id = c.order_id
     WHERE e.from_status = c.from_status AND e.to_status = c.to_status),
-  85, 'A 段每張單剛好一筆事件,from_status 是轉移前的狀態'
+  102, 'A 段每張單剛好一筆事件,from_status 是轉移前的狀態'
 );
 
 -- ---------------------------------------------------------------------

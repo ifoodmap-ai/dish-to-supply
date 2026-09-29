@@ -11,10 +11,13 @@ export type Audience = "supplier" | "restaurant" | "both";
 export interface Rule {
   audience: Audience;
   subject: (ctx: Ctx) => string;
-  lead: (ctx: Ctx) => string;
+  /** 內文開頭那段;ctx 的每個欄位都已經跳脫過,audience 是這封信的收件對象 */
+  lead: (ctx: Ctx, audience: "supplier" | "restaurant") => string;
   cta: string;
   /** 收件人該去哪個後台 */
   path: (audience: "supplier" | "restaurant") => string;
+  /** 內文要附上事件的原因(退回重新報價、取消):notify 會用 event_id 讀事件的 note */
+  needsReason?: boolean;
 }
 
 export interface Ctx {
@@ -23,6 +26,8 @@ export interface Ctx {
   supplierName: string;
   amount: string;
   items: string;
+  /** 事件的原因(退回重新報價、取消);沒有就是空字串 */
+  reason?: string;
 }
 
 export const RULES: Record<string, Rule> = {
@@ -77,6 +82,61 @@ export const RULES: Record<string, Rule> = {
   },
 };
 
+/** 進行中(派發之後、送達之前)的狀態:從這些狀態取消才要通知對方 */
+export const IN_FLIGHT_STATUSES = ["dispatched", "sent", "accepted", "quoted", "confirmed", "shipped", "in_transit"];
+
+const reasonText = (c: Ctx) => (c.reason ? c.reason : "(沒有填寫)");
+
+/** 餐廳退回重新報價(quoted → accepted):請供應商重新報價 */
+export const REQUOTE_RULE: Rule = {
+  audience: "supplier",
+  subject: (c) => `${c.restaurantName} 退回報價,請重新報價 — 訂單 ${c.orderShort}`,
+  lead: (c) => `${c.restaurantName} 看過你的報價後退回了,原因:${reasonText(c)}<br>這份報價已作廢,請調整後在後台重新報價。`,
+  cta: "重新報價",
+  path: () => "/supplier/orders",
+  needsReason: true,
+};
+
+/** 平台(管理員/系統)取消進行中的單:通知供應商與餐廳 */
+export const CANCELLED_BY_PLATFORM_RULE: Rule = {
+  audience: "both",
+  subject: (c) => `訂單已取消 — 訂單 ${c.orderShort}`,
+  lead: (c, a) =>
+    a === "supplier"
+      ? `iFoodmap 平台已取消 ${c.restaurantName} 的這張訂單,原因:${reasonText(c)}<br>這張單不會再進行,<strong>請不要出貨</strong>;有問題請直接回覆這封信。`
+      : `iFoodmap 平台已取消這張訂單(供應商:${c.supplierName}),原因:${reasonText(c)}<br>需要的話可以在後台重新叫貨。`,
+  cta: "查看訂單",
+  path: (a) => (a === "supplier" ? "/supplier/orders" : "/restaurant/orders"),
+  needsReason: true,
+};
+
+/** 餐廳取消已經有供應商處理中的單(例如報價後不要了):通知供應商 */
+export const CANCELLED_BY_RESTAURANT_RULE: Rule = {
+  audience: "supplier",
+  subject: (c) => `${c.restaurantName} 取消了訂單 ${c.orderShort}`,
+  lead: (c) => `${c.restaurantName} 取消了這張訂單${c.reason ? `,原因:${c.reason}` : ""}。<br>這張單不會再進行,<strong>請不要出貨</strong>。`,
+  cta: "查看訂單",
+  path: () => "/supplier/orders",
+  needsReason: true,
+};
+
+export interface EventInfo {
+  toStatus: string;
+  /** 20260929110000 起 trigger 會帶;舊的 trigger 沒有這兩個欄位 → 退回重新報價、取消不寄(跟以前一樣) */
+  fromStatus?: string | null;
+  actorRole?: string | null;
+}
+
+/** 這個事件要用哪一條通知規則;null = 不寄 */
+export const resolveRule = (ev: EventInfo): Rule | null => {
+  if (ev.toStatus === "accepted") return ev.fromStatus === "quoted" ? REQUOTE_RULE : null;
+  if (ev.toStatus === "cancelled") {
+    if (!ev.fromStatus || !IN_FLIGHT_STATUSES.includes(ev.fromStatus)) return null;
+    return ev.actorRole === "restaurant" ? CANCELLED_BY_RESTAURANT_RULE : CANCELLED_BY_PLATFORM_RULE;
+  }
+  return RULES[ev.toStatus] ?? null;
+};
+
 export const money = (n: unknown) =>
   n == null || Number.isNaN(Number(n)) ? "" : `NT$ ${Number(n).toLocaleString("zh-TW")}`;
 
@@ -118,9 +178,10 @@ export const renderMail = (
     supplierName: escapeHtml(ctx.supplierName),
     amount: escapeHtml(ctx.amount),
     items: escapeHtml(ctx.items),
+    reason: escapeHtml(ctx.reason ?? ""),
   };
   // 供應商的連結多帶 ?order=:訂單頁會自動切到這張單所在的狀態分頁(路徑不變,舊連結照樣能開)
   const url = `${siteUrl}${rule.path(audience)}` +
     (audience === "supplier" ? `?order=${encodeURIComponent(orderId)}` : "");
-  return { subject, body: html(escapeHtml(subject), rule.lead(safe), rule.cta, url), url };
+  return { subject, body: html(escapeHtml(subject), rule.lead(safe, audience), rule.cta, url), url };
 };

@@ -172,6 +172,12 @@ export default function DispatchOrderDialog({ order, onClose, onChanged }: Props
           </DialogDescription>
         </DialogHeader>
 
+        {order?.status === "expired" && previous && (
+          // 逾時是排程自動標的,原供應商不一定知道;改派後 supplier_id 換人,原供應商就看不到這張單了
+          <p data-testid="redispatch-expired-warning" className="rounded-md bg-amber-50 px-3 py-2 text-xs text-amber-800">
+            這張單是逾時交回平台的,原供應商可能還在備貨或已經出貨。改派之後原供應商就看不到這張單,請先聯絡原供應商確認不要出貨。
+          </p>
+        )}
         {itemNames.length > 0 && (
           <p className="text-xs text-slate-500">
             品項:{itemNames.slice(0, 8).join("、")}

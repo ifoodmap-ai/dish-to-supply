@@ -8,6 +8,7 @@
 //   - 同一張卡上的「備註」:狀態不變時其實存得進去,但那是直接改 supplier_orders.notes、不會留下任何事件,
 //     放在這個「事實紀錄」頁上等於能無痕改訂單內容 —— 所以先不搬,要不要保留待業主決定(備註照樣在「訂單資訊」唯讀顯示)。
 // 第二期(Q2-A):待派發/被拒/逾時的單在標題旁有「派給…」(DispatchOrderDialog,只寫一筆 recordOrderEvent);
+// F5:管理員可以取消的單(含卡住的進行中訂單)有「取消訂單…」(CancelOrderDialog,要填原因,只寫一筆事件)。
 // 除此之外這一頁維持唯讀,不寫任何資料表。
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
@@ -21,6 +22,7 @@ import {
   Send,
   ShieldCheck,
   Star,
+  XCircle,
 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -51,6 +53,7 @@ import {
 } from '@/lib/orders';
 import { formatOrderNo } from '@/lib/order-number';
 import DispatchOrderDialog, { type DispatchTarget } from './DispatchOrderDialog';
+import CancelOrderDialog, { type CancelTarget } from './CancelOrderDialog';
 
 /* ---------------------------------------------------------------
  * 新資料表尚未進 types.ts,沿用專案既有的 cast 慣例
@@ -335,6 +338,7 @@ export default function AdminOrderTimelinePage() {
   const [loading, setLoading] = useState(true);
   const [timelineError, setTimelineError] = useState<string | null>(null);
   const [dispatchTarget, setDispatchTarget] = useState<DispatchTarget | null>(null);
+  const [cancelTarget, setCancelTarget] = useState<CancelTarget | null>(null);
 
   const load = useCallback(async () => {
     if (!id) return;
@@ -499,6 +503,17 @@ export default function AdminOrderTimelinePage() {
             >
               <Send className="mr-1.5 h-3.5 w-3.5" />
               {order.status === 'rejected' || order.status === 'expired' ? '改派給…' : '派給…'}
+            </Button>
+          )}
+          {allowedTransitions('admin', order.status).includes('cancelled') && (
+            <Button
+              size="sm"
+              variant="outline"
+              className="border-red-200 text-red-600 hover:bg-red-50"
+              onClick={() => setCancelTarget({ id: order.id, status: order.status, supplier_id: order.supplier_id })}
+            >
+              <XCircle className="mr-1.5 h-3.5 w-3.5" />
+              取消訂單…
             </Button>
           )}
         </div>
@@ -862,6 +877,7 @@ export default function AdminOrderTimelinePage() {
       </div>
 
       <DispatchOrderDialog order={dispatchTarget} onClose={() => setDispatchTarget(null)} onChanged={load} />
+      <CancelOrderDialog order={cancelTarget} onClose={() => setCancelTarget(null)} onChanged={load} />
     </div>
   );
 }

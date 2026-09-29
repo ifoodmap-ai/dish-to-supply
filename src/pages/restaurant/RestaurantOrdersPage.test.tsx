@@ -14,7 +14,7 @@ type Role = "owner" | "manager" | "purchaser";
 type Filter = [op: string, col: string, val: unknown];
 interface Call { table: string; op: string; cols?: string; values?: unknown; filters: Filter[] }
 
-const { state, recordOrderEvent } = vi.hoisted(() => ({
+const { state, recordOrderEvent, callOrderRpc, toastError } = vi.hoisted(() => ({
   state: {
     role: "owner" as Role,
     calls: [] as Call[],
@@ -22,6 +22,8 @@ const { state, recordOrderEvent } = vi.hoisted(() => ({
     draftRows: [] as Record<string, unknown>[],
   },
   recordOrderEvent: vi.fn(),
+  callOrderRpc: vi.fn(),
+  toastError: vi.fn(),
 }));
 
 /** 只實作這頁用得到的 PostgREST builder;回傳什麼依篩選條件決定 */
@@ -69,12 +71,12 @@ vi.mock("@/components/RestaurantRoute", () => ({
 
 vi.mock("@/lib/orders", async () => {
   const actual = await vi.importActual<typeof import("@/lib/orders")>("@/lib/orders");
-  return { ...actual, recordOrderEvent, fetchOrderTimeline: vi.fn(async () => []) };
+  return { ...actual, recordOrderEvent, callOrderRpc, fetchOrderTimeline: vi.fn(async () => []) };
 });
 
 vi.mock("@/components/restaurant/ReceiveOrderDialog", () => ({ default: () => null }));
 vi.mock("@/components/restaurant/OrderReviewDialog", () => ({ default: () => null }));
-vi.mock("sonner", () => ({ toast: { success: vi.fn(), error: vi.fn(), info: vi.fn() } }));
+vi.mock("sonner", () => ({ toast: { success: vi.fn(), error: toastError, info: vi.fn() } }));
 
 const order = (id: string, status: string) => ({
   id,
@@ -103,6 +105,9 @@ beforeEach(() => {
   state.draftRows = [{ id: "draft-1" }, { id: "draft-2" }];
   recordOrderEvent.mockReset();
   recordOrderEvent.mockResolvedValue({});
+  callOrderRpc.mockReset();
+  callOrderRpc.mockResolvedValue({});
+  toastError.mockReset();
   fetchGuard = vi.fn(() => Promise.reject(new Error("測試不准打網路")));
   vi.stubGlobal("fetch", fetchGuard);
 });
@@ -215,3 +220,98 @@ describe("RestaurantOrdersPage — 沒有送出鈕,其他既有動作照舊", ()
     );
   });
 });
+
+describe("RestaurantOrdersPage — 退回重新報價(報價後品項鎖住,業主拍板 N2)", () => {
+  it.each<Role>(["owner", "manager"])("%s:待確認的單有「退回重新報價」,並提示品項已鎖定", async (role) => {
+    state.role = role;
+    renderPage();
+    await waitLoaded();
+
+    const card = screen.getByText("#0000Q001").closest("[class*='rounded']") as HTMLElement;
+    expect(within(card).getByRole("button", { name: "退回重新報價" })).toBeInTheDocument();
+    expect(card).toHaveTextContent("供應商已報價,品項與數量已鎖定,要改請按「退回重新報價」");
+  });
+
+  it("採購員沒有「退回重新報價」(只有老闆/店長能退),提示請老闆或店長處理", async () => {
+    state.role = "purchaser";
+    renderPage();
+    await waitLoaded();
+
+    expect(screen.queryByRole("button", { name: "退回重新報價" })).toBeNull();
+    const card = screen.getByText("#0000Q001").closest("[class*='rounded']") as HTMLElement;
+    expect(card).toHaveTextContent("要改請老闆或店長退回重新報價");
+    // 採購員照舊可以確認報價
+    expect(within(card).getByRole("button", { name: "確認訂單" })).toBeInTheDocument();
+  });
+
+  it("要填原因才送得出去;送出只寫一筆事件 quoted → accepted,原因寫進 note", async () => {
+    const user = userEvent.setup();
+    renderPage();
+    await waitLoaded();
+
+    await user.click(screen.getByRole("button", { name: "退回重新報價" }));
+    const dialog = await screen.findByRole("dialog");
+    const confirm = within(dialog).getByRole("button", { name: "確定退回" });
+    expect(confirm).toBeDisabled();
+
+    await user.type(within(dialog).getByLabelText("退回原因"), "高麗菜改成 20 顆");
+    await user.click(confirm);
+    await waitFor(() => expect(recordOrderEvent).toHaveBeenCalledTimes(1));
+    expect(recordOrderEvent).toHaveBeenCalledWith({
+      orderId: "aaaaaaaa-0000-4000-8000-00000000q001",
+      fromStatus: "quoted",
+      toStatus: "accepted",
+      actorRole: "restaurant",
+      source: "restaurant_portal",
+      note: "高麗菜改成 20 顆",
+      payload: { reason: "高麗菜改成 20 顆" },
+    });
+  });
+});
+
+describe("RestaurantOrdersPage — 申請爭議一次交易完成(F7)", () => {
+  it("送出只呼叫 restaurant_open_dispute RPC,不再從前端直接寫 disputes", async () => {
+    const user = userEvent.setup();
+    state.listRows = [order("aaaaaaaa-0000-4000-8000-00000000d201", "discrepancy")];
+    renderPage();
+    await screen.findByText("#0000D201");
+
+    await user.click(screen.getByRole("button", { name: "申請爭議處理" }));
+    const dialog = await screen.findByRole("dialog");
+    await user.type(within(dialog).getByPlaceholderText(/請描述事發經過/), "少了兩箱");
+    await user.click(within(dialog).getByRole("button", { name: "送出申請" }));
+
+    await waitFor(() => expect(callOrderRpc).toHaveBeenCalledTimes(1));
+    expect(callOrderRpc).toHaveBeenCalledWith("restaurant_open_dispute", {
+      p_order_id: "aaaaaaaa-0000-4000-8000-00000000d201",
+      p_from_status: "discrepancy",
+      p_kind: "shortage",
+      p_detail: "少了兩箱",
+    });
+    expect(recordOrderEvent).not.toHaveBeenCalled();
+    expect(state.calls.filter((c) => c.table === "disputes")).toEqual([]);
+  });
+
+  it("後到的人(畫面過期):照實顯示錯誤、關掉對話框並重抓列表", async () => {
+    const user = userEvent.setup();
+    const { OrderEventError } = await vi.importActual<typeof import("@/lib/orders")>("@/lib/orders");
+    callOrderRpc.mockRejectedValueOnce(
+      new OrderEventError("這張訂單的狀態已經變成「爭議中」,畫面上的資料過期了,請重新整理後再操作", "P0001", "stale_order_status"),
+    );
+    state.listRows = [order("aaaaaaaa-0000-4000-8000-00000000d202", "discrepancy")];
+    renderPage();
+    await screen.findByText("#0000D202");
+    const before = state.calls.filter((c) => c.table === "supplier_orders").length;
+
+    await user.click(screen.getByRole("button", { name: "申請爭議處理" }));
+    const dialog = await screen.findByRole("dialog");
+    await user.type(within(dialog).getByPlaceholderText(/請描述事發經過/), "我也要申請");
+    await user.click(within(dialog).getByRole("button", { name: "送出申請" }));
+
+    await waitFor(() => expect(toastError).toHaveBeenCalled());
+    expect(toastError.mock.calls[0][1].description).toContain("畫面上的資料過期了");
+    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+    await waitFor(() => expect(state.calls.filter((c) => c.table === "supplier_orders").length).toBeGreaterThan(before));
+  });
+});
+

@@ -10,7 +10,9 @@ import {
   History,
   Inbox,
   Loader2,
+  Lock,
   PackageCheck,
+  RotateCcw,
   Search,
   ShieldX,
   Star,
@@ -52,12 +54,13 @@ import {
   PIPELINE_STAGES,
   ROLE_LABEL,
   SOURCE_LABEL,
-  allowedTransitions,
+  callOrderRpc,
   fetchOrderTimeline,
   formatStageAge,
   isStaleOrderError,
   isStuck,
   recordOrderEvent,
+  restaurantTransitions,
   type OrderEvent,
   type OrderStatus,
 } from "@/lib/orders";
@@ -136,7 +139,7 @@ interface ActionConf {
 }
 
 /**
- * 動作按鈕外觀 —— 實際會出現哪幾顆完全由 allowedTransitions 決定。
+ * 動作按鈕外觀 —— 實際會出現哪幾顆完全由 restaurantTransitions(轉移表 + 採購員限制)決定。
  *
  * 刻意沒有 submitted(「送出訂單」):草稿只在「叫貨」分頁的待簽核區處理,
  * 送出只給老闆/店長(業主拍板 Q8-A;資料庫 trg_guard_order_submission 也擋採購員)。
@@ -144,6 +147,8 @@ interface ActionConf {
  */
 const ACTION_CONF: Partial<Record<OrderStatus, ActionConf>> = {
   confirmed: { label: "確認訂單", icon: CheckCircle2, tone: "primary" },
+  // 待確認 → 待報價:退回重新報價(只有老闆/店長;要填原因,會轉告供應商)
+  accepted: { label: "退回重新報價", icon: RotateCcw, tone: "warn" },
   cancelled: { label: "取消訂單", icon: XCircle, tone: "danger" },
   received: { label: "已收到貨", icon: PackageCheck, tone: "primary" },
   discrepancy: { label: "回報異常", icon: TriangleAlert, tone: "warn" },
@@ -262,6 +267,8 @@ export default function RestaurantOrdersPage() {
   const [disputeTarget, setDisputeTarget] = useState<OrderRow | null>(null);
   const [disputeKind, setDisputeKind] = useState("shortage");
   const [disputeDetail, setDisputeDetail] = useState("");
+  const [requoteTarget, setRequoteTarget] = useState<OrderRow | null>(null);
+  const [requoteReason, setRequoteReason] = useState("");
 
   const supplierName = useCallback(
     (id: string | null) => (id && supplierMap[id]) || "尚未指派供應商",
@@ -377,33 +384,20 @@ export default function RestaurantOrdersPage() {
     }
   };
 
+  /**
+   * 申請爭議:事件與爭議案件在資料庫一次交易寫完(restaurant_open_dispute)。
+   * 別人剛處理過這張單(畫面過期)時整筆被擋,不會留下爭議案件;這時順手重抓。
+   */
   const submitDispute = async () => {
     if (!disputeTarget) return;
     const order = disputeTarget;
     setBusyId(order.id);
     try {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-
-      const { error } = await db("disputes").insert({
-        order_id: order.id,
-        kind: disputeKind,
-        status: "open",
-        opened_by: user?.id ?? null,
-        opened_role: "restaurant",
-        detail: disputeDetail.trim() || null,
-      });
-      if (error) throw new Error(error.message);
-
-      await recordOrderEvent({
-        orderId: order.id,
-        fromStatus: order.status,
-        toStatus: "disputed",
-        actorRole: "restaurant",
-        source: "restaurant_portal",
-        note: disputeDetail.trim() || null,
-        payload: { kind: disputeKind },
+      await callOrderRpc("restaurant_open_dispute", {
+        p_order_id: order.id,
+        p_from_status: order.status,
+        p_kind: disputeKind,
+        p_detail: disputeDetail.trim() || null,
       });
 
       toast.success("已送出爭議申請", { description: "客服會在 1 個工作天內聯繫您" });
@@ -413,6 +407,42 @@ export default function RestaurantOrdersPage() {
       await refreshAfterAction(order.id);
     } catch (e) {
       toast.error("送出失敗", { description: (e as Error).message });
+      if (isStaleOrderError(e)) {
+        setDisputeTarget(null);
+        await refreshAfterAction(order.id);
+      }
+    } finally {
+      setBusyId(null);
+    }
+  };
+
+  /** 退回重新報價:訂單回到「待報價」、舊報價作廢,原因會寄給供應商(資料庫要求一定要填原因) */
+  const submitRequote = async () => {
+    if (!requoteTarget) return;
+    const order = requoteTarget;
+    const reason = requoteReason.trim();
+    if (!reason) return;
+    setBusyId(order.id);
+    try {
+      await recordOrderEvent({
+        orderId: order.id,
+        fromStatus: order.status,
+        toStatus: "accepted",
+        actorRole: "restaurant",
+        source: "restaurant_portal",
+        note: reason,
+        payload: { reason },
+      });
+      toast.success("已退回給供應商重新報價", { description: "供應商重新報價後會通知您確認" });
+      setRequoteTarget(null);
+      setRequoteReason("");
+      await refreshAfterAction(order.id);
+    } catch (e) {
+      toast.error("退回失敗", { description: (e as Error).message });
+      if (isStaleOrderError(e)) {
+        setRequoteTarget(null);
+        await refreshAfterAction(order.id);
+      }
     } finally {
       setBusyId(null);
     }
@@ -436,6 +466,10 @@ export default function RestaurantOrdersPage() {
         setDisputeKind("shortage");
         setDisputeDetail("");
         setDisputeTarget(order);
+        return;
+      case "accepted":
+        setRequoteReason("");
+        setRequoteTarget(order);
         return;
       default:
         advance(order, to);
@@ -610,7 +644,10 @@ export default function RestaurantOrdersPage() {
             const meta = statusMeta(order.status);
             const since = order.current_stage_since ?? order.created_at;
             const stuck = isStuck(order.status, since);
-            const transitions = allowedTransitions("restaurant", order.status);
+            // 按鈕只由轉移表產生;採購員看不到只有老闆/店長能做的(送出、退回重新報價)
+            const transitions = restaurantTransitions(role, order.status);
+            // 報價之後品項就鎖住了(資料庫 guard_order_update 擋);只有待確認時還能用「退回重新報價」改,所以提示只在這時出現
+            const showItemsLockHint = order.status === "quoted";
             const isOpen = expanded === order.id;
             const events = timelines[order.id];
             const busy = busyId === order.id;
@@ -667,6 +704,14 @@ export default function RestaurantOrdersPage() {
                 {/* 品項摘要 */}
                 {itemSummary(order.ingredient_list) ?? (
                   <p className="text-xs italic text-slate-400">尚無品項明細</p>
+                )}
+
+                {showItemsLockHint && (
+                  <p className="mt-2 flex items-center gap-1.5 text-xs text-slate-500">
+                    <Lock className="h-3.5 w-3.5 text-slate-400" />
+                    供應商已報價,品項與數量已鎖定
+                    {mustApprove ? ",要改請老闆或店長退回重新報價" : ",要改請按「退回重新報價」"}
+                  </p>
                 )}
 
                 {order.notes && (
@@ -837,6 +882,50 @@ export default function RestaurantOrdersPage() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* 退回重新報價 */}
+      <Dialog
+        open={!!requoteTarget}
+        onOpenChange={(o) => {
+          if (!o && busyId === null) setRequoteTarget(null);
+        }}
+      >
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <RotateCcw className="h-5 w-5 text-orange-500" />
+              退回重新報價
+            </DialogTitle>
+            <DialogDescription>
+              訂單 {formatOrderNo(requoteTarget?.id)} —— 這份報價會作廢,訂單回到「待報價」,供應商會收到你寫的原因並重新報價。
+              要改品項或數量,請在原因裡寫清楚。
+            </DialogDescription>
+          </DialogHeader>
+          <div>
+            <p className="mb-1.5 text-sm font-medium text-slate-700">退回原因(必填)</p>
+            <Textarea
+              rows={4}
+              value={requoteReason}
+              onChange={(e) => setRequoteReason(e.target.value)}
+              placeholder="例如:高麗菜改成 20 顆、價格請再優惠"
+              aria-label="退回原因"
+            />
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setRequoteTarget(null)} disabled={busyId !== null}>
+              取消
+            </Button>
+            <Button
+              className="bg-orange-600 text-white hover:bg-orange-700"
+              onClick={submitRequote}
+              disabled={busyId !== null || !requoteReason.trim()}
+            >
+              {busyId !== null && <Loader2 className="mr-1.5 h-4 w-4 animate-spin" />}
+              確定退回
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* 申請爭議處理 */}
       <Dialog

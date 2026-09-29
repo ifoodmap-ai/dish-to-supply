@@ -16,7 +16,7 @@ import { OrderEventError } from "@/lib/orders";
 interface Call { table: string; op: string; filters: [string, string, unknown][] }
 
 const { state, recordOrderEvent, toastSuccess, toastError } = vi.hoisted(() => ({
-  state: { calls: [] as Call[], orders: [] as Record<string, unknown>[] },
+  state: { calls: [] as Call[], orders: [] as Record<string, unknown>[], events: [] as Record<string, unknown>[] },
   recordOrderEvent: vi.fn(),
   toastSuccess: vi.fn(),
   toastError: vi.fn(),
@@ -29,6 +29,7 @@ const fakeFrom = (table: string) => {
     if (table === "supplier_accounts") return { data: { supplier_id: "sup-1" }, error: null };
     if (table === "supplier_orders") return { data: state.orders, error: null };
     if (table === "restaurants") return { data: [{ id: "rest-1", name: "好味小館", city: "台北市" }], error: null };
+    if (table === "order_events") return { data: state.events, error: null };
     if (table === "supplier_shipments")
       return {
         data: [{ order_id: "ord-shipped-000000a4", shipped_at: "2026-09-28T02:00:00Z", tracking_info: { carrier: "自有車隊", tracking_number: "T-9" }, notes: null }],
@@ -40,7 +41,7 @@ const fakeFrom = (table: string) => {
     select: () => builder,
     eq: (col: string, val: unknown) => { call.filters.push(["eq", col, val]); return builder; },
     in: (col: string, val: unknown) => { call.filters.push(["in", col, val]); return builder; },
-    order: () => builder,
+    order: (col: string, opts?: { ascending?: boolean }) => { call.filters.push(["order", col, opts?.ascending ?? true]); return builder; },
     insert: () => { call.op = "insert"; return builder; },
     update: () => { call.op = "update"; return builder; },
     delete: () => { call.op = "delete"; return builder; },
@@ -114,6 +115,7 @@ let fetchGuard: ReturnType<typeof vi.fn>;
 beforeEach(() => {
   state.calls = [];
   state.orders = ALL();
+  state.events = [];
   recordOrderEvent.mockReset();
   recordOrderEvent.mockResolvedValue({});
   toastSuccess.mockReset();
@@ -359,3 +361,62 @@ describe("App.tsx 的路由", () => {
     expect(app).not.toMatch(/SupplierQuotesPage|SupplierShipmentsPage|SupplierLogisticsPage/);
   });
 });
+
+describe("退回重新報價、取消、逾時的原因(業主拍板 N2 / F5)", () => {
+  it("被餐廳退回的單(quoted → accepted)在待報價顯示原因;供應商自己接單的不顯示", async () => {
+    state.orders = [
+      order("ord-requote-00000000b1", "accepted"),
+      order("ord-accepted-000000a2", "accepted"),
+      order("ord-cancelled-0000000c1", "cancelled", { total_amount: 900 }),
+      order("ord-expired-000000000e1", "expired"),
+    ];
+    state.events = [
+      { order_id: "ord-requote-00000000b1", from_status: "dispatched", to_status: "accepted", note: null, created_at: "2026-09-28T01:00:00Z" },
+      { order_id: "ord-requote-00000000b1", from_status: "quoted", to_status: "accepted", note: "高麗菜改成 20 顆", created_at: "2026-09-28T03:00:00Z" },
+      { order_id: "ord-accepted-000000a2", from_status: "dispatched", to_status: "accepted", note: null, created_at: "2026-09-28T01:00:00Z" },
+      { order_id: "ord-cancelled-0000000c1", from_status: "confirmed", to_status: "cancelled", note: "餐廳改訂,平台取消", created_at: "2026-09-28T04:00:00Z" },
+      { order_id: "ord-expired-000000000e1", from_status: "dispatched", to_status: "expired", note: "在「待接單」停留超過 24 小時沒有人處理,系統標為逾時", created_at: "2026-09-28T05:00:00Z" },
+    ];
+    renderPage("/supplier/orders?stage=all");
+    await waitLoaded();
+
+    expect(screen.getByTestId("reason-ord-requote-00000000b1")).toHaveTextContent("餐廳退回報價,請重新報價:高麗菜改成 20 顆");
+    expect(screen.queryByTestId("reason-ord-accepted-000000a2")).toBeNull();
+    expect(screen.getByTestId("reason-ord-cancelled-0000000c1")).toHaveTextContent("取消原因:餐廳改訂,平台取消");
+    expect(screen.getByTestId("reason-ord-expired-000000000e1")).toHaveTextContent("逾時:在「待接單」停留超過 24 小時");
+    // 被退回的單照樣可以重新報價
+    expect(within(card("ord-requote-00000000b1")).getByRole("button", { name: "報價" })).toBeInTheDocument();
+    const evQuery = state.calls.find((c) => c.table === "order_events")!;
+    expect(evQuery.filters).toContainEqual(["in", "to_status", ["accepted", "cancelled", "expired"]]);
+    // 新到舊撈:筆數超過上限時被截掉的是最舊的事件
+    expect(evQuery.filters).toContainEqual(["order", "created_at", false]);
+  });
+
+  it("只看造成目前狀態的那一筆:退回 → 逾時 → 改派給我、我接單之後,不顯示以前寫給上一家的退回原因", async () => {
+    state.orders = [order("ord-redispatch-0000000r1", "accepted")];
+    state.events = [
+      { order_id: "ord-redispatch-0000000r1", from_status: "dispatched", to_status: "accepted", note: null, created_at: "2026-09-26T01:00:00Z" },
+      { order_id: "ord-redispatch-0000000r1", from_status: "quoted", to_status: "accepted", note: "寫給上一家的:單價太高", created_at: "2026-09-26T05:00:00Z" },
+      { order_id: "ord-redispatch-0000000r1", from_status: "accepted", to_status: "expired", note: "在「待報價」停留超過 24 小時沒有人處理,系統標為逾時", created_at: "2026-09-27T06:00:00Z" },
+      { order_id: "ord-redispatch-0000000r1", from_status: "dispatched", to_status: "accepted", note: null, created_at: "2026-09-28T02:00:00Z" },
+    ];
+    renderPage("/supplier/orders?stage=all");
+    await waitLoaded();
+    expect(card("ord-redispatch-0000000r1")).toBeInTheDocument();
+    expect(screen.queryByTestId("reason-ord-redispatch-0000000r1")).toBeNull();
+  });
+
+  it("事件不管用什麼順序回來,都取最新一筆進到目前狀態的事件", async () => {
+    state.orders = [order("ord-twice-00000000t1", "accepted")];
+    // 資料庫依新到舊回來:最新一次退回(R2)排第一
+    state.events = [
+      { order_id: "ord-twice-00000000t1", from_status: "quoted", to_status: "accepted", note: "第二次退回:數量改 30", created_at: "2026-09-28T06:00:00Z" },
+      { order_id: "ord-twice-00000000t1", from_status: "quoted", to_status: "accepted", note: "第一次退回:單價太高", created_at: "2026-09-27T06:00:00Z" },
+      { order_id: "ord-twice-00000000t1", from_status: "dispatched", to_status: "accepted", note: null, created_at: "2026-09-26T06:00:00Z" },
+    ];
+    renderPage("/supplier/orders?stage=all");
+    await waitLoaded();
+    expect(screen.getByTestId("reason-ord-twice-00000000t1")).toHaveTextContent("第二次退回:數量改 30");
+  });
+});
+

@@ -183,5 +183,15 @@ describe('被拒的單改派', () => {
     expect(await screen.findByText('改派 #EDCF4143 — 好味小館')).toBeInTheDocument();
     await waitFor(() => expect(screen.getAllByTestId(/^candidate-/)).toHaveLength(3));
     expect(within(screen.getByTestId('candidate-sup-a')).getByText('剛拒絕這張單')).toBeInTheDocument();
+    // 供應商自己拒的單不用提醒聯絡原供應商
+    expect(screen.queryByTestId('redispatch-expired-warning')).toBeNull();
+  });
+
+  it('逾時交回的單改派:標出上次沒回應的供應商,並提醒先聯絡原供應商確認不要出貨', async () => {
+    renderDialog({ ...ORDER, status: 'expired', supplier_id: 'sup-b' });
+    expect(await screen.findByText('改派 #EDCF4143 — 好味小館')).toBeInTheDocument();
+    await waitFor(() => expect(screen.getAllByTestId(/^candidate-/)).toHaveLength(3));
+    expect(within(screen.getByTestId('candidate-sup-b')).getByText('上次沒有回應')).toBeInTheDocument();
+    expect(screen.getByTestId('redispatch-expired-warning')).toHaveTextContent('請先聯絡原供應商確認不要出貨');
   });
 });

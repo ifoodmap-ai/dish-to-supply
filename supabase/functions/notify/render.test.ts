@@ -1,6 +1,15 @@
 import { describe, expect, it } from "vitest";
 import { formatOrderNo } from "../../../src/lib/order-number.ts";
-import { money, renderMail, RULES, type Ctx } from "./render.ts";
+import {
+  CANCELLED_BY_PLATFORM_RULE,
+  CANCELLED_BY_RESTAURANT_RULE,
+  money,
+  renderMail,
+  REQUOTE_RULE,
+  resolveRule,
+  RULES,
+  type Ctx,
+} from "./render.ts";
 
 const ORDER_ID = "a1e337b0-de8c-4e65-b22a-ca76edcf4143";
 const ctx = (over: Partial<Ctx> = {}): Ctx => ({
@@ -51,3 +60,57 @@ describe("renderMail", () => {
     expect(q.subject).toContain("O'Neil & Sons");
   });
 });
+
+describe("resolveRule:哪個事件寄哪一種信", () => {
+  it("原本的規則照舊(依目標狀態)", () => {
+    expect(resolveRule({ toStatus: "dispatched" })).toBe(RULES.dispatched);
+    expect(resolveRule({ toStatus: "quoted", fromStatus: "accepted", actorRole: "supplier" })).toBe(RULES.quoted);
+    expect(resolveRule({ toStatus: "expired", fromStatus: "dispatched", actorRole: "system" })).toBeNull();
+    expect(resolveRule({ toStatus: "confirmed" })).toBeNull();
+  });
+
+  it("accepted 只有「退回重新報價」(從 quoted 來)才寄給供應商;供應商自己接單不寄", () => {
+    expect(resolveRule({ toStatus: "accepted", fromStatus: "quoted", actorRole: "restaurant" })).toBe(REQUOTE_RULE);
+    expect(resolveRule({ toStatus: "accepted", fromStatus: "dispatched", actorRole: "supplier" })).toBeNull();
+    // 舊版 trigger 沒帶 from_status:不寄(跟以前一樣)
+    expect(resolveRule({ toStatus: "accepted" })).toBeNull();
+  });
+
+  it("進行中的單被取消才寄:平台取消 → 雙方;餐廳取消 → 供應商;草稿/待派發取消不寄", () => {
+    expect(resolveRule({ toStatus: "cancelled", fromStatus: "confirmed", actorRole: "admin" })).toBe(CANCELLED_BY_PLATFORM_RULE);
+    expect(resolveRule({ toStatus: "cancelled", fromStatus: "shipped", actorRole: "system" })).toBe(CANCELLED_BY_PLATFORM_RULE);
+    expect(resolveRule({ toStatus: "cancelled", fromStatus: "quoted", actorRole: "restaurant" })).toBe(CANCELLED_BY_RESTAURANT_RULE);
+    expect(resolveRule({ toStatus: "cancelled", fromStatus: "draft", actorRole: "restaurant" })).toBeNull();
+    expect(resolveRule({ toStatus: "cancelled", fromStatus: "submitted", actorRole: "admin" })).toBeNull();
+    expect(resolveRule({ toStatus: "cancelled" })).toBeNull();
+    expect(CANCELLED_BY_PLATFORM_RULE.audience).toBe("both");
+    expect(CANCELLED_BY_RESTAURANT_RULE.audience).toBe("supplier");
+  });
+});
+
+describe("退回重新報價、取消的信件內容", () => {
+  it("退回重新報價:寄給供應商,附上原因,連結帶 ?order=", () => {
+    const m = renderMail(REQUOTE_RULE, ctx({ reason: "高麗菜改成 20 顆" }), "supplier", "https://site.example", ORDER_ID);
+    expect(m.subject).toBe("好味小館 退回報價,請重新報價 — 訂單 #EDCF4143");
+    expect(m.body).toContain("原因:高麗菜改成 20 顆");
+    expect(m.url).toBe(`https://site.example/supplier/orders?order=${ORDER_ID}`);
+  });
+
+  it("平台取消:供應商那封叫他不要出貨、餐廳那封說可以重新叫貨,兩封都有原因", () => {
+    const toSupplier = renderMail(CANCELLED_BY_PLATFORM_RULE, ctx({ reason: "供應商兩天沒回應" }), "supplier", "https://s", ORDER_ID);
+    const toRestaurant = renderMail(CANCELLED_BY_PLATFORM_RULE, ctx({ reason: "供應商兩天沒回應" }), "restaurant", "https://s", ORDER_ID);
+    expect(toSupplier.subject).toBe("訂單已取消 — 訂單 #EDCF4143");
+    expect(toSupplier.body).toContain("請不要出貨");
+    expect(toSupplier.body).toContain("原因:供應商兩天沒回應");
+    expect(toRestaurant.body).toContain("可以在後台重新叫貨");
+    expect(toRestaurant.body).toContain("原因:供應商兩天沒回應");
+    expect(toRestaurant.url).toBe("https://s/restaurant/orders");
+  });
+
+  it("原因是使用者填的字:內文一樣跳脫,不能塞 HTML", () => {
+    const m = renderMail(REQUOTE_RULE, ctx({ reason: '<a href="https://evil.example">點我</a>' }), "supplier", "https://s", ORDER_ID);
+    expect(m.body).not.toContain('<a href="https://evil.example">');
+    expect(m.body).toContain("&lt;a href=&quot;https://evil.example&quot;&gt;");
+  });
+});
+

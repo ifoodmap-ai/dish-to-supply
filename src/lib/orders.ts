@@ -87,7 +87,8 @@ export const PIPELINE_STAGES: OrderStatus[] = [
 const TRANSITIONS: Record<ActorRole, Partial<Record<OrderStatus, OrderStatus[]>>> = {
   restaurant: {
     draft:      ["submitted", "cancelled"],
-    quoted:     ["confirmed", "cancelled"],
+    // accepted = 退回重新報價(只有老闆/店長,要填原因;見 RESTAURANT_APPROVER_ONLY)
+    quoted:     ["confirmed", "accepted", "cancelled"],
     // ★ received 只有餐廳能觸發 —— GMV 可信度的來源
     delivered:  ["received", "discrepancy"],
     received:   ["reviewed"],
@@ -107,23 +108,31 @@ const TRANSITIONS: Record<ActorRole, Partial<Record<OrderStatus, OrderStatus[]>>
     draft:      ["dispatched", "cancelled"],
     rejected:   ["dispatched", "cancelled"],
     expired:    ["dispatched", "cancelled"],
+    // 進行中的單卡住時由管理員取消(要填原因,資料庫會檢查)
+    dispatched: ["cancelled"],
+    sent:       ["cancelled"],
+    accepted:   ["cancelled"],
+    quoted:     ["cancelled"],
+    confirmed:  ["cancelled"],
+    shipped:    ["cancelled"],
+    in_transit: ["cancelled"],
     discrepancy:["disputed", "received", "closed"],
     disputed:   ["closed", "received"],
     reviewed:   ["closed"],
     received:   ["closed"],
   },
-  // 系統(service_role、排程):所有角色的轉移聯集 + 等待中的單逾時(給之後的排程用;畫面上沒有系統按鈕)
+  // 系統(service_role、排程):所有角色的轉移聯集 + 等待中的單逾時(每日排程 expire_stuck_orders;畫面上沒有系統按鈕)
   system: {
     draft:      ["submitted", "cancelled", "dispatched"],
     submitted:  ["dispatched", "cancelled"],
     pending:    ["dispatched", "cancelled"],
-    dispatched: ["accepted", "rejected", "expired"],
-    sent:       ["accepted", "rejected", "expired"],
-    accepted:   ["quoted", "expired"],
-    quoted:     ["confirmed", "cancelled", "expired"],
-    confirmed:  ["shipped"],
-    shipped:    ["in_transit", "delivered"],
-    in_transit: ["delivered"],
+    dispatched: ["accepted", "rejected", "expired", "cancelled"],
+    sent:       ["accepted", "rejected", "expired", "cancelled"],
+    accepted:   ["quoted", "expired", "cancelled"],
+    quoted:     ["confirmed", "accepted", "cancelled", "expired"],
+    confirmed:  ["shipped", "expired", "cancelled"],
+    shipped:    ["in_transit", "delivered", "cancelled"],
+    in_transit: ["delivered", "cancelled"],
     delivered:  ["received", "discrepancy"],
     received:   ["reviewed", "closed"],
     reviewed:   ["closed"],
@@ -142,6 +151,25 @@ export const ADMIN_DISPATCHABLE: OrderStatus[] = ["submitted", "pending", "rejec
 
 export const allowedTransitions = (role: ActorRole, status: OrderStatus): OrderStatus[] =>
   TRANSITIONS[role]?.[status] ?? [];
+
+/** 餐廳端只有老闆/店長能做的轉移:送出草稿(簽核)、退回重新報價。採購員看不到這兩顆按鈕,資料庫也擋 */
+export const RESTAURANT_APPROVER_ONLY: ReadonlyArray<readonly [OrderStatus, OrderStatus]> = [
+  ["draft", "submitted"],
+  ["quoted", "accepted"],
+];
+
+export type RestaurantMemberRole = "owner" | "manager" | "purchaser";
+
+/** 餐廳成員在某狀態下可以做的轉移(採購員扣掉 RESTAURANT_APPROVER_ONLY) */
+export const restaurantTransitions = (role: RestaurantMemberRole, status: OrderStatus): OrderStatus[] =>
+  allowedTransitions("restaurant", status).filter(
+    (to) => role !== "purchaser" || !RESTAURANT_APPROVER_ONLY.some(([f, t]) => f === status && t === to),
+  );
+
+/** 管理員取消這些狀態的單要填原因(資料庫 guard_order_transition 同一份清單) */
+export const IN_FLIGHT_STATUSES: OrderStatus[] = [
+  "dispatched", "sent", "accepted", "quoted", "confirmed", "shipped", "in_transit",
+];
 
 export const canTransition = (role: ActorRole, from: OrderStatus, to: OrderStatus): boolean =>
   allowedTransitions(role, from).includes(to);
@@ -168,6 +196,18 @@ export class OrderEventError extends Error {
     this.hint = hint;
   }
 }
+
+/**
+ * 呼叫訂單相關的 RPC(restaurant_receive_order / restaurant_open_dispute):一次交易完成事件與子表,
+ * 失敗時跟 recordOrderEvent 一樣丟 OrderEventError(帶 code / hint,畫面過期可以用 isStaleOrderError 判斷)
+ */
+export const callOrderRpc = async <T = unknown>(fn: string, args: Record<string, unknown>): Promise<T> => {
+  const { data, error } = await (supabase as never as {
+    rpc: (f: string, a: Record<string, unknown>) => PromiseLike<{ data: T | null; error: PgError }>;
+  }).rpc(fn, args);
+  if (error) throw new OrderEventError(error.message, error.code ?? null, error.hint ?? null);
+  return data as T;
+};
 
 /** 畫面上的狀態已經過期(別人剛處理過這張單)—— 呼叫端應該重新整理列表 */
 export const isStaleOrderError = (e: unknown): boolean =>

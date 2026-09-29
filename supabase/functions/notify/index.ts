@@ -22,7 +22,7 @@
 
 import { createClient } from "npm:@supabase/supabase-js@2";
 import { isLive, planDeliveries, type Recipient } from "./gate.ts";
-import { money, renderMail, RULES, type Ctx } from "./render.ts";
+import { money, renderMail, resolveRule, type Ctx } from "./render.ts";
 // 訂單編號與三個後台同一支函式(src/lib/order-number.ts 沒有任何 import,Deno 可以直接載入;
 // --use-api 部署時 CLI 會把它一起上傳)
 import { formatOrderNo } from "../../../src/lib/order-number.ts";
@@ -79,15 +79,29 @@ Deno.serve(async (req) => {
   const auth = req.headers.get("authorization") ?? "";
   if (auth !== `Bearer ${NOTIFY_SECRET}`) return json({ message: "Unauthorized" }, 401);
 
-  const body = await req.json().catch(() => null) as { order_id?: string; to_status?: string } | null;
+  const body = await req.json().catch(() => null) as {
+    order_id?: string;
+    to_status?: string;
+    // 20260929110000 起 trigger 多帶這三個(舊的 trigger 沒有 → 退回重新報價、取消不寄,跟以前一樣)
+    from_status?: string | null;
+    actor_role?: string | null;
+    event_id?: string | null;
+  } | null;
   const orderId = body?.order_id;
   const toStatus = body?.to_status;
   if (!orderId || !toStatus) return json({ message: "order_id and to_status are required" }, 400);
 
-  const rule = RULES[toStatus];
-  // 不在規則裡的狀態(draft/submitted/accepted/confirmed/reviewed/closed…)不寄信,
+  const rule = resolveRule({ toStatus, fromStatus: body?.from_status ?? null, actorRole: body?.actor_role ?? null });
+  // 不在規則裡的狀態(draft/submitted/接單的 accepted/confirmed/reviewed/closed/expired…)不寄信,
   // 避免使用者信箱被系統噪音淹沒。
   if (!rule) return json({ data: { skipped: true, reason: `no rule for ${toStatus}` } });
+
+  // 退回重新報價、取消:內文附上事件的原因(用 event_id 讀,service role)
+  let reason = "";
+  if (rule.needsReason && body?.event_id) {
+    const { data: ev } = await supabase.from("order_events").select("note").eq("id", body.event_id).maybeSingle();
+    reason = String(ev?.note ?? "").trim();
+  }
 
   const { data: order } = await supabase
     .from("supplier_orders")
@@ -133,6 +147,7 @@ Deno.serve(async (req) => {
     supplierName: supplier?.name ?? "供應商",
     amount: money(order.total_amount),
     items: items || "(見系統)",
+    reason,
   };
 
   const targets: Recipient[] = [];

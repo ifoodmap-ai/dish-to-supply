@@ -19,29 +19,8 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { toast } from "sonner";
-import { supabase } from "@/integrations/supabase/client";
-import { recordOrderEvent, type OrderStatus } from "@/lib/orders";
+import { callOrderRpc, isStaleOrderError, type OrderStatus } from "@/lib/orders";
 import { formatOrderNo } from "@/lib/order-number";
-
-/* ------------------------------------------------------------------ *
- * 新資料表不在 types.ts 裡 —— 沿用專案既有的 cast 慣例
- * ------------------------------------------------------------------ */
-type PgError = { message: string } | null;
-
-interface QueryBuilder<T> extends PromiseLike<{ data: T[] | null; error: PgError }> {
-  select: (cols: string) => QueryBuilder<T>;
-  insert: (values: unknown) => QueryBuilder<T>;
-  update: (values: unknown) => QueryBuilder<T>;
-  eq: (col: string, val: string | number | boolean) => QueryBuilder<T>;
-  order: (col: string, opts: { ascending: boolean }) => QueryBuilder<T>;
-  limit: (n: number) => QueryBuilder<T>;
-  single: () => PromiseLike<{ data: T | null; error: PgError }>;
-}
-
-const db = <T,>(table: string): QueryBuilder<T> =>
-  (supabase as never as { from: (t: string) => QueryBuilder<T> }).from(table);
-
-/* ------------------------------------------------------------------ */
 
 /** supplier_orders.ingredient_list 的單一品項(欄位都可能缺) */
 export interface OrderIngredient {
@@ -193,75 +172,22 @@ export default function ReceiveOrderDialog({
     }
   };
 
+  /**
+   * 確認收貨 / 回報異常:事件、送貨單、出貨紀錄的收貨欄位在資料庫一次交易寫完(restaurant_receive_order)。
+   * 兩個人同時操作時,後到的那個會拿到「畫面上的資料過期了」,而且不會留下任何送貨單或出貨紀錄的改動。
+   */
   const handleSubmit = async () => {
     if (!order) return;
     setSaving(true);
     try {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-      const userId = user?.id ?? null;
-
-      // 1. 找這張單最新的出貨紀錄(可能沒有,供應商未建 shipment)
-      const { data: shipments } = await db<{ id: string }>("supplier_shipments")
-        .select("id")
-        .eq("order_id", order.id)
-        .order("created_at", { ascending: false })
-        .limit(1);
-      const shipmentId = shipments?.[0]?.id ?? null;
-
-      // 2. 有照片或有差異才留一筆送貨單紀錄
-      let receiptId: string | null = null;
-      if (photo || hasDiscrepancy) {
-        const { data: receipt, error: receiptError } = await db<{ id: string }>(
-          "delivery_receipts",
-        )
-          .insert({
-            order_id: order.id,
-            shipment_id: shipmentId,
-            image_url: photo,
-            ai_parsed: null, // AI 解析由主控端後續接上
-            discrepancies: diffs.length > 0 ? diffs : null,
-            has_discrepancy: hasDiscrepancy,
-            uploaded_by: userId,
-          })
-          .select("id")
-          .single();
-        if (receiptError) throw new Error(receiptError.message);
-        receiptId = receipt?.id ?? null;
-      }
-
-      // 3. 回填出貨紀錄的收貨欄位(沒有 shipment 就略過)
-      if (shipmentId) {
-        const { error: shipError } = await db("supplier_shipments")
-          .update({
-            received_at: new Date().toISOString(),
-            received_by: userId,
-            receive_status: hasDiscrepancy ? "discrepancy" : "ok",
-          })
-          .eq("id", shipmentId);
-        if (shipError) {
-          // 不阻斷收貨,只提醒
-          toast.warning("出貨紀錄未同步", { description: shipError.message });
-        }
-      }
-
-      // 4. ★ 狀態一律走事件,不直接 update supplier_orders.status
-      await recordOrderEvent({
-        orderId: order.id,
-        fromStatus: order.status,
-        toStatus: hasDiscrepancy ? "discrepancy" : "received",
-        actorRole: "restaurant",
-        source: "restaurant_portal",
-        note: note.trim() || null,
-        payload: {
-          items_total: items.length,
-          discrepancy_count: diffs.length,
-          discrepancies: diffs,
-          receipt_id: receiptId,
-          shipment_id: shipmentId,
-          has_photo: !!photo,
-        },
+      await callOrderRpc("restaurant_receive_order", {
+        p_order_id: order.id,
+        p_from_status: order.status,
+        p_has_discrepancy: hasDiscrepancy,
+        p_note: note.trim() || null,
+        p_image_url: photo,
+        p_discrepancies: diffs,
+        p_items_total: items.length,
       });
 
       toast.success(hasDiscrepancy ? "已回報收貨異常" : "已確認收貨", {
@@ -273,6 +199,11 @@ export default function ReceiveOrderDialog({
       onDone?.();
     } catch (e) {
       toast.error("送出失敗", { description: (e as Error).message });
+      // 別人剛處理過這張單:關掉對話框、讓外層重抓,畫面才會是最新狀態
+      if (isStaleOrderError(e)) {
+        onOpenChange(false);
+        onDone?.();
+      }
     } finally {
       setSaving(false);
     }
