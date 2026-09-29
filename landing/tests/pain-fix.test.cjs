@@ -38,8 +38,35 @@ test('標題階層:一個 h2 + 一個 h3,沒有多塞 h1', () => {
   assert.equal((sec.match(/<h2\b/g) || []).length, 1);
   assert.equal((sec.match(/<h3\b/g) || []).length, 1);
   assert.match(sec, /aria-labelledby="pf-title"/);
-  // 插圖那組跟標籤列是同一份清單 → 插圖對螢幕閱讀器隱藏
-  assert.match(sec, /class="pf-network" aria-hidden="true"/);
+  // 藥丸標籤列拿掉之後(業主 2026-09-29),五種供應商只剩插圖那組 →
+  // 它不能再 aria-hidden,要是一個有名字的 group,螢幕閱讀器才讀得到五個 figcaption
+  assert.match(sec, /class="pf-network" role="group" aria-label="\{\{ L\.home\.pfTypesAria \}\}"/);
+  assert.doesNotMatch(sec, /class="pf-network"[^>]*aria-hidden/);
+});
+
+test('藥丸標籤列已拿掉(業主 2026-09-29),連 CSS 一起清乾淨', () => {
+  const sec = home.slice(home.indexOf('class="ifm-v2 pf"'), home.indexOf('</section>', home.indexOf('class="ifm-v2 pf"')));
+  assert.doesNotMatch(sec, /pf-typelist/);
+  const at = html.indexOf('<style id="pf">\n');
+  const css = html.slice(at, html.indexOf('</style>', at));
+  assert.doesNotMatch(css, /pf-typelist/);
+});
+
+test('說明文字的間距壓得過 .ifm-v2 p{margin:0}(不然黑底標題、說明文字會黏在一起)', () => {
+  // .ifm-v2 p 的權重是 (0,1,1),只寫 .pf-lead(0,1,0)的 margin 會被整個歸零 ——
+  // 畫面上看不出 CSS 有寫錯,只會覺得「擠在一起」,業主 2026-09-29 截圖才發現
+  const at = html.indexOf('<style id="pf">\n');
+  // 先去掉註解:註解裡本身就寫了 .ifm-v2 p{margin:0},不去掉會被當成一條規則
+  const css = html.slice(at, html.indexOf('</style>', at)).replace(/\/\*[\s\S]*?\*\//g, '');
+  const leadRules = css.match(/[^{}]*\.pf-lead[^{}]*\{[^}]*\}/g) || [];
+  assert.ok(leadRules.length > 0, '找不到 .pf-lead 的樣式');
+  for (const rule of leadRules) {
+    if (!/margin/.test(rule)) continue;
+    const selector = rule.slice(0, rule.indexOf('{')).trim();
+    assert.match(selector, /^\.pf \.pf-lead$/, `設 margin 的選擇器要寫成 .pf .pf-lead,現在是「${selector}」`);
+  }
+  const desktop = leadRules.find((r) => /\.pf \.pf-lead\s*\{[^}]*margin:\s*\d+px 0 0/.test(r));
+  assert.ok(desktop, '桌機版要有上方間距、下方 0(它是左欄最後一個元素)');
 });
 
 test('版面不寫行內 grid(support.js 會把行內多欄 grid 在手機上強制改單欄)', () => {

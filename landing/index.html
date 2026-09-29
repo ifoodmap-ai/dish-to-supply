@@ -838,11 +838,10 @@
           <div class="pf-copy">
             <h3 class="pf-sol">{{ L.home.pfSolPre }}<mark>{{ L.home.pfSolHl }}</mark></h3>
             <p class="pf-lead">{{ L.home.pfLeadA }}<br>{{ L.home.pfLeadB }}</p>
-            <ul class="pf-typelist" aria-label="{{ L.home.pfTypesAria }}">
-              <sc-for list="{{ pfTypes }}" as="ty" hint-placeholder-count="5"><li>{{ ty.label }}</li></sc-for>
-            </ul>
           </div>
-          <div class="pf-network" aria-hidden="true">
+          <!-- 五種供應商只剩這一組(藥丸標籤列 2026-09-29 業主拿掉),所以不再 aria-hidden:
+               螢幕閱讀器從五個 figcaption 讀到類型,中間主圖與圓形插圖都是 alt="" 的裝飾 -->
+          <div class="pf-network" role="group" aria-label="{{ L.home.pfTypesAria }}">
             <img class="pf-match" src="/assets/pf-match.svg" alt="" width="360" height="280" loading="lazy" decoding="async">
             <sc-for list="{{ pfTypes }}" as="ty" hint-placeholder-count="5">
               <figure class="pf-node pf-node--{{ ty.key }}">
@@ -3138,13 +3137,9 @@ class Component extends DCLogic {
   .pf-sol:lang(zh) { text-wrap:wrap; }   /* balance 會為了等長把「找食材」拆開,中文改回一般斷行 */
   /* 說明文字只在標點後斷行(「…產地、／加工廠與各級供應商。」),不把「供應商」拆兩半;太長時仍可強制斷 */
   .pf-lead:lang(zh) { word-break:keep-all; overflow-wrap:break-word; }
-  .pf-lead { margin:26px 0 28px; font-size:18px; line-height:1.9; color:#2F3D35; text-wrap:pretty; }
-  /* 分隔線畫在每一項的左邊並往左推 1px,由 overflow:hidden 裁掉每一列開頭那條,
-     換行後第二列開頭才不會多一條懸空的線 */
-  .pf-typelist { list-style:none; margin:0; padding:12px 0; display:flex; flex-wrap:wrap; row-gap:6px; overflow:hidden;
-                 background:#F7FBEF; border:1px solid #DDE9CE; border-radius:18px; }
-  .pf-typelist li { padding:2px 16px; margin-left:-1px; border-left:1px solid #C9D9B0;
-                    font-size:17px; font-weight:700; color:#0E1A14; line-height:1.6; }
+  /* 一定要寫成 .pf .pf-lead:第 54 行的 .ifm-v2 p{margin:0} 權重 (0,1,1) 比單一 class 高,
+     只寫 .pf-lead 的 margin 會整個被歸零,黑底標題與說明文字就黏在一起(2026-09-29 業主截圖反映) */
+  .pf .pf-lead { margin:20px 0 0; font-size:18px; line-height:1.7; color:#2F3D35; text-wrap:pretty; }
 
   /* 五種供應商繞著中間的「用筆電媒合」:虛線圈暗示連結 */
   /* 中間欄放 pf-match 主圖,給它 1.5 倍寬;兩側至少 118px,窄桌機時先縮中間,圓不會被擠到重疊 */
@@ -3173,8 +3168,7 @@ class Component extends DCLogic {
     .pf-text { font-size:16px; line-height:1.7; }
     .pf-arrow { border-left-width:22px; border-right-width:22px; border-top-width:20px; }
     .pf-bottom { grid-template-columns:1fr; border-radius:24px; padding:24px 14px; }
-    .pf-lead { font-size:16px; margin:20px 0 22px; }
-    .pf-typelist li { font-size:16px; padding:2px 12px; }
+    .pf .pf-lead { font-size:16px; margin-top:16px; }
     .pf-match { display:none; }                   /* 手機只留五個圓形,不再撐長 */
     .pf-network { grid-template-columns:repeat(6,minmax(0,1fr)); grid-template-areas:none; gap:18px 4px; }
     .pf-network::before { display:none; }
