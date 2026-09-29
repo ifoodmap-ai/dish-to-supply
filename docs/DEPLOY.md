@@ -211,10 +211,24 @@ SUPABASE_ACCESS_TOKEN=sbp_... supabase secrets set \
 
 ### 寄件網域
 
-目前這個 Resend 帳號驗證過的網域只有 **`gathertaiwan.com`** 與 `beunion.tw`,
-**`ifoodmap.com.tw` 還沒驗證**,所以沿用 `notify` 那支已經在用的
-`noreply@gathertaiwan.com`。這是寄給業主自己的內部通知信,網域不一致沒關係;
-之後若要寄給客戶,請先在 Resend 驗證 ifoodmap 自己的網域再改 `LEAD_NOTIFY_FROM`。
+**2026-09-29 起全部改用業主的 `ifoodmap.ai` 寄信**(之前借用 gathertaiwan.com):
+
+| 寄件人 | 用在哪 | 設在哪 |
+|---|---|---|
+| `iFoodmap 食材地圖 <noreply@ifoodmap.ai>` | 訂單通知(`notify`)、寄給供應商申請者的信 | Supabase secret `NOTIFY_FROM` |
+| `iFoodmap 表單通知 <noreply@ifoodmap.ai>` | 寄給業主的內部通知(官網表單、供應商申請) | Supabase secret `LEAD_NOTIFY_FROM` |
+| `iFoodmap 食材地圖 <noreply@ifoodmap.ai>` | Supabase Auth 的註冊確認/邀請/重設密碼 | Auth 設定 `smtp_admin_email` + `smtp_sender_name` |
+
+- ifoodmap.ai 驗證在 **gathertaiwan 的 Resend 帳號**(東京 ap-northeast-1)。`RESEND_API_KEY` 與 Auth SMTP 的密碼都是這個帳號的 key,
+  所以換網域只要改上面三個值,不用換 key。
+- 程式裡的預設值(`supabase/functions/*` 的 `?? "…@gathertaiwan.com"`)只在 secret 沒設時才用得到;
+  gathertaiwan.com 在同一個 Resend 帳號仍是已驗證狀態,所以就算 secret 被刪掉也寄得出去,只是寄件網域會變回舊的。
+- DNS(GoDaddy)上 Resend 用的三筆:`TXT resend._domainkey`(DKIM)、`CNAME send → send.forge.rmta.net`、
+  `CNAME rsend → rsend-apne1.forge.rmta.net`。🔴 **不要加 Resend 頁面上的收信 MX(`@ → inbound-smtp…`)**:
+  根網域的 MX 是業主現在在用的 GoDaddy 信箱,加了會把信搶走。
+- 驗證紀錄:切換當天用一筆測試用供應商申請同時觸發兩條路徑(申請者確認信走 `NOTIFY_FROM`、業主通知走 `LEAD_NOTIFY_FROM`),
+  Resend 上兩封都是 `noreply@ifoodmap.ai`、Delivered;測試資料已刪。Auth 那條沒有實寄(那要在正式站開帳號),
+  下一封真實的邀請/註冊信寄出後,到 Resend → Emails 確認寄件人即可。
 
 信件的 `reply_to` 會設成 lead 填的 `contact_email`(只有 `partnership_leads` 有這欄),
 所以業主在 Gmail 直接按回覆就是回給對方。
@@ -306,9 +320,9 @@ email 格式要嚴格是因為「同一個 email」是拿字串比的:寬鬆格�
 **核准只接受待審(pending)的申請**:已退件的申請者已經收到退件信,不能再收到一封邀請信;
 兩位管理員同時處理同一筆時,後到的那個會 409 並收回自己建的資料(復原失敗會據實回報還留著什麼)。
 
-**寄件人**:寄給申請者的信用 `NOTIFY_FROM`(與 `notify` 共用,現值 `iFoodmap 食材地圖 <noreply@gathertaiwan.com>`),
-業主通知用 `LEAD_NOTIFY_FROM`;申請者按「回覆」會寄到 `SUPPLIER_MAIL_REPLY_TO`(沒設就是 `LEAD_NOTIFY_TO` 的第一個)。
-之後換成 ifoodmap.ai:在 Resend 驗證網域後改 `NOTIFY_FROM` 這個 secret 即可,不用改程式。
+**寄件人**:寄給申請者的信用 `NOTIFY_FROM`(與 `notify` 共用,現值 `iFoodmap 食材地圖 <noreply@ifoodmap.ai>`),
+業主通知用 `LEAD_NOTIFY_FROM`(現值 `iFoodmap 表單通知 <noreply@ifoodmap.ai>`);
+申請者按「回覆」會寄到 `SUPPLIER_MAIL_REPLY_TO`(沒設就是 `LEAD_NOTIFY_TO` 的第一個)。2026-09-29 起的寄件網域見「寄件網域」。
 
 **確認有沒有寄出**:每封信都記在 `supplier_application_mails`(`status` / `resend_id` / `error`;寄給申請者的信另存 `body_text`)。
 
@@ -474,7 +488,7 @@ anon 對 `profiles` 沒有任何權限;登入者只讀得到自己、自己已�
 | 設定 | 值(2026-09-28 從 Management API `config/auth` 讀到) |
 |---|---|
 | SMTP | `smtp.resend.com:465`,user `resend`(密碼是一把 Resend API key) |
-| 寄件人 | `iFoodmap 食材地圖 <noreply@gathertaiwan.com>` —— 同樣借用 gathertaiwan.com,ifoodmap 自己的網域還沒驗證 |
+| 寄件人 | `iFoodmap 食材地圖 <noreply@ifoodmap.ai>`(2026-09-29 從 gathertaiwan.com 換過來,見「寄件網域」) |
 | `rate_limit_email_sent` | **每小時 100 封,全專案共用**(邀請、忘記密碼、註冊確認信都算在一起) |
 | `smtp_max_frequency` | 同一個收件人 20 秒內只寄一封 |
 | 邀請連結效期 | `mailer_otp_exp` = 3600 秒 |
