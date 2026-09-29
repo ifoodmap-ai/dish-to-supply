@@ -13,6 +13,7 @@ import {
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { recordOrderEvent, type OrderStatus } from "@/lib/orders";
+import { formatOrderNo } from "@/lib/order-number";
 
 /* 新資料表不在 types.ts 裡 —— 沿用專案既有的 cast 慣例 */
 type PgError = { message: string } | null;
@@ -236,7 +237,7 @@ export default function OrderReviewDialog({
                 為這次交易評價
               </DialogTitle>
               <DialogDescription>
-                訂單 #{order ? order.id.slice(-8).toUpperCase() : "—"}
+                訂單 {formatOrderNo(order?.id)}
                 {order?.supplier_name ? ` · ${order.supplier_name}` : ""}
                 {" —— 您的評分只會以彙整分數呈現給供應商"}
               </DialogDescription>

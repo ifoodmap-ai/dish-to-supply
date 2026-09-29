@@ -55,11 +55,13 @@ import {
   allowedTransitions,
   fetchOrderTimeline,
   formatStageAge,
+  isStaleOrderError,
   isStuck,
   recordOrderEvent,
   type OrderEvent,
   type OrderStatus,
 } from "@/lib/orders";
+import { formatOrderNo } from "@/lib/order-number";
 import ReceiveOrderDialog, {
   type OrderIngredient,
 } from "@/components/restaurant/ReceiveOrderDialog";
@@ -368,6 +370,8 @@ export default function RestaurantOrdersPage() {
       await refreshAfterAction(order.id);
     } catch (e) {
       toast.error("操作失敗", { description: (e as Error).message });
+      // 別人剛處理過這張單(資料庫回「畫面上的資料過期了」):順手重抓,畫面才會是最新狀態
+      if (isStaleOrderError(e)) await refreshAfterAction(order.id);
     } finally {
       setBusyId(null);
     }
@@ -618,7 +622,7 @@ export default function RestaurantOrdersPage() {
                   <div className="min-w-0">
                     <div className="mb-1 flex flex-wrap items-center gap-2">
                       <span className="font-mono text-sm font-semibold text-slate-800">
-                        #{order.id.slice(-8).toUpperCase()}
+                        {formatOrderNo(order.id)}
                       </span>
                       <Badge variant="outline" className={meta.className}>
                         {meta.label}
@@ -848,7 +852,7 @@ export default function RestaurantOrdersPage() {
               申請爭議處理
             </DialogTitle>
             <DialogDescription>
-              訂單 #{disputeTarget ? disputeTarget.id.slice(-8).toUpperCase() : "—"} —— 客服會介入協調並回覆處理結果
+              訂單 {formatOrderNo(disputeTarget?.id)} —— 客服會介入協調並回覆處理結果
             </DialogDescription>
           </DialogHeader>
 

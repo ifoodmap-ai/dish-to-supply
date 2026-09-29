@@ -7,7 +7,8 @@
 //     (PROPOSAL §5 #2)。正式的管理員動作列(派單/取消/結案/刪單,走 recordOrderEvent / admin_delete_order)是第二期。
 //   - 同一張卡上的「備註」:狀態不變時其實存得進去,但那是直接改 supplier_orders.notes、不會留下任何事件,
 //     放在這個「事實紀錄」頁上等於能無痕改訂單內容 —— 所以先不搬,要不要保留待業主決定(備註照樣在「訂單資訊」唯讀顯示)。
-// 這一頁維持純唯讀,不寫任何資料表。
+// 第二期(Q2-A):待派發/被拒/逾時的單在標題旁有「派給…」(DispatchOrderDialog,只寫一筆 recordOrderEvent);
+// 除此之外這一頁維持唯讀,不寫任何資料表。
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import {
@@ -17,6 +18,7 @@ import {
   FileWarning,
   ImageOff,
   ScrollText,
+  Send,
   ShieldCheck,
   Star,
 } from 'lucide-react';
@@ -35,9 +37,11 @@ import {
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import {
+  ADMIN_DISPATCHABLE,
   ORDER_STATUS,
   ROLE_LABEL,
   SOURCE_LABEL,
+  allowedTransitions,
   fetchOrderTimeline,
   formatStageAge,
   isStuck,
@@ -45,6 +49,8 @@ import {
   type OrderEvent,
   type OrderStatus,
 } from '@/lib/orders';
+import { formatOrderNo } from '@/lib/order-number';
+import DispatchOrderDialog, { type DispatchTarget } from './DispatchOrderDialog';
 
 /* ---------------------------------------------------------------
  * 新資料表尚未進 types.ts,沿用專案既有的 cast 慣例
@@ -328,6 +334,7 @@ export default function AdminOrderTimelinePage() {
   const [buyer, setBuyer] = useState<BuyerLead | null>(null);
   const [loading, setLoading] = useState(true);
   const [timelineError, setTimelineError] = useState<string | null>(null);
+  const [dispatchTarget, setDispatchTarget] = useState<DispatchTarget | null>(null);
 
   const load = useCallback(async () => {
     if (!id) return;
@@ -471,12 +478,29 @@ export default function AdminOrderTimelinePage() {
       <div className="mb-1 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-center gap-3">
           <h1 className="text-2xl font-bold text-slate-800">訂單履歷</h1>
-          <span className="font-mono text-sm text-slate-400">#{order.id.slice(-8)}</span>
+          <span className="font-mono text-sm text-slate-400">{formatOrderNo(order.id)}</span>
         </div>
         <div className="flex items-center gap-2">
           <Badge variant="outline" className={statusClass(order.status)}>
             {statusLabel(order.status)}
           </Badge>
+          {ADMIN_DISPATCHABLE.includes(order.status) && allowedTransitions('admin', order.status).includes('dispatched') && (
+            <Button
+              size="sm"
+              className="bg-emerald-600 text-white hover:bg-emerald-700"
+              onClick={() =>
+                setDispatchTarget({
+                  id: order.id,
+                  status: order.status,
+                  supplier_id: order.supplier_id,
+                  restaurantName: restaurantName || null,
+                })
+              }
+            >
+              <Send className="mr-1.5 h-3.5 w-3.5" />
+              {order.status === 'rejected' || order.status === 'expired' ? '改派給…' : '派給…'}
+            </Button>
+          )}
         </div>
       </div>
       <p className="mb-5 text-sm text-slate-500">
@@ -836,6 +860,8 @@ export default function AdminOrderTimelinePage() {
           </CardContent>
         </Card>
       </div>
+
+      <DispatchOrderDialog order={dispatchTarget} onClose={() => setDispatchTarget(null)} onChanged={load} />
     </div>
   );
 }

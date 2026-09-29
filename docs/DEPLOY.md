@@ -476,3 +476,13 @@ anon 對 `profiles` 沒有任何權限;登入者只讀得到自己、自己已�
 - 兩支 trigger 都只做唯讀查詢、不取列鎖,沒有改變既有的鎖順序。
 - **rollback 一定要照順序**:`190300 → 190200 → 190100 → 190000`(`supabase/rollbacks/*.down.sql`)。順序反了,190000 那支會直接報錯擋下。
 - 驗證:`supabase/tests/database/restaurant_draft_approval.test.sql`(72 項,在正式庫一律包在 BEGIN…ROLLBACK 裡跑)。
+
+## 訂單狀態機與通知信閘門(2026-09-29,migration 20260929100000 / 100100 / 100200 / 100300、notify v8)
+
+- **100000 `order_transition_rules`**:`order_transition_rules()` 列出 85 條允許的 (from, to, 角色) 轉移;`trg_guard_order_transition`(字母序排在 `trg_guard_order_submission` 之後)檢查每筆 order_events:身分必須名副其實(老闆/店長/採購員看 `restaurant_role()`、供應商看該單供應商的啟用帳號、管理員看 `is_admin()`、系統 = 沒有登入者且是 service_role 或沒有 JWT);`actor_id` 一律改寫成 `auth.uid()`;前端的 from_status 與目前狀態不同就擋(畫面過期,P0001),轉移不在表內就擋(42501)。同一個 INSERT 同一張單只能寫一筆事件。前端 `src/lib/orders.ts` 的 `TRANSITIONS` 與 SQL 逐條一致,vitest 會解析 migration 比對。
+- **100100 `order_event_side_effects`**:派單寫 supplier_id、報價寫 total_amount 並留報價紀錄、出貨新增出貨紀錄,都和狀態在同一個交易。
+- **100200 `order_integrity_hardening`**:送出後只有管理員/系統能直接改供應商與金額;建單不能帶供應商;供應商不能直接寫出貨紀錄、報價只能新增。派單與出貨先鎖供應商再鎖訂單(與刪供應商同順序)。
+- **100300 `shipment_receipt_columns`**:餐廳對出貨紀錄只能回填收貨三欄。
+- **rollback 順序**:`100300 → 100200 → 100100 → 100000`(`supabase/rollbacks/*.down.sql`,有順序保護)。驗證:`supabase/tests/database/order_transition_rules.test.sql`(172 項)、`order_integrity_hardening.test.sql`(37)、`shipment_receipt_columns.test.sql`(14),在正式庫一律包在 BEGIN…ROLLBACK。
+- **通知信閘門**:notify 在 secret `NOTIFY_LIVE` 不等於字串 `"true"` 時,把同一種收件對象合併成一封寄到 ifoodmaptw@gmail.com,主旨加「[測試轉寄]」,內文列出原收件人。**目前刻意沒設 NOTIFY_LIVE**(正式庫有真實的供應商信箱)。要對真實餐廳/供應商開放時,由業主同意後 `supabase secrets set NOTIFY_LIVE=true --project-ref cwvpehqcvbfuynabpqop`(改 secret 會讓所有 function 重新部署一次)。
+- 訂單編號一律用 `src/lib/order-number.ts` 的 `formatOrderNo`(「#」+ 末 8 碼大寫),notify 也直接引用它。

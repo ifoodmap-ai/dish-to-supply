@@ -1,4 +1,6 @@
 // 後台精簡第一期:供應商後台選單 11 → 5 個分區,分區裡用分頁。
+// 第二期(Q1-A):訂單分區的收單/報價/出貨合成一個訂單頁(頁面自己用 ?stage= 狀態分頁),
+// 版面不再畫訂單分區的分頁列;舊網址轉址到 /supplier/orders?stage=…(轉址寫法與 App.tsx 相同)。
 // 這裡驗證:①側欄剛好 5 項 ②分頁依路由標出 active ③舊路由全部還能開、
 // 落在正確的分區與分頁 ④定價助手從選單/分頁收起來但路由仍可直接開 ⑤鍵盤與 aria。
 //
@@ -6,7 +8,7 @@
 // 跟其他 Layout 測試一樣 mock 掉 supabase 與 PortalSwitcher,不打任何正式服務。
 
 import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
-import { MemoryRouter, Navigate, Route, Routes } from "react-router-dom";
+import { MemoryRouter, Navigate, Route, Routes, useLocation } from "react-router-dom";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import SupplierLayout from "./SupplierLayout";
 
@@ -21,6 +23,17 @@ vi.mock("@/integrations/supabase/client", () => ({
 
 vi.mock("@/components/PortalSwitcher", () => ({ default: () => null }));
 
+/** 訂單頁空殼:把轉址後的網址(含 ?stage=)印出來 */
+const OrdersStub = () => {
+  const location = useLocation();
+  return (
+    <>
+      <h1>訂單頁</h1>
+      <p data-testid="orders-url">{`${location.pathname}${location.search}`}</p>
+    </>
+  );
+};
+
 const renderLayout = (path: string) =>
   render(
     <MemoryRouter initialEntries={[path]}>
@@ -28,15 +41,15 @@ const renderLayout = (path: string) =>
         <Route path="/supplier" element={<SupplierLayout />}>
           <Route index element={<h1>總覽頁</h1>} />
           <Route path="leads" element={<h1>商機雷達頁</h1>} />
-          <Route path="orders" element={<h1>收單紀錄頁</h1>} />
-          <Route path="quotes" element={<h1>線上報價頁</h1>} />
+          <Route path="orders" element={<OrdersStub />} />
+          {/* 對齊 App.tsx:收單/報價/出貨合成一個訂單頁,舊網址轉到對應的狀態分頁 */}
+          <Route path="quotes" element={<Navigate to="/supplier/orders?stage=accepted" replace />} />
           <Route path="catalog" element={<h1>商品目錄頁</h1>} />
           <Route path="pricing" element={<h1>定價助手頁</h1>} />
           <Route path="forecast" element={<h1>需求預測頁</h1>} />
           <Route path="customers" element={<h1>客戶管理頁</h1>} />
-          {/* 對齊 App.tsx:物流追蹤併入出貨,這條路由現在是轉址 */}
-          <Route path="logistics" element={<Navigate to="/supplier/shipments" replace />} />
-          <Route path="shipments" element={<h1>出貨紀錄頁</h1>} />
+          <Route path="logistics" element={<Navigate to="/supplier/orders?stage=shipped" replace />} />
+          <Route path="shipments" element={<Navigate to="/supplier/orders?stage=shipped" replace />} />
           <Route path="reviews" element={<h1>我的評價頁</h1>} />
         </Route>
       </Routes>
@@ -97,10 +110,10 @@ describe("SupplierLayout — 11 條舊路由全部打得開,落在正確的分�
     ["/supplier", "總覽頁", "總覽", null as string[] | null, null as string | null],
     ["/supplier/leads", "商機雷達頁", "商機", ["商機雷達", "需求與備貨"], "商機雷達"],
     ["/supplier/forecast", "需求預測頁", "商機", ["商機雷達", "需求與備貨"], "需求與備貨"],
-    ["/supplier/orders", "收單紀錄頁", "訂單", ["收單", "報價", "出貨"], "收單"],
-    ["/supplier/quotes", "線上報價頁", "訂單", ["收單", "報價", "出貨"], "報價"],
-    ["/supplier/shipments", "出貨紀錄頁", "訂單", ["收單", "報價", "出貨"], "出貨"],
-    ["/supplier/logistics", "出貨紀錄頁", "訂單", ["收單", "報價", "出貨"], "出貨"],
+    ["/supplier/orders", "訂單頁", "訂單", null as string[] | null, null as string | null],
+    ["/supplier/quotes", "訂單頁", "訂單", null as string[] | null, null as string | null],
+    ["/supplier/shipments", "訂單頁", "訂單", null as string[] | null, null as string | null],
+    ["/supplier/logistics", "訂單頁", "訂單", null as string[] | null, null as string | null],
     ["/supplier/catalog", "商品目錄頁", "商品與價格", null as string[] | null, null as string | null],
     ["/supplier/customers", "客戶管理頁", "客戶與評價", ["客戶", "評價"], "客戶"],
     ["/supplier/reviews", "我的評價頁", "客戶與評價", ["客戶", "評價"], "評價"],
@@ -121,11 +134,15 @@ describe("SupplierLayout — 11 條舊路由全部打得開,落在正確的分�
     }
   });
 
-  it("/supplier/logistics 會真的轉址(網址變成 /supplier/shipments),不是停在原地假裝有內容", () => {
-    renderLayout("/supplier/logistics");
-    // 轉址後只剩出貨紀錄頁的標題,物流頁的內容不會出現
-    expect(screen.getByRole("heading", { name: "出貨紀錄頁" })).toBeInTheDocument();
-    expect(screen.queryByRole("heading", { name: /物流/ })).toBeNull();
+  it.each([
+    ["/supplier/orders", "/supplier/orders"],
+    ["/supplier/quotes", "/supplier/orders?stage=accepted"],
+    ["/supplier/shipments", "/supplier/orders?stage=shipped"],
+    ["/supplier/logistics", "/supplier/orders?stage=shipped"],
+  ])("舊網址 %s 會真的轉址到 %s(落在對應的狀態分頁)", (path, landed) => {
+    renderLayout(path);
+    expect(screen.getByTestId("orders-url")).toHaveTextContent(landed);
+    expect(screen.queryByRole("heading", { name: /物流|出貨紀錄|線上報價/ })).toBeNull();
   });
 });
 
@@ -153,11 +170,11 @@ describe("SupplierLayout — 定價助手:選單收起來,路由仍可直接開(
 });
 
 describe("SupplierLayout — 分頁列的鍵盤操作與 aria(整合驗證,細節見 SectionTabs.test.tsx)", () => {
-  it("方向鍵可以在訂單分區的 3 個分頁間移動焦點", () => {
-    renderLayout("/supplier/orders");
+  it("方向鍵可以在商機分區的 2 個分頁間移動焦點", () => {
+    renderLayout("/supplier/leads");
     const tablist = screen.getByRole("tablist");
-    const first = screen.getByRole("tab", { name: "收單" });
-    const second = screen.getByRole("tab", { name: "報價" });
+    const first = screen.getByRole("tab", { name: "商機雷達" });
+    const second = screen.getByRole("tab", { name: "需求與備貨" });
 
     first.focus();
     expect(first).toHaveFocus();
@@ -166,9 +183,9 @@ describe("SupplierLayout — 分頁列的鍵盤操作與 aria(整合驗證,細�
   });
 
   it("分頁列有正確的 aria-label,並且 aria-controls 指到主內容區", () => {
-    renderLayout("/supplier/orders");
+    renderLayout("/supplier/leads");
     const tablist = screen.getByRole("tablist");
-    expect(tablist).toHaveAttribute("aria-label", "訂單分頁");
+    expect(tablist).toHaveAttribute("aria-label", "商機分頁");
     screen.getAllByRole("tab").forEach((tab) => {
       expect(tab).toHaveAttribute("aria-controls", "supplier-main-panel");
     });

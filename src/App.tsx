@@ -64,9 +64,7 @@ import SupplierRoute from "./components/SupplierRoute";
 import SupplierLayout from "./pages/supplier/SupplierLayout";
 import SupplierDashboard from "./pages/supplier/SupplierDashboard";
 import SupplierOrdersPage from "./pages/supplier/SupplierOrdersPage";
-import SupplierShipmentsPage from "./pages/supplier/SupplierShipmentsPage";
 import SupplierCatalogPage from "./pages/supplier/SupplierCatalogPage";
-import SupplierQuotesPage from "./pages/supplier/SupplierQuotesPage";
 import SupplierLeadsPage from "./pages/supplier/SupplierLeadsPage";
 import SupplierPricingPage from "./pages/supplier/SupplierPricingPage";
 import SupplierForecastPage from "./pages/supplier/SupplierForecastPage";
@@ -168,14 +166,14 @@ const MainRoutes = () => (
       <Route index element={<SupplierDashboard />} />
       <Route path="leads" element={<SupplierLeadsPage />} />
       <Route path="orders" element={<SupplierOrdersPage />} />
-      <Route path="quotes" element={<SupplierQuotesPage />} />
+      {/* 後台精簡第二期(Q1-A):收單/報價/出貨合成一個訂單頁,舊網址轉到對應的狀態分頁(書籤、舊信件連結不會壞) */}
+      <Route path="quotes" element={<Navigate to="/supplier/orders?stage=accepted" replace />} />
       <Route path="catalog" element={<SupplierCatalogPage />} />
       <Route path="pricing" element={<SupplierPricingPage />} />
       <Route path="forecast" element={<SupplierForecastPage />} />
       <Route path="customers" element={<SupplierCustomersPage />} />
-      {/* 後台精簡第一期:物流追蹤併入出貨(同表同篩選的真重複,見 PROPOSAL.md §3),轉址到新分頁 */}
-      <Route path="logistics" element={<Navigate to="/supplier/shipments" replace />} />
-      <Route path="shipments" element={<SupplierShipmentsPage />} />
+      <Route path="logistics" element={<Navigate to="/supplier/orders?stage=shipped" replace />} />
+      <Route path="shipments" element={<Navigate to="/supplier/orders?stage=shipped" replace />} />
       <Route path="reviews" element={<SupplierReviewsPage />} />
     </Route>
 

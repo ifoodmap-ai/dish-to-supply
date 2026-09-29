@@ -21,6 +21,7 @@ import {
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { recordOrderEvent, type OrderStatus } from "@/lib/orders";
+import { formatOrderNo } from "@/lib/order-number";
 
 /* ------------------------------------------------------------------ *
  * 新資料表不在 types.ts 裡 —— 沿用專案既有的 cast 慣例
@@ -290,7 +291,7 @@ export default function ReceiveOrderDialog({
             {isReport ? "回報收貨異常" : "確認收貨"}
           </DialogTitle>
           <DialogDescription>
-            訂單 #{order ? order.id.slice(-8).toUpperCase() : "—"}
+            訂單 {formatOrderNo(order?.id)}
             {order?.supplier_name ? ` · ${order.supplier_name}` : ""}
             {isReport
               ? " —— 請說明短缺、錯品或品質問題,我們會介入協調"

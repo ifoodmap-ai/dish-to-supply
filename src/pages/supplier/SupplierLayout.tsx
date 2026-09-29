@@ -40,12 +40,9 @@ const sections: SupplierSection[] = [
     to: "/supplier/orders",
     label: "訂單",
     icon: Inbox,
+    // 第二期(Q1-A):收單/報價/出貨合成一個訂單頁,頁面自己用狀態分頁(?stage=),這裡不再畫分頁列。
+    // 舊網址 /supplier/quotes、/supplier/shipments、/supplier/logistics 在 App.tsx 轉址到對應的狀態分頁。
     match: startsWithAny(["/supplier/orders", "/supplier/quotes", "/supplier/shipments", "/supplier/logistics"]),
-    tabs: [
-      { label: "收單", path: "/supplier/orders" },
-      { label: "報價", path: "/supplier/quotes" },
-      { label: "出貨", path: "/supplier/shipments" },
-    ],
   },
   {
     key: "leads",

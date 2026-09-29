@@ -13,8 +13,19 @@
 //   discrepancy/disputed → 雙方 + 平台
 //
 // 寄不出去不會讓 trigger 失敗 —— 通知是加值,不該擋住交易。
+//
+// 🔴 寄信閘門(gate.ts):NOTIFY_LIVE 不是 "true" 時,所有收件人換成 ifoodmaptw@gmail.com、
+//    主旨加「[測試轉寄]」、內文開頭列出原收件人。業主同意前不要設 NOTIFY_LIVE。
+//
+// 部署(verify_jwt=false,見 supabase/config.toml):
+//   supabase functions deploy notify --project-ref cwvpehqcvbfuynabpqop --use-api --no-verify-jwt
 
 import { createClient } from "npm:@supabase/supabase-js@2";
+import { isLive, planDeliveries, type Recipient } from "./gate.ts";
+import { money, renderMail, RULES, type Ctx } from "./render.ts";
+// 訂單編號與三個後台同一支函式(src/lib/order-number.ts 沒有任何 import,Deno 可以直接載入;
+// --use-api 部署時 CLI 會把它一起上傳)
+import { formatOrderNo } from "../../../src/lib/order-number.ts";
 
 const supabase = createClient(
   Deno.env.get("SUPABASE_URL")!,
@@ -39,110 +50,26 @@ const CORS = {
 const json = (b: unknown, s = 200) =>
   new Response(JSON.stringify(b), { status: s, headers: { ...CORS, "Content-Type": "application/json" } });
 
-type Audience = "supplier" | "restaurant" | "both";
 
-interface Rule {
-  audience: Audience;
-  subject: (ctx: Ctx) => string;
-  lead: (ctx: Ctx) => string;
-  cta: string;
-  /** 收件人該去哪個後台 */
-  path: (audience: "supplier" | "restaurant") => string;
-}
-
-interface Ctx {
-  orderShort: string;
-  restaurantName: string;
-  supplierName: string;
-  amount: string;
-  items: string;
-}
-
-const RULES: Record<string, Rule> = {
-  dispatched: {
-    audience: "supplier",
-    subject: (c) => `新訂單待接單 — ${c.restaurantName}`,
-    lead: (c) => `${c.restaurantName} 有一張新的採購單指派給你,品項:${c.items}。<br>越快回覆成交機率越高,請盡快接單並報價。`,
-    cta: "查看訂單",
-    path: () => "/supplier/orders",
-  },
-  quoted: {
-    audience: "restaurant",
-    subject: (c) => `${c.supplierName} 已報價 — 訂單 ${c.orderShort}`,
-    lead: (c) => `${c.supplierName} 已針對你的採購單報價${c.amount ? `,金額 ${c.amount}` : ""}。<br>請進後台確認訂單,確認後供應商才會安排出貨。`,
-    cta: "確認訂單",
-    path: () => "/restaurant/orders",
-  },
-  shipped: {
-    audience: "restaurant",
-    subject: (c) => `${c.supplierName} 已出貨 — 訂單 ${c.orderShort}`,
-    lead: (c) => `${c.supplierName} 已安排出貨,品項:${c.items}。<br>收到貨之後記得回系統按「已收到貨」。`,
-    cta: "查看進度",
-    path: () => "/restaurant/orders",
-  },
-  delivered: {
-    audience: "restaurant",
-    subject: (c) => `請確認收貨 — 訂單 ${c.orderShort}`,
-    lead: (c) => `${c.supplierName} 回報已送達。<br><strong>請清點後在系統按「已收到貨」</strong> —— 這是我們與供應商對帳的依據,也能順手用拍照對帳檢查有沒有短少。`,
-    cta: "確認收貨",
-    path: () => "/restaurant/orders",
-  },
-  received: {
-    audience: "supplier",
-    subject: (c) => `${c.restaurantName} 已確認收貨 — 訂單 ${c.orderShort}`,
-    lead: (c) => `${c.restaurantName} 已確認收到這批貨${c.amount ? `,金額 ${c.amount}` : ""}。<br>這筆交易已計入你的成交紀錄。`,
-    cta: "查看訂單",
-    path: () => "/supplier/orders",
-  },
-  discrepancy: {
-    audience: "both",
-    subject: (c) => `⚠️ 收貨有差異 — 訂單 ${c.orderShort}`,
-    lead: (c) => `${c.restaurantName} 在確認 ${c.supplierName} 的這批貨時回報了差異。<br>請雙方盡快確認明細,平台已同步收到通知。`,
-    cta: "查看明細",
-    path: (a) => (a === "supplier" ? "/supplier/orders" : "/restaurant/orders"),
-  },
-  disputed: {
-    audience: "both",
-    subject: (c) => `⚠️ 訂單進入爭議處理 — ${c.orderShort}`,
-    lead: () => `這張訂單已進入爭議流程,iFoodmap 客服會介入協調,稍後與你聯繫。`,
-    cta: "查看訂單",
-    path: (a) => (a === "supplier" ? "/supplier/orders" : "/restaurant/orders"),
-  },
-};
-
-const html = (title: string, lead: string, cta: string, url: string) => `
-<div style="font-family:-apple-system,'PingFang TC','Microsoft JhengHei',sans-serif;max-width:520px;margin:0 auto;padding:32px 24px;color:#0f172a">
-  <div style="text-align:center;margin-bottom:28px">
-    <div style="font-size:20px;font-weight:700;color:#059669">iFoodmap 食材地圖</div>
-  </div>
-  <h1 style="font-size:18px;margin:0 0 12px">${title}</h1>
-  <p style="font-size:15px;line-height:1.7;color:#334155;margin:0 0 24px">${lead}</p>
-  <p style="text-align:center;margin:0 0 24px">
-    <a href="${url}" style="display:inline-block;background:#059669;color:#fff;text-decoration:none;padding:13px 32px;border-radius:8px;font-weight:600;font-size:15px">${cta}</a>
-  </p>
-  <hr style="border:none;border-top:1px solid #e2e8f0;margin:24px 0">
-  <p style="font-size:12px;color:#94a3b8;line-height:1.6;margin:0">
-    這是 iFoodmap 的系統通知信。有問題請直接回覆這封信或聯絡你的窗口。
-  </p>
-</div>`;
-
-const sendMail = async (to: string, subject: string, body: string) => {
-  if (!RESEND_KEY) return { ok: false, err: "RESEND_API_KEY 未設定" };
+const sendMail = async (
+  to: string,
+  subject: string,
+  body: string,
+): Promise<{ ok: boolean; err: string | null; id: string | null }> => {
+  if (!RESEND_KEY) return { ok: false, err: "RESEND_API_KEY 未設定", id: null };
   try {
     const res = await fetch("https://api.resend.com/emails", {
       method: "POST",
       headers: { Authorization: `Bearer ${RESEND_KEY}`, "Content-Type": "application/json" },
       body: JSON.stringify({ from: FROM, to: [to], subject, html: body })
     });
-    if (!res.ok) return { ok: false, err: `Resend ${res.status}: ${(await res.text()).slice(0, 200)}` };
-    return { ok: true, err: null as string | null };
+    if (!res.ok) return { ok: false, err: `Resend ${res.status}: ${(await res.text()).slice(0, 200)}`, id: null };
+    const sent = (await res.json().catch(() => null)) as { id?: string } | null;
+    return { ok: true, err: null, id: sent?.id ?? null };
   } catch (e) {
-    return { ok: false, err: e instanceof Error ? e.message : "unknown" };
+    return { ok: false, err: e instanceof Error ? e.message : "unknown", id: null };
   }
 };
-
-const money = (n: unknown) =>
-  n == null || Number.isNaN(Number(n)) ? "" : `NT$ ${Number(n).toLocaleString("zh-TW")}`;
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: CORS });
@@ -201,14 +128,14 @@ Deno.serve(async (req) => {
     : "";
 
   const ctx: Ctx = {
-    orderShort: `#${String(order.id).slice(-8).toUpperCase()}`,
+    orderShort: formatOrderNo(order.id),
     restaurantName: restaurant?.name ?? "買家",
     supplierName: supplier?.name ?? "供應商",
     amount: money(order.total_amount),
     items: items || "(見系統)",
   };
 
-  const targets: { email: string; audience: "supplier" | "restaurant" }[] = [];
+  const targets: Recipient[] = [];
   if (rule.audience === "supplier" || rule.audience === "both") {
     if (supplier?.contact_email) targets.push({ email: supplier.contact_email, audience: "supplier" });
   }
@@ -221,23 +148,37 @@ Deno.serve(async (req) => {
   }
 
   const subject = rule.subject(ctx);
-  const results: { to: string; ok: boolean; err: string | null }[] = [];
+  // 閘門:NOTIFY_LIVE 不是 "true" 就只寄內部測試信箱(每次請求都重讀,不快取)
+  const live = isLive(Deno.env.get("NOTIFY_LIVE"));
+  const deliveries = planDeliveries(targets, subject, live);
+  const results: {
+    to: string;
+    subject: string;
+    original_count: number;
+    ok: boolean;
+    err: string | null;
+    id: string | null;
+  }[] = [];
 
-  for (const t of targets) {
-    const url = `${SITE_URL}${rule.path(t.audience)}`;
-    const r = await sendMail(t.email, subject, html(subject, rule.lead(ctx), rule.cta, url));
-    results.push({ to: t.email, ...r });
+  for (const d of deliveries) {
+    // 內文裡的店名、品項等都在 renderMail 裡跳脫過(主旨是純文字不跳脫)
+    const mail = renderMail(rule, ctx, d.audience, SITE_URL, String(order.id));
+    const mailBody = (d.forwardNote ?? "") + mail.body;
+    const r = await sendMail(d.to, d.subject, mailBody);
+    results.push({ to: d.to, subject: d.subject, original_count: d.originalRecipients.length, ...r });
 
-    // 留紀錄供 /admin/notifications 查
+    // 留紀錄供 /admin/notifications 查(recipient 記實際寄出的信箱)
     await supabase.from("notifications").insert({
-      recipient: t.email,
+      recipient: d.to,
       channel: "email",
-      title: subject,
-      message: `訂單 ${ctx.orderShort} 狀態變更為 ${toStatus}`,
+      title: d.subject,
+      message:
+        `訂單 ${ctx.orderShort} 狀態變更為 ${toStatus}` +
+        (d.forwardNote ? `(測試轉寄,原收件人:${d.originalRecipients.join("、")})` : ""),
       status: r.ok ? "sent" : "failed",
       sent_at: r.ok ? new Date().toISOString() : null,
     });
   }
 
-  return json({ data: { sent: results.filter((r) => r.ok).length, total: results.length, results } });
+  return json({ data: { live, sent: results.filter((r) => r.ok).length, total: results.length, results } });
 });

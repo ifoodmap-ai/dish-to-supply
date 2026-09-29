@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { AlertTriangle, Inbox, RefreshCw } from 'lucide-react';
+import { AlertTriangle, Inbox, RefreshCw, Send } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -10,13 +10,17 @@ import { supabase } from '@/integrations/supabase/client';
 import {
   ORDER_STATUS,
   PIPELINE_STAGES,
+  ADMIN_DISPATCHABLE,
   ROLE_LABEL,
+  allowedTransitions,
   formatStageAge,
   hoursInStage,
   isStuck,
   type OrderStatus,
 } from '@/lib/orders';
+import { formatOrderNo } from '@/lib/order-number';
 import { ACTIVE_ORDER_STATUSES } from './adminCounts';
+import DispatchOrderDialog, { type DispatchTarget } from './DispatchOrderDialog';
 
 /* ---------------------------------------------------------------
  * 新資料表尚未進 types.ts,沿用專案既有的 cast 慣例
@@ -76,6 +80,9 @@ export default function AdminPipelinePage() {
   const [loadError, setLoadError] = useState<string | null>(null);
   const [onlyStuck, setOnlyStuck] = useState(false);
   const [fetchedAt, setFetchedAt] = useState<Date | null>(null);
+  /** 供應商拒絕的單:order_pipeline 不含 rejected,另外查,只放在「異常處理中」欄等改派(不算進上面的數字) */
+  const [rejectedRows, setRejectedRows] = useState<PipelineRow[]>([]);
+  const [dispatchTarget, setDispatchTarget] = useState<DispatchTarget | null>(null);
 
   const fetchData = useCallback(async (silent = false) => {
     if (silent) setRefreshing(true);
@@ -107,6 +114,12 @@ export default function AdminPipelinePage() {
     }
 
     setRows(list);
+
+    // 被拒的單要改派:view 不含 rejected,這裡另外撈(讀不到只是少了改派入口,不擋看板)
+    const rejected = await table<PipelineRow>('supplier_orders')
+      .select('id, status, restaurant_id, supplier_id, total_amount, current_stage_since, created_at')
+      .eq('status', 'rejected');
+    setRejectedRows(rejected.error ? [] : (rejected.data ?? []));
 
     // 餐廳 / 供應商名稱對照
     const [rest, sup] = await Promise.all([
@@ -157,10 +170,12 @@ export default function AdminPipelinePage() {
     const bySeniority = (a: PipelineRow, b: PipelineRow) =>
       hoursInStage(b.current_stage_since) - hoursInStage(a.current_stage_since);
     cols.forEach((c) => c.rows.sort(bySeniority));
+    // 被拒的單沒有 SLA(不會卡關),「只看卡關」時不列
+    if (!onlyStuck) extra.push(...rejectedRows.filter((r) => !visible.some((v) => v.id === r.id)));
     extra.sort(bySeniority);
 
     return { columns: cols, exceptions: extra };
-  }, [visible]);
+  }, [visible, rejectedRows, onlyStuck]);
 
   const totalAmount = useMemo(
     () => rows.reduce((sum, r) => sum + (Number(r.total_amount) || 0), 0),
@@ -172,59 +187,82 @@ export default function AdminPipelinePage() {
     const stuck = isStuck(row.status, row.current_stage_since);
     const meta = ORDER_STATUS[row.status];
     const waitingOn = meta?.waitingOn;
+    const restaurantName = (row.restaurant_id && restaurantMap[row.restaurant_id]) || null;
+    // 「派給…」只給待派發(含舊資料 pending)與被拒/逾時的單,而且轉移表允許管理員派單
+    const canDispatch =
+      ADMIN_DISPATCHABLE.includes(row.status) && allowedTransitions('admin', row.status).includes('dispatched');
 
     return (
-      <button
-        type="button"
-        onClick={() => navigate(`/admin/orders/${row.id}`)}
-        className={`w-full text-left rounded-lg border p-3 transition-shadow hover:shadow-md ${
-          stuck ? 'border-red-300 bg-red-50 hover:bg-red-100/70' : 'border-slate-200 bg-white hover:bg-slate-50'
+      <div
+        data-testid={`pipeline-card-${row.id}`}
+        className={`rounded-lg border transition-shadow hover:shadow-md ${
+          stuck ? 'border-red-300 bg-red-50' : 'border-slate-200 bg-white'
         }`}
       >
-        <div className="flex items-center justify-between gap-2">
-          <span
-            className={`font-mono text-xs ${stuck ? 'text-red-700' : 'text-slate-500'}`}
-          >
-            #{row.id.slice(-8)}
-          </span>
-          <span
-            className={`text-xs whitespace-nowrap ${
-              stuck ? 'font-semibold text-red-700' : 'text-slate-400'
-            }`}
-          >
-            {formatStageAge(row.current_stage_since)}
-          </span>
-        </div>
-
-        <p className={`mt-1.5 text-sm font-medium truncate ${stuck ? 'text-red-900' : 'text-slate-800'}`}>
-          {(row.restaurant_id && restaurantMap[row.restaurant_id]) || '未指定餐廳'}
-        </p>
-        <p className={`text-xs truncate ${stuck ? 'text-red-700' : 'text-slate-500'}`}>
-          → {(row.supplier_id && supplierMap[row.supplier_id]) || '尚未派發供應商'}
-        </p>
-
-        <div className="mt-2 flex items-center justify-between gap-2">
-          <span
-            className={`text-xs tabular-nums ${stuck ? 'text-red-800' : 'text-slate-600'}`}
-          >
-            {money(row.total_amount) ?? <span className="text-slate-400 italic">尚未報價</span>}
-          </span>
-          {STAGE_ALIAS[row.status] && (
-            <Badge variant="outline" className="text-[10px] px-1.5 py-0 bg-slate-100 text-slate-500 border-slate-300">
-              舊狀態·{meta?.label ?? row.status}
-            </Badge>
-          )}
-        </div>
-
-        {stuck && (
-          <div className="mt-2 flex items-center gap-1.5 rounded-md bg-red-100 px-2 py-1 text-xs font-medium text-red-800">
-            <AlertTriangle className="h-3.5 w-3.5 shrink-0" />
-            <span>
-              已卡關 · 該催{waitingOn ? ROLE_LABEL[waitingOn] : '相關窗口'}
+        <button
+          type="button"
+          onClick={() => navigate(`/admin/orders/${row.id}`)}
+          className={`w-full text-left rounded-lg p-3 ${stuck ? 'hover:bg-red-100/70' : 'hover:bg-slate-50'}`}
+        >
+          <div className="flex items-center justify-between gap-2">
+            <span
+              className={`font-mono text-xs ${stuck ? 'text-red-700' : 'text-slate-500'}`}
+            >
+              {formatOrderNo(row.id)}
+            </span>
+            <span
+              className={`text-xs whitespace-nowrap ${
+                stuck ? 'font-semibold text-red-700' : 'text-slate-400'
+              }`}
+            >
+              {formatStageAge(row.current_stage_since)}
             </span>
           </div>
+
+          <p className={`mt-1.5 text-sm font-medium truncate ${stuck ? 'text-red-900' : 'text-slate-800'}`}>
+            {restaurantName || '未指定餐廳'}
+          </p>
+          <p className={`text-xs truncate ${stuck ? 'text-red-700' : 'text-slate-500'}`}>
+            → {(row.supplier_id && supplierMap[row.supplier_id]) || '尚未派發供應商'}
+          </p>
+
+          <div className="mt-2 flex items-center justify-between gap-2">
+            <span
+              className={`text-xs tabular-nums ${stuck ? 'text-red-800' : 'text-slate-600'}`}
+            >
+              {money(row.total_amount) ?? <span className="text-slate-400 italic">尚未報價</span>}
+            </span>
+            {STAGE_ALIAS[row.status] && (
+              <Badge variant="outline" className="text-[10px] px-1.5 py-0 bg-slate-100 text-slate-500 border-slate-300">
+                舊狀態·{meta?.label ?? row.status}
+              </Badge>
+            )}
+          </div>
+
+          {stuck && (
+            <div className="mt-2 flex items-center gap-1.5 rounded-md bg-red-100 px-2 py-1 text-xs font-medium text-red-800">
+              <AlertTriangle className="h-3.5 w-3.5 shrink-0" />
+              <span>
+                已卡關 · 該催{waitingOn ? ROLE_LABEL[waitingOn] : '相關窗口'}
+              </span>
+            </div>
+          )}
+        </button>
+        {canDispatch && (
+          <div className="px-3 pb-3">
+            <Button
+              size="sm"
+              className="w-full bg-emerald-600 text-white hover:bg-emerald-700"
+              onClick={() =>
+                setDispatchTarget({ id: row.id, status: row.status, supplier_id: row.supplier_id, restaurantName })
+              }
+            >
+              <Send className="mr-1.5 h-3.5 w-3.5" />
+              {row.status === 'rejected' || row.status === 'expired' ? '改派給…' : '派給…'}
+            </Button>
+          </div>
         )}
-      </button>
+      </div>
     );
   };
 
@@ -326,13 +364,13 @@ export default function AdminPipelinePage() {
             </div>
           ))}
         </div>
-      ) : rows.length === 0 ? (
+      ) : rows.length === 0 && exceptions.length === 0 ? (
         <div className="rounded-lg border border-slate-200 bg-white py-20 text-center text-slate-400">
           <Inbox className="h-10 w-10 mx-auto mb-3 opacity-40" />
           <p className="text-sm">目前沒有進行中的訂單</p>
           <p className="text-xs mt-1">餐廳送出叫貨單之後,會即時出現在這裡</p>
         </div>
-      ) : visible.length === 0 ? (
+      ) : visible.length === 0 && exceptions.length === 0 ? (
         <div className="rounded-lg border border-slate-200 bg-white py-20 text-center text-slate-400">
           <p className="text-sm">沒有卡關的訂單</p>
           <Button variant="outline" size="sm" className="mt-3" onClick={() => setOnlyStuck(false)}>
@@ -398,6 +436,12 @@ export default function AdminPipelinePage() {
           點任一張卡片可查看該筆訂單的完整履歷(誰、什麼時候、做了什麼)
         </p>
       )}
+
+      <DispatchOrderDialog
+        order={dispatchTarget}
+        onClose={() => setDispatchTarget(null)}
+        onChanged={() => fetchData(true)}
+      />
     </div>
   );
 }

@@ -5,8 +5,14 @@
 //   2. order_events 的 trigger 會同步更新 supplier_orders.status
 //      → 前端永遠不要直接 update status,否則停留時間與履歷會失真
 //   3. received 只能由餐廳端觸發,供應商最多推到 delivered
+//   4. 下面的 TRANSITIONS 只決定「畫面上出現哪些按鈕」;真正的規則在資料庫
+//      (supabase/migrations/20260929100000_order_transition_rules.sql 的 order_transition_rules()):
+//      身分、目前狀態、目標狀態不在表裡就寫不進去,actor_id 也由伺服器用 auth.uid() 決定。
+//      兩份表由 orders.test.ts 逐條比對,改一邊一定要改另一邊。
 
 import { supabase } from "@/integrations/supabase/client";
+
+export { formatOrderNo } from "./order-number";
 
 export type OrderStatus =
   | "draft" | "submitted" | "dispatched" | "accepted" | "quoted" | "confirmed"
@@ -106,8 +112,33 @@ const TRANSITIONS: Record<ActorRole, Partial<Record<OrderStatus, OrderStatus[]>>
     reviewed:   ["closed"],
     received:   ["closed"],
   },
-  system: {},
+  // 系統(service_role、排程):所有角色的轉移聯集 + 等待中的單逾時(給之後的排程用;畫面上沒有系統按鈕)
+  system: {
+    draft:      ["submitted", "cancelled", "dispatched"],
+    submitted:  ["dispatched", "cancelled"],
+    pending:    ["dispatched", "cancelled"],
+    dispatched: ["accepted", "rejected", "expired"],
+    sent:       ["accepted", "rejected", "expired"],
+    accepted:   ["quoted", "expired"],
+    quoted:     ["confirmed", "cancelled", "expired"],
+    confirmed:  ["shipped"],
+    shipped:    ["in_transit", "delivered"],
+    in_transit: ["delivered"],
+    delivered:  ["received", "discrepancy"],
+    received:   ["reviewed", "closed"],
+    reviewed:   ["closed"],
+    discrepancy:["disputed", "received", "closed"],
+    disputed:   ["closed", "received"],
+    rejected:   ["dispatched", "cancelled"],
+    expired:    ["dispatched", "cancelled"],
+  },
 };
+
+/**
+ * 管理員畫面上出現「派給…」的狀態:待派發(含舊資料 pending)、被拒、逾時。
+ * 轉移表也允許管理員直接從草稿派單,但草稿要由餐廳老闆/店長簽核送出,畫面上刻意不給。
+ */
+export const ADMIN_DISPATCHABLE: OrderStatus[] = ["submitted", "pending", "rejected", "expired"];
 
 export const allowedTransitions = (role: ActorRole, status: OrderStatus): OrderStatus[] =>
   TRANSITIONS[role]?.[status] ?? [];
@@ -126,9 +157,30 @@ interface RecordEventInput {
   note?: string | null;
 }
 
+/** 寫事件被資料庫擋下時的錯誤:message 是給使用者看的中文;hint 標出原因(見 isStaleOrderError) */
+export class OrderEventError extends Error {
+  readonly code: string | null;
+  readonly hint: string | null;
+  constructor(message: string, code: string | null = null, hint: string | null = null) {
+    super(message);
+    this.name = "OrderEventError";
+    this.code = code;
+    this.hint = hint;
+  }
+}
+
+/** 畫面上的狀態已經過期(別人剛處理過這張單)—— 呼叫端應該重新整理列表 */
+export const isStaleOrderError = (e: unknown): boolean =>
+  e instanceof OrderEventError && (e.hint === "stale_order_status" || e.hint === "one_event_per_order");
+
+type PgError = { message: string; code?: string | null; hint?: string | null } | null;
+
 /**
  * 寫一筆訂單事件。DB trigger 會同步把 supplier_orders.status 更新成 toStatus
  * 並重設 current_stage_since —— 所以呼叫端不需要(也不應該)自己 update status。
+ *
+ * fromStatus 請傳畫面上看到的狀態:資料庫發現它跟目前狀態不同會擋下(isStaleOrderError)。
+ * actor_id 不送 —— 伺服器一律用 auth.uid() 決定;actor_label 只是顯示用。
  */
 export const recordOrderEvent = async (input: RecordEventInput): Promise<OrderEvent> => {
   const { data: { user } } = await supabase.auth.getUser();
@@ -136,7 +188,7 @@ export const recordOrderEvent = async (input: RecordEventInput): Promise<OrderEv
   const { data, error } = await (supabase as never as {
     from: (t: string) => {
       insert: (v: unknown) => {
-        select: (c: string) => { single: () => Promise<{ data: OrderEvent | null; error: { message: string } | null }> };
+        select: (c: string) => { single: () => Promise<{ data: OrderEvent | null; error: PgError }> };
       };
     };
   })
@@ -145,7 +197,6 @@ export const recordOrderEvent = async (input: RecordEventInput): Promise<OrderEv
       order_id: input.orderId,
       from_status: input.fromStatus,
       to_status: input.toStatus,
-      actor_id: user?.id ?? null,
       actor_role: input.actorRole,
       actor_label: input.actorLabel ?? user?.email ?? null,
       source: input.source,
@@ -155,7 +206,9 @@ export const recordOrderEvent = async (input: RecordEventInput): Promise<OrderEv
     .select("*")
     .single();
 
-  if (error || !data) throw new Error(error?.message ?? "寫入訂單事件失敗");
+  if (error || !data) {
+    throw new OrderEventError(error?.message ?? "寫入訂單事件失敗", error?.code ?? null, error?.hint ?? null);
+  }
   return data;
 };
 
