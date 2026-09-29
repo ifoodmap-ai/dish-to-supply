@@ -1,5 +1,29 @@
 {
   "ignoreCommand": "git diff --quiet ${VERCEL_GIT_PREVIOUS_SHA:-HEAD^} HEAD -- . ':(exclude)landing' ':(exclude).github'",
+  "redirects": [
+    {
+      "source": "/",
+      "has": [
+        {
+          "type": "host",
+          "value": "^dish-to-supply\\.vercel\\.app$"
+        }
+      ],
+      "destination": "https://app.ifoodmap.ai/",
+      "permanent": true
+    },
+    {
+      "source": "/:path*",
+      "has": [
+        {
+          "type": "host",
+          "value": "^dish-to-supply\\.vercel\\.app$"
+        }
+      ],
+      "destination": "https://app.ifoodmap.ai/:path*",
+      "permanent": true
+    }
+  ],
   "rewrites": [
     { "source": "/(.*)", "destination": "/index.html" }
   ]

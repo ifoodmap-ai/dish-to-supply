@@ -76,6 +76,9 @@ VERCEL_PROJECT_ID=prj_cf9IKsaZJd5AwOr9Jg3TRGmRZUrU \
   所以 secret 萬一被刪掉,信裡的連結會退回舊網址。
 - 🔴 **所有人都要重新登入一次**:Supabase session 存在各網域自己的 localStorage(見「跨站 session」),
   舊網址上的登入狀態不會跟著 308 過去。
+- 轉址規則在根目錄 `vercel.json` 的 `redirects`。🔴 **這份檔案 dish-to-supply 與 ifoodmap-admin 兩個專案共用**:
+  host 條件只比對 `dish-to-supply.vercel.app` 本身,正式網域、管理員站、preview 部署都不會被轉走。
+  站根 `/` 要另外一條(Vercel 的 `/:path*` 不比對站根,形象站上線當天踩過)。`src/test/product-domain-redirect.test.ts` 釘住規則。
 
 ## 形象站(landing/)
 
