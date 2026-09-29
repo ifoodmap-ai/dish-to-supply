@@ -60,47 +60,59 @@ test('會被部署出去的檔案裡不再出現舊網址(vercel.json 的轉址�
   assert.deepEqual(hits, []);
 });
 
-test('vercel.json:舊網址整站 308 轉到正式網域的同一路徑', () => {
+test('vercel.json:舊網址整站 308 轉到正式網域的同一路徑(首頁那條要另外寫)', () => {
   const config = JSON.parse(read('vercel.json'));
   const hostRedirects = (config.redirects || []).filter((r) => (r.has || []).some((h) => h.type === 'host'));
-  assert.equal(hostRedirects.length, 1, '只該有一條依 host 轉址的規則');
+  assert.equal(hostRedirects.length, 2, '依 host 轉址的規則剛好兩條:站根一條、其餘路徑一條');
   // 整條釘死:多一個欄位(statusCode、missing…)或少一個都要紅。
   //   permanent: true → Vercel 回 308(保留 method 與 body;搜尋引擎視為永久搬家)。
   //   /:path* → /:path*:整段路徑原樣帶過去(Vercel 文件的 /blog/:path* → /news/:path* 同一種寫法)。
   //   query 不寫在 destination:Vercel 會自己把原本的 ?query 接到 Location 後面
-  //   (2026-09-29 對舊網址的 trailingSlash / cleanUrls 兩種 308 實測都有保留,它們跟這條是同一種 route)。
+  //   (2026-09-29 上線實測 /about?ref=test → https://ifoodmap.ai/about?ref=test)。
+  // 🔴 站根 / 要自己一條:2026-09-29 上線後實測,只有 /:path* 時舊網址的 / 照樣回 200
+  //    (/about、/en 都有轉,就只有站根沒轉 —— Vercel 的 /:path* 不比對空路徑)。
+  //    首頁是舊網址最常被分享、被搜尋引擎收錄的一頁,漏掉它等於搬家只搬了一半。
   assert.deepEqual(hostRedirects[0], {
+    source: '/',
+    has: [{ type: 'host', value: '^ifoodmap-landing\\.vercel\\.app$' }],
+    destination: `${routing.publicBaseUrl}/`,
+    permanent: true,
+  });
+  assert.deepEqual(hostRedirects[1], {
     source: '/:path*',
     has: [{ type: 'host', value: '^ifoodmap-landing\\.vercel\\.app$' }],
     destination: `${routing.publicBaseUrl}/:path*`,
     permanent: true,
   });
-  assert.doesNotMatch(hostRedirects[0].destination, /[?#]/);
+  for (const r of hostRedirects) assert.doesNotMatch(r.destination, /[?#]/);
 });
 
 test('host 條件剛好等於舊網址:preview 部署、正式網域、www 都不會被轉走', () => {
   const config = JSON.parse(read('vercel.json'));
-  const rule = config.redirects.find((r) => (r.has || []).some((h) => h.type === 'host'));
-  const { value } = rule.has[0];
-  // Vercel 把 has 的字串值當正規表示式;官方 CLI 的「host 等於」條件也是編成 ^跳脫後的值$ 這個形狀。
-  // 點號一定要跳脫,否則 . 會配任何字元。「片段搜尋」與「整串比對」兩種解讀都驗,兩種都要成立。
-  const readings = [new RegExp(value), new RegExp(`^(?:${value})$`)];
-  const mustNotMatch = [
-    'ifoodmap.ai',
-    'www.ifoodmap.ai',
-    'ifoodmap-landing-git-main-example-team.vercel.app', // 分支 preview
-    'ifoodmap-landing-a1b2c3d4e-example-team.vercel.app', // 單次部署網址
-    'dish-to-supply.vercel.app',
-    'ifoodmap-admin.vercel.app',
-    'ifoodmap-landingXvercelXapp',
-    `x${OLD_HOST}`,
-    `${OLD_HOST}.example.test`,
-  ];
-  for (const re of readings) {
-    assert.ok(re.test(OLD_HOST), `${re} 應該比對到 ${OLD_HOST}`);
-    for (const host of mustNotMatch) assert.ok(!re.test(host), `${re} 不該比對到 ${host}`);
-    // 目的地的 host 絕對不能又符合條件,否則會無限轉址
-    assert.ok(!re.test(new URL(rule.destination.replace('/:path*', '/')).host));
+  const rules = config.redirects.filter((r) => (r.has || []).some((h) => h.type === 'host'));
+  assert.ok(rules.length > 0);
+  for (const rule of rules) {
+    const { value } = rule.has[0];
+    // Vercel 把 has 的字串值當正規表示式;官方 CLI 的「host 等於」條件也是編成 ^跳脫後的值$ 這個形狀。
+    // 點號一定要跳脫,否則 . 會配任何字元。「片段搜尋」與「整串比對」兩種解讀都驗,兩種都要成立。
+    const readings = [new RegExp(value), new RegExp(`^(?:${value})$`)];
+    const mustNotMatch = [
+      'ifoodmap.ai',
+      'www.ifoodmap.ai',
+      'ifoodmap-landing-git-main-example-team.vercel.app', // 分支 preview
+      'ifoodmap-landing-a1b2c3d4e-example-team.vercel.app', // 單次部署網址
+      'dish-to-supply.vercel.app',
+      'ifoodmap-admin.vercel.app',
+      'ifoodmap-landingXvercelXapp',
+      `x${OLD_HOST}`,
+      `${OLD_HOST}.example.test`,
+    ];
+    for (const re of readings) {
+      assert.ok(re.test(OLD_HOST), `${rule.source}: ${re} 應該比對到 ${OLD_HOST}`);
+      for (const host of mustNotMatch) assert.ok(!re.test(host), `${rule.source}: ${re} 不該比對到 ${host}`);
+      // 目的地的 host 絕對不能又符合條件,否則會無限轉址
+      assert.ok(!re.test(new URL(rule.destination.replace('/:path*', '/')).host));
+    }
   }
   // www.ifoodmap.ai → ifoodmap.ai 刻意不寫在這裡,交給 Vercel 的網域設定(Redirect to ifoodmap.ai):
   // 網域層的轉址在部署的路由之前就生效,這裡再寫一條只是死碼;而如果有人把網域設定改成

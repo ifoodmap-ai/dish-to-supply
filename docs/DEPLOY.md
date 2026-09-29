@@ -94,6 +94,7 @@ https://ifoodmap.ai 的原始碼在 `landing/`:純靜態頁 + `landing/api/` 三
 - `www.ifoodmap.ai` → `ifoodmap.ai` 的 308 是 **Vercel 網域設定**做的(ifoodmap-landing 專案 → Domains),不寫在 `landing/vercel.json`。
 - 舊網址 `ifoodmap-landing.vercel.app` 由 `landing/vercel.json` 的 host 條件整站 308 轉到 ifoodmap.ai(路徑與 query 保留);
   **preview 部署的網址不受影響**。三邊(routing.js / index.html / vercel.json)用 `landing/tests/public-domain.test.cjs` 釘在同一個網址。
+  ⚠️ 站根 `/` 是另外一條規則:只寫 `/:path*` 時,Vercel 上舊網址的 `/` 照樣回 200(上線當天實測),深層頁才有轉。
 - SSL 憑證:Vercel 當初沒有自動簽,是用 API `POST /v3/certs {"cns":["ifoodmap.ai","www.ifoodmap.ai"]}` 手動簽的(Let's Encrypt,autoRenew)。
   之後若憑證出問題:先看 `GET /v6/domains/ifoodmap.ai/config` 的 `misconfigured`,再重跑同一支 API。
   本機 vercel CLI 看不到 ifoodmap team,要用本 repo 的 `VERCEL_TOKEN` secret(例如暫時分支上的一次性 workflow,跑完刪分支)。

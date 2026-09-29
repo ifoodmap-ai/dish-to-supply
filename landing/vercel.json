@@ -3,6 +3,17 @@
   "trailingSlash": false,
   "redirects": [
     {
+      "source": "/",
+      "has": [
+        {
+          "type": "host",
+          "value": "^ifoodmap-landing\\.vercel\\.app$"
+        }
+      ],
+      "destination": "https://ifoodmap.ai/",
+      "permanent": true
+    },
+    {
       "source": "/:path*",
       "has": [
         {
